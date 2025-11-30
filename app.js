@@ -992,11 +992,20 @@ export const App = {
              return { t: "Vitesse ⚡", m: m };
         }
         const acc = tot > 0 ? (s.globalOk / tot) : 0;
+        
+        // EXPERT TIER (>80%)
         if(acc >= 0.80) {
-            const pool = [...COACH_DB.master, ...COACH_DB.theory];
-            const m = pool[Math.floor(Math.random() * pool.length)];
+            const m = COACH_DB.master[Math.floor(Math.random() * COACH_DB.master.length)];
             return { t: "Expert 🎓", m: m };
         }
+        
+        // INTERMEDIATE/SOLID TIER (50-79%)
+        // Donnes des conseils théoriques pour pousser vers l'expertise
+        if(acc >= 0.50) {
+             const m = COACH_DB.theory[Math.floor(Math.random() * COACH_DB.theory.length)];
+             return { t: "Solide 🛡️", m: m };
+        }
+
         const m = COACH_DB.boost[Math.floor(Math.random() * COACH_DB.boost.length)];
         return { t: "Motivation 💪", m: m };
     },
