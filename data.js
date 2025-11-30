@@ -1,7 +1,28 @@
 
+
 // --- MASTERY & SETS ---
 export const MASTERY_NAMES = [
     "🏛️ L'Académie", "🎷 Le Club", "🧪 Le Laboratoire", "🌌 Le Cosmos"
+];
+
+// Cycle de 5 niveaux de Maîtrise par matière (Utilisé par UI.js et BADGES)
+export const LORE_MATERIALS = [
+    { name: "Cristal",    particle: "de ",  color: "#a5f3fc", shadow: "#22d3ee" }, // Cyan clair
+    { name: "Marbre",     particle: "de ",  color: "#e2e8f0", shadow: "#94a3b8" }, // Blanc gris
+    { name: "Argent",     particle: "de l'", color: "#cbd5e1", shadow: "#64748b" }, // Argent
+    { name: "Or",         particle: "de l'", color: "#fbbf24", shadow: "#b45309" }, // Or
+    { name: "Chrome",     particle: "de ",  color: "#38bdf8", shadow: "#0ea5e9" }, // Bleu électrique
+    { name: "Carbone",    particle: "de ",  color: "#71717a", shadow: "#27272a" }, // Gris sombre
+    { name: "Titane",     particle: "de ",  color: "#94a3b8", shadow: "#475569" }, // Bleu gris
+    { name: "Plasma",     particle: "de ",  color: "#c084fc", shadow: "#9333ea" }, // Violet
+    { name: "Saphir",     particle: "de ",  color: "#3b82f6", shadow: "#1d4ed8" }, // Bleu royal
+    { name: "Émeraude",   particle: "d'",   color: "#34d399", shadow: "#059669" }, // Vert
+    { name: "Rubis",      particle: "de ",  color: "#f43f5e", shadow: "#be123c" }, // Rouge
+    { name: "Diamant",    particle: "de ",  color: "#818cf8", shadow: "#4f46e5" }, // Indigo
+    { name: "Obsidienne", particle: "d'",   color: "#1e293b", shadow: "#0f172a" }, // Noir bleu
+    { name: "Météore",    particle: "de ",  color: "#f97316", shadow: "#c2410c" }, // Orange brûlé
+    { name: "Quasar",     particle: "de ",  color: "#d946ef", shadow: "#a21caf" }, // Magenta
+    { name: "L'Absolu",   particle: "de ",  color: "#fcd34d", shadow: "#ffffff" }  // Or Blanc
 ];
 
 export const DB = {
@@ -46,10 +67,10 @@ export const DB = {
             mode: "lab",
             description: "Architectures & Espaces Modernes.",
             chords: [
-                { id: 'struct_36', name: 'Structure 3-6', tech: '3/6', sub: 'Struct. A', iv: [0,3,11], unlockLvl: 10 },
-                { id: 'struct_45tr', name: 'Structure 4/5-Tr', tech: '4/5-Tr', sub: 'Struct. B', iv: [0,6,11], unlockLvl: 12 },
-                { id: 'trichord', name: 'Trichordes', tech: '3-X', sub: 'Texture', iv: [0,1,2], unlockLvl: 14 },
-                { id: 'sus_sym', name: 'Suspendus', tech: 'Sus', sub: 'Symétrie', iv: [0,2,7], unlockLvl: 16 }
+                { id: 'struct_36', name: 'Structure 3-6', tech: '3/6', sub: 'Struct. A', iv: [0,3,11], unlockLvl: 1 },
+                { id: 'struct_45tr', name: 'Structure 4/5-Tr', tech: '4/5-Tr', sub: 'Struct. B', iv: [0,6,11], unlockLvl: 5 },
+                { id: 'trichord', name: 'Trichordes', tech: '3-X', sub: 'Texture', iv: [0,1,2], unlockLvl: 10 },
+                { id: 'sus_sym', name: 'Suspendus', tech: 'Sus', sub: 'Symétrie', iv: [0,2,7], unlockLvl: 15 }
             ]
         }
     },
@@ -130,74 +151,76 @@ export const checkRankColl = (d, type, limit) => {
 };
 
 export const BADGES = [
-    { id: 'b_appr', icon: '👶', title: "L'Apprenti", desc: "Jouer 100 accords au total", check: (d) => d.stats.totalPlayed >= 100 },
-    { id: 'b_achar', icon: '🏋️', title: "L'Acharné", desc: "Jouer 500 accords au total", check: (d) => d.stats.totalPlayed >= 500 },
-    { id: 'b_ency', icon: '📚', title: "L'Encyclopédie", desc: "Valider les 21 combinaisons uniques", check: (d) => d.stats.combos && d.stats.combos.length >= 21 },
-    { id: 'b_init', icon: '🥉', title: "L'Initié", desc: "Rang Bronze min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 20) },
-    { id: 'b_conf', icon: '🥈', title: "Le Confirmé", desc: "Rang Argent min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 50) },
-    { id: 'b_virt', icon: '🥇', title: "Le Virtuose", desc: "Rang Or sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 100) },
-    { id: 'b_bat', icon: '🔨', title: "Le Bâtisseur", desc: "Rang Bronze min. sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 20) },
-    { id: 'b_ing', icon: '📐', title: "L'Ingénieur", desc: "Rang Argent min. sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 50) },
-    { id: 'b_arch', icon: '🏗️', title: "L'Architecte", desc: "Rang Or sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 100) },
-    { id: 'b_reg', icon: '📏', title: "Le Régulier", desc: "Série de 10 sans faute", check: (d, s) => s.streak >= 10 },
-    { id: 'b_inv', icon: '🛡️', title: "L'Invincible", desc: "Série de 30 sans faute", check: (d, s) => s.streak >= 30 },
-    { id: 'b_snip', icon: '🎯', title: "Le Sniper", desc: "Série de 15 sans faute sans aides", check: (d, s) => s.cleanStreak >= 15 },
-    { id: 'b_grand', icon: '🌊', title: "Grand Large", desc: "Série de 15 sans faute en Mode Ouvert (Acad.)", check: (d, s) => s.openStreak >= 15 },
-    { id: 'b_pur', icon: '🧐', title: "Le Puriste", desc: "Série de 25 sans faute avec TOUS réglages", check: (d, s) => s.fullConfigStreak >= 25 },
-    { id: 'b_metro', icon: '⏱️', title: "Métronome", desc: "10 bonnes réponses rapides à la suite", check: (d, s) => s.fastStreak >= 10 },
-    { id: 'b_duke', icon: '🎩', title: "The Duke", desc: "10 réussites consécutives sur Maj7/min7 (Acad.)", check: (d) => d.stats.str_jazz >= 10 },
-    { id: 'b_007', icon: '🕵️', title: "Agent 007", desc: "10 réussites consécutives sur MinMaj7", check: (d) => d.stats.str_007 >= 10 },
-    { id: 'b_dem', icon: '💣', title: "Démineur", desc: "10 réussites consécutives sur Dim7", check: (d) => d.stats.str_dim >= 10 },
-    { id: 'b_acro', icon: '🤸', title: "L'Acrobate", desc: "10 réussites consécutives sur Renversements", check: (d) => d.stats.str_inv >= 10 },
-    { id: 'b_blue', icon: '🎷', title: "Blue Note", desc: "Réussir 50 accords Jazz (Club)", check: (d) => { if(!d.stats.v) return false; let tot = 0; for(let k in d.stats.v) tot += d.stats.v[k].ok; return tot >= 50; }},
-    { id: 'b_goldear', icon: '👂', title: "Oreille d'Or", desc: "20 sans faute en mode Inverse", check: (d, s) => s.mode === 'inverse' && s.streak >= 20 },
-    { id: 'b_expl', icon: '🧭', title: "L'Explorateur", desc: "Finir une partie dans les 4 modes", check: (d) => d.stats.modesPlayed && d.stats.modesPlayed.length >= 4 },
-    { id: 'b_ecl', icon: '⚡', title: "L'Éclair", desc: "3 réponses < 2s d'affilée", check: (d, s) => s.fastStreak >= 3 },
-    { id: 'b_bolt', icon: '🏃', title: "Usain Bolt", desc: "Score 2 000 pts (Sprint)", check: (d, s) => s.mode === 'sprint' && s.score >= 2000 },
-    { id: 'b_comp', icon: '🎼', title: "Le Compositeur", desc: "Série de 10 sans faute (Inverse)", check: (d, s) => s.mode === 'inverse' && s.streak >= 10 },
-    { id: 'b_pres', icon: '⏲️', title: "Sous Pression", desc: "Survivre 2 minutes (Chrono)", check: (d, s) => s.mode === 'chrono' && (Date.now() - s.startTime) >= 120000 },
-    { id: 'b_phen', icon: '🦅', title: "Le Phénix", desc: "1 vie -> 1 000 pts (Chrono/Sprint)", check: (d, s) => s.lowLifeRecovery && s.score >= 1000 },
-    { id: 'b_leg', icon: '👑', title: "La Légende", desc: "Débloquer tous les autres badges", check: (d) => d.badges.length >= (BADGES.length - 1) }
+    // --- CATÉGORIE: GÉNÉRAL (Gameplay & Stats) ---
+    { id: 'b_appr', category: 'general', icon: '👶', title: "L'Apprenti", desc: "Jouer 100 accords au total", check: (d) => d.stats.totalPlayed >= 100 },
+    { id: 'b_achar', category: 'general', icon: '🏋️', title: "L'Acharné", desc: "Jouer 500 accords au total", check: (d) => d.stats.totalPlayed >= 500 },
+    { id: 'b_ency', category: 'general', icon: '📚', title: "L'Encyclopédie", desc: "Valider les 21 combinaisons uniques (Acad.)", check: (d) => d.stats.combos && d.stats.combos.length >= 21 },
+    { id: 'b_init', category: 'general', icon: '🥉', title: "L'Initié", desc: "Rang Bronze min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 20) },
+    { id: 'b_conf', category: 'general', icon: '🥈', title: "Le Confirmé", desc: "Rang Argent min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 50) },
+    { id: 'b_virt', category: 'general', icon: '🥇', title: "Le Virtuose", desc: "Rang Or sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 100) },
+    { id: 'b_bat', category: 'general', icon: '🔨', title: "Le Bâtisseur", desc: "Rang Bronze min. sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 20) },
+    { id: 'b_ing', category: 'general', icon: '📐', title: "L'Ingénieur", desc: "Rang Argent min. sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 50) },
+    { id: 'b_arch', category: 'general', icon: '🏗️', title: "L'Architecte", desc: "Rang Or sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 100) },
+    { id: 'b_reg', category: 'general', icon: '📏', title: "Le Régulier", desc: "Série de 10 sans faute", check: (d, s) => s.streak >= 10 },
+    { id: 'b_inv', category: 'general', icon: '🛡️', title: "L'Invincible", desc: "Série de 30 sans faute", check: (d, s) => s.streak >= 30 },
+    { id: 'b_snip', category: 'general', icon: '🎯', title: "Le Sniper", desc: "Série de 15 sans faute sans aides", check: (d, s) => s.cleanStreak >= 15 },
+    { id: 'b_metro', category: 'general', icon: '⏱️', title: "Métronome", desc: "10 bonnes réponses rapides à la suite", check: (d, s) => s.fastStreak >= 10 },
+    { id: 'b_expl', category: 'general', icon: '🧭', title: "L'Explorateur", desc: "Finir une partie dans les 4 modes", check: (d) => d.stats.modesPlayed && d.stats.modesPlayed.length >= 4 },
+    { id: 'b_ecl', category: 'general', icon: '⚡', title: "L'Éclair", desc: "3 réponses < 2s d'affilée", check: (d, s) => s.fastStreak >= 3 },
+    { id: 'b_bolt', category: 'general', icon: '🏃', title: "Usain Bolt", desc: "Score 2 000 pts (Sprint)", check: (d, s) => s.mode === 'sprint' && s.score >= 2000 },
+    { id: 'b_pres', category: 'general', icon: '⏲️', title: "Sous Pression", desc: "Survivre 2 minutes (Chrono)", check: (d, s) => s.mode === 'chrono' && (Date.now() - s.startTime) >= 120000 },
+    { id: 'b_phen', category: 'general', icon: '🦅', title: "Le Phénix", desc: "1 vie -> 1 000 pts (Chrono/Sprint)", check: (d, s) => s.lowLifeRecovery && s.score >= 1000 },
+
+    // --- CATÉGORIE: SPÉCIALISATIONS (Modes & Accords Spécifiques) ---
+    { id: 'b_blue', category: 'special', icon: '🎷', title: "Blue Note", desc: "Réussir 50 accords Jazz (Club)", check: (d) => { if(!d.stats.v) return false; let tot = 0; for(let k in d.stats.v) tot += d.stats.v[k].ok; return tot >= 50; }},
+    { id: 'b_lab', category: 'special', icon: '🧪', title: "Rat de Labo", desc: "Réussir 50 accords Laboratoire", check: (d) => { if(!d.stats.l) return false; let tot = 0; for(let k in d.stats.l) tot += d.stats.l[k].ok; return tot >= 50; }},
+    { id: 'b_grand', category: 'special', icon: '🌊', title: "Grand Large", desc: "Série de 15 sans faute en Mode Ouvert (Acad.)", check: (d, s) => s.openStreak >= 15 },
+    { id: 'b_pur', category: 'special', icon: '🧐', title: "Le Puriste", desc: "Série de 25 sans faute avec TOUS réglages", check: (d, s) => s.fullConfigStreak >= 25 },
+    { id: 'b_duke', category: 'special', icon: '🎩', title: "The Duke", desc: "10 réussites consécutives sur Maj7/min7 (Acad.)", check: (d) => d.stats.str_jazz >= 10 },
+    { id: 'b_007', category: 'special', icon: '🕵️', title: "Agent 007", desc: "10 réussites consécutives sur MinMaj7", check: (d) => d.stats.str_007 >= 10 },
+    { id: 'b_dem', category: 'special', icon: '💣', title: "Démineur", desc: "10 réussites consécutives sur Dim7", check: (d) => d.stats.str_dim >= 10 },
+    { id: 'b_acro', category: 'special', icon: '🤸', title: "L'Acrobate", desc: "10 réussites consécutives sur Renversements", check: (d) => d.stats.str_inv >= 10 },
+    { id: 'b_goldear', category: 'special', icon: '👂', title: "Oreille d'Or", desc: "20 sans faute en mode Inverse", check: (d, s) => s.mode === 'inverse' && s.streak >= 20 },
+    { id: 'b_comp', category: 'special', icon: '🎼', title: "Le Compositeur", desc: "Série de 10 sans faute (Inverse)", check: (d, s) => s.mode === 'inverse' && s.streak >= 10 },
+
+    // --- CATÉGORIE: HÉRITAGE (Secrets & Maîtrise) ---
+    // Note: Les badges de Matière sont générés ci-dessous et ajoutés à ce tableau
+    { id: 'b_leg', category: 'lore', icon: '👑', title: "La Légende", desc: "Débloquer tous les badges standards", check: (d) => d.badges.filter(bid => !bid.startsWith('b_mat_')).length >= (BADGES.filter(b => !b.secret).length - 1) }
 ];
 
-export const COACH_DB = {
-    start: [ "Entraîne-toi encore un peu, j'ai besoin de plus de données pour analyser ton oreille.", "Je t'observe... Enchaîne quelques accords pour que je puisse établir ton profil." ],
-    weakness: {
-        maj7: [ {t:"Théorie", m:"Le **M7M (Maj7)** te résiste ? Cherche la *Sensible* (la 7ème note) qui veut monter d'un demi-ton vers la Tonique."}, {t:"Astuce", m:"Pour le **M7M (Maj7)**, arpège les notes dans ta tête : c'est le début de la chanson *'Mr. Sandman'* (1-3-5-7)."} ],
-        min7: [ {t:"Théorie", m:"Le **m7m (min7)** est souvent le **IIe degré** d'une gamme majeure. Imagine qu'il amène une cadence parfaite (II - V - I)."} ],
-        dom7: [ {t:"Théorie", m:"La présence du **Triton** (3 tons) dans le **M7m (Dom7)** crée une forte tension qui appelle une résolution."} ],
-        hdim7: [ {t:"Théorie", m:"Le **Ø (m7b5)** est le **IIe degré** d'une gamme mineure. Comme le **m7m**, mais avec une quinte bémol qui rajoute de la dissonance."} ],
-        dim7: [ {t:"Théorie", m:"Le **dim7** est composé uniquement de **tierces mineures** empilées. C'est un enchevêtrement de deux tritons !"} ],
-        minmaj7: [ {t:"Image", m:"Le **mM7 (minMaj7)** est l'accord du mystère, type *James Bond* ou film noir. Une base mineure triste avec une note finale perçante."} ]
-    },
-    streak: [
-        "Déjà 5 bonnes réponses ! Tu entres dans la zone. Respire et garde le rythme.",
-        "Belle régularité. Ton cerveau commence à traiter les 'couleurs' sans calcul.",
-        "Une série solide. C'est la constance qui forge l'oreille absolue."
-    ],
-    speed: [
-        "Tu réponds à l'instinct, c'est excellent. C'est le secret de l'improvisation.",
-        "Tes réflexes sont bons. L'oreille relative doit devenir une seconde nature, sans calcul mental.",
-        "Vitesse impressionnante ! Attention tout de même à bien laisser résonner l'accord dans ta tête."
-    ],
-    theory: [
-        "N'oublie pas de consulter le **Codex**. Associer une image mentale à un son renforce la mémoire.",
-        "Chaque accord a une personnalité. Le Maj7 est nostalgique, le Dom7 est tendu. Cherche l'émotion."
-    ],
-    master: [ 
-        "Précision chirurgicale. Pour plus de défi, active la **Position Ouverte** dans les réglages.", 
-        "C'est trop facile ? La **Position Ouverte** écarte les notes et teste vraiment ton oreille intérieure.",
-        "Tu maîtrises la structure serrée. Essaie d'identifier ces mêmes accords sur une tessiture plus large (Position Ouverte)."
-    ],
-    boost: [ 
-        "La régularité bat l'intensité. Mieux vaut 5 minutes par jour qu'une heure par semaine.", 
-        "L'oreille se construit pendant le sommeil. Tes efforts d'aujourd'hui paieront demain.",
-        "Ne te décourage pas. L'erreur est la seule façon de calibrer ton oreille."
-    ]
-};
+// GÉNÉRATION DES BADGES SECRETS DE MATIÈRE
+LORE_MATERIALS.forEach((m, i) => {
+    BADGES.push({
+        id: `b_mat_${i}`,
+        category: 'lore',
+        secret: true, // Invisible tant que non débloqué
+        icon: '💠',
+        title: `L'Éveil du ${m.name}`,
+        desc: `Atteindre la Maîtrise de ${m.name} (Niveau ${i*5 + 1})`,
+        check: (d) => d.mastery >= (i * 5 + 1)
+    });
+});
 
 export const PHYSICAL_MAP = {
     'Digit1': 0, 'Digit2': 1, 'Digit3': 2, 'Digit4': 3, 'Digit5': 4, 'Digit6': 5,
     'Numpad1': 0, 'Numpad2': 1, 'Numpad3': 2, 'Numpad4': 3, 'Numpad5': 4, 'Numpad6': 5,
     'KeyQ': 0, 'KeyW': 1, 'KeyE': 2, 'KeyR': 3, 'KeyT': 4, 'KeyY': 5, 'KeyZ': 5
+};
+
+// COACH DATABASE
+export const COACH_DB = {
+    start: ["Prends une grande respiration.", "Ferme les yeux pour mieux entendre.", "Visualise le clavier.", "Écoute la basse en premier.", "Chante la note la plus aiguë."],
+    streak: ["Tu es en feu !", "Rien ne t'arrête !", "Quelle concentration !", "Ton oreille s'affine.", "Zone de Flow activée."],
+    speed: ["Vif comme l'éclair !", "Réflexes impressionnants.", "Ton cerveau traite le son instantanément.", "Vitesse lumière !", "Tu anticipes l'harmonie."],
+    master: ["Une oreille absolue en devenir ?", "Maîtrise totale.", "Tu entends les couleurs.", "L'harmonie n'a plus de secrets.", "Niveau professionnel."],
+    theory: ["La 7ème majeure est sensible.", "Le triton divise l'octave en deux.", "La tierce définit la couleur (Majeur/Mineur).", "La quinte stabilise l'accord.", "Les renversements changent la basse, pas la nature."],
+    boost: ["L'erreur est la meilleure professeure.", "Respire, et réécoute.", "Ne lâche rien, ça va venir.", "Chaque essai construit ton cerveau.", "La régularité est la clé."],
+    weakness: {
+        maj7: [{t:"Technique", m:"Essaie d'entendre la 7ème majeure qui frotte juste sous l'octave."}],
+        min7: [{t:"Technique", m:"C'est un accord doux, sans le frottement du Maj7 ni la tension du Dom7."}],
+        dom7: [{t:"Technique", m:"Repère le Triton. Ça sonne 'bluesy' et instable."}],
+        hdim7: [{t:"Technique", m:"C'est sombre et tendu. Comme un film noir."}],
+        dim7: [{t:"Technique", m:"Symétrique et effrayant. Le son des méchants de cinéma."}],
+        minmaj7: [{t:"Technique", m:"Le son de détective privé. Mineur + Tension aiguë."}]
+    }
 };

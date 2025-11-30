@@ -75,6 +75,24 @@ export const App = {
         Piano.init(); 
     },
 
+    // CENTRALIZED LOCKING LOGIC
+    isLocked(id) {
+        const c = DB.chords.find(x => x.id === id);
+        if(!c) return false;
+        
+        // Jazz Logic: Mastery 1 + Level progression
+        if(this.data.currentSet === 'jazz' && this.data.mastery === 1) {
+            return (c.unlockLvl && c.unlockLvl > this.data.lvl);
+        }
+        
+        // Lab Logic: Always Level progression
+        if(this.data.currentSet === 'laboratory') {
+            return (c.unlockLvl && c.unlockLvl > this.data.lvl);
+        }
+        
+        return false;
+    },
+
     loadSet(setName, silent = false) {
         if(!DB.sets[setName]) setName = 'academy';
         this.data.currentSet = setName;
@@ -99,11 +117,13 @@ export const App = {
         const validInvIds = DB.currentInvs.map(i => i.id);
         this.data.settings.activeI = validInvIds;
 
-        if(this.data.currentSet === 'jazz' && this.data.mastery === 1) {
-            this.data.settings.activeC = this.data.settings.activeC.filter(id => {
-                const c = DB.chords.find(x => x.id === id);
-                return c && c.unlockLvl <= this.data.lvl;
-            });
+        // SANITIZATION: Filter out locked items based on current level/mastery
+        this.data.settings.activeC = this.data.settings.activeC.filter(id => !this.isLocked(id));
+        
+        // Ensure at least one chord is active (fallback to first available)
+        if(this.data.settings.activeC.length === 0) {
+            const available = DB.chords.find(c => !this.isLocked(c.id));
+            if(available) this.data.settings.activeC = [available.id];
         }
 
         if(!silent) {
@@ -132,11 +152,20 @@ export const App = {
         if(this.data.lvl < 20) return;
         if(confirm("Félicitations ! Vous allez valider ce niveau de Maîtrise.\n\nVotre Niveau reviendra à 1, mais vous gagnerez une Étoile et conserverez vos stats et badges.\n\nContinuer ?")) {
             this.data.mastery++;
-            this.data.lvl = 1;
+            this.data.lvl = 1; // Reset Level
             this.data.xp = 0;
             this.data.next = 100;
+            
+            // CLEANUP: Remove locked items since Level dropped to 1
+            this.data.settings.activeC = this.data.settings.activeC.filter(id => !this.isLocked(id));
+            if(this.data.settings.activeC.length === 0) {
+                 const available = DB.chords.find(c => !this.isLocked(c.id));
+                 if(available) this.data.settings.activeC = [available.id];
+            }
+
             this.save();
             window.UI.closeModals();
+            window.UI.renderBoard(); // Update visual board
             window.UI.updateHeader();
             Audio.sfx('prestige');
             window.UI.confetti();
@@ -196,14 +225,14 @@ export const App = {
     },
 
     toggleSetting(type, id) {
-        if(this.data.currentSet === 'jazz' && this.data.mastery === 1) {
+        // Use Centralized Locking Logic
+        if(type === 'c' && this.isLocked(id)) {
             const chord = DB.chords.find(c => c.id === id);
-            if(type === 'c' && chord && chord.unlockLvl > this.data.lvl) {
-                window.UI.showToast(`🔒 Débloqué au Niveau ${chord.unlockLvl}`);
-                window.UI.vibrate([50,50]);
-                return;
-            }
+            window.UI.showToast(`🔒 Débloqué au Niveau ${chord.unlockLvl}`);
+            window.UI.vibrate([50,50]);
+            return;
         }
+
         const list = type === 'c' ? this.data.settings.activeC : this.data.settings.activeI;
         const idx = list.indexOf(id);
         if (idx > -1) { 
@@ -264,10 +293,11 @@ export const App = {
                 if(invId === 3) intervals = [0, 9, 13]; 
             }
             else if(type.id === 'struct_45tr') {
-                if(invId === 0) intervals = [0, 6, 11]; 
-                if(invId === 1) intervals = [0, 5, 11]; 
-                if(invId === 2) intervals = [0, 6, 13]; 
-                if(invId === 3) intervals = [0, 7, 13]; 
+                // FIXED SEMANTIC AUDIO MATCHING VISUALS
+                if(invId === 0) intervals = [0, 5, 11]; // Pos Basse: Basse + 4te + Tr
+                if(invId === 1) intervals = [0, 6, 11]; // Pos Haute: Basse + Tr + 4te
+                if(invId === 2) intervals = [0, 7, 13]; // Pos Basse: Basse + 5te + Tr
+                if(invId === 3) intervals = [0, 6, 13]; // Pos Haute: Basse + Tr + 5te
             } 
             else if(type.id === 'trichord') {
                 if(invId === 0) intervals = [0, 1, 2]; // Chromatique
@@ -412,7 +442,9 @@ export const App = {
         
         if(type.id === 'dim7' && this.data.currentSet !== 'jazz') inv = DB.currentInvs.find(i => i.id === 0);
         
-        const open = document.getElementById('toggleOpen').checked;
+        // STATE LEAK FIX: Ensure Open Position only applies to Academy
+        const open = document.getElementById('toggleOpen').checked && this.data.currentSet === 'academy';
+        
         const root = (open ? 36 : 48) + Math.floor(Math.random()*12);
         
         try {
@@ -514,14 +546,17 @@ export const App = {
         if(this.vignetteRef) { clearTimeout(this.vignetteRef); this.vignetteRef = null; }
         document.getElementById('sprintFill').style.transition = 'none';
         document.getElementById('vignette').className = 'vignette-overlay';
+        
         const c = this.session.chord;
         const okC = this.session.selC === c.type.id;
         const isDim = c.type.id === 'dim7' && this.data.currentSet !== 'jazz';
         const okI = isDim ? true : (this.session.selI === c.inv);
+        
         this.session.done = true; 
         this.session.roundLocked = true; 
-        const win = (okC && okI);
-        this.processWin(win);
+        
+        // Pass distinct booleans for granular stats
+        this.processWin(okC, okI);
         window.UI.reveal(okC, okI);
     },
     
@@ -529,10 +564,24 @@ export const App = {
         if(this.session.roundLocked) return; 
         this.session.done = true;
         this.session.roundLocked = true;
+        
         const userIdx = this.session.quizUserChoice;
         const correctIdx = this.session.quizCorrectIdx;
-        const win = (userIdx === correctIdx);
-        this.processWin(win);
+        
+        // Analyze user choice vs correct choice for partial stats
+        const userOpt = this.session.quizOptions[userIdx];
+        const corrOpt = this.session.quizOptions[correctIdx];
+
+        const okC = userOpt.type.id === corrOpt.type.id;
+        
+        // Check inversion (handle Dim7 edge case)
+        let okI = userOpt.inv === corrOpt.inv;
+        if (corrOpt.type.id === 'dim7' && this.data.currentSet !== 'jazz') okI = true;
+        
+        const win = (userIdx === correctIdx); // Strict win for visual feedback on buttons
+        
+        this.processWin(okC, okI);
+        
         document.querySelectorAll('.quiz-btn').forEach((btn, i) => {
             const o = this.session.quizOptions[i];
             
@@ -548,7 +597,10 @@ export const App = {
         });
     },
 
-    processWin(win) {
+    processWin(okC, okI) {
+        // STRICT GAMEPLAY WIN CONDITION (Must have both right for points/lives)
+        const win = okC && okI;
+        
         const c = this.session.chord;
         const isDim = c.type.id === 'dim7' && this.data.currentSet !== 'jazz';
         const difficultyMult = this.getDifficultyMultiplier();
@@ -568,32 +620,42 @@ export const App = {
             else { invObj = this.data.stats.i[c.inv]; }
             if(invObj) oldIRank = getRank(invObj.ok);
         }
+        
         if(!isTrivial) {
+            // --- PARTIAL STATS UPDATE LOGIC ---
+            
+            // 1. UPDATE INVERSION STATS (Using okI)
             if(this.data.currentSet === 'jazz') {
                  if(!this.data.stats.v[c.inv]) this.data.stats.v[c.inv] = {ok:0, tot:0};
                  this.data.stats.v[c.inv].tot++;
-                 if(win) this.data.stats.v[c.inv].ok++;
+                 if(okI) this.data.stats.v[c.inv].ok++;
             } else if(this.data.currentSet === 'laboratory') {
                  if(!this.data.stats.l[c.inv]) this.data.stats.l[c.inv] = {ok:0, tot:0};
                  this.data.stats.l[c.inv].tot++;
-                 if(win) this.data.stats.l[c.inv].ok++;
+                 if(okI) this.data.stats.l[c.inv].ok++;
             } else {
                  if(!isDim) {
                      if(!this.data.stats.i[c.inv]) this.data.stats.i[c.inv] = {ok:0, tot:0};
                      this.data.stats.i[c.inv].tot++; 
-                     if(win) this.data.stats.i[c.inv].ok++;
+                     if(okI) this.data.stats.i[c.inv].ok++;
                  }
             }
+
+            // 2. UPDATE CHORD STATS (Using okC)
             if(!this.data.stats.c[c.type.id]) this.data.stats.c[c.type.id] = {ok:0, tot:0};
             this.data.stats.c[c.type.id].tot++; 
-            if(win) this.data.stats.c[c.type.id].ok++;
+            if(okC) this.data.stats.c[c.type.id].ok++;
+            
             this.data.stats.totalPlayed++; 
             this.calcGlobalStats();
+            
+            // Combos require STRICT WIN
             if(win) {
                 const comboID = `${c.type.id}-${c.inv}`;
                 if(!this.data.stats.combos.includes(comboID)) this.data.stats.combos.push(comboID);
             }
         }
+        
         if(win) {
             let basePts = 50; if(document.getElementById('toggleOpen').checked) basePts = 75;
             if(this.session.hint) basePts = 20;
@@ -748,7 +810,10 @@ export const App = {
         const type = ac[Math.floor(Math.random()*ac.length)];
         let inv = ai[Math.floor(Math.random()*ai.length)];
         if(type.id === 'dim7' && this.data.currentSet !== 'jazz') inv = DB.currentInvs.find(i => i.id === 0);
-        const open = document.getElementById('toggleOpen').checked;
+        
+        // STATE LEAK FIX: Force Open Position to false if not Academy
+        const open = document.getElementById('toggleOpen').checked && this.data.currentSet === 'academy';
+        
         const root = (open ? 36 : 48) + Math.floor(Math.random()*12);
         const notes = this.getNotes(type, inv.id, root, open);
         const realBass = Math.min(...notes);
@@ -794,10 +859,10 @@ export const App = {
                     if(configId === 2) { top='6M'; bot='3M'; } 
                     if(configId === 3) { top='3M'; bot='6M'; } 
                 } else if (t.id === 'struct_45tr') {
-                    if(configId === 0) { top='4J'; bot='Tr'; }
-                    if(configId === 1) { top='Tr'; bot='4J'; }
-                    if(configId === 2) { top='5J'; bot='Tr'; }
-                    if(configId === 3) { top='Tr'; bot='5J'; }
+                    if(configId === 0) { top='Tr'; bot='4J'; }
+                    if(configId === 1) { top='4J'; bot='Tr'; }
+                    if(configId === 2) { top='Tr'; bot='5J'; }
+                    if(configId === 3) { top='5J'; bot='Tr'; }
                 }
                 return `<div class="figured-bass quiz-huge"><span>${top}</span><span>${bot}</span></div>`;
             }
