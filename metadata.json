@@ -1,0 +1,5 @@
+{
+  "name": "Pure JS Skeleton",
+  "description": "A modular pure JavaScript application structure based on ES Modules.",
+  "requestFramePermissions": []
+}
