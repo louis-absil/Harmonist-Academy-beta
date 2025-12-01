@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Harmonist Academy - V4.0 (Codex)</title>
+    <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="/index.css">
+<script type="importmap">
+{
+  "imports": {
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "url": "https://aistudiocdn.com/url@^0.11.4"
+  }
+}
+</script>
+</head>
+<body>
+
+<div class="vignette-overlay" id="vignette"></div>
+
+<div class="badge-ribbon" id="badgeRibbon">
+    <span class="badge-ribbon-icon">🏅</span>
+    <div>
+        <span class="badge-txt-gold" id="badgeRibbonTitle">Badge</span>
+        <span>Débloqué !</span>
+    </div>
+</div>
+
+<canvas class="confetti-canvas" id="confetti"></canvas>
+
+<div class="level-hud" id="levelOverlay">
+    <div style="font-size:4rem;">🎉</div>
+    <p>Niveau Supérieur !</p>
+    <h1 id="lvlOverlayName">...</h1>
+</div>
+
+<div class="combo-popup" id="comboPopup">
+    <h2 id="comboTitle">COMBO x10</h2>
+    <p>Incroyable !</p>
+</div>
+
+<div class="toast-box" id="rankToast"></div>
+
+<div class="app-container" id="appContainer">
+    <header>
+        <div class="header-left" onclick="window.UI.openModal('modalProfile')">
+            <div class="rank-icon" id="rankIcon">📄</div>
+            <div class="rank-text">
+                <div style="display:flex; align-items:center;">
+                    <div class="lvl-pill">Niveau <span id="lvlNum">1</span></div>
+                    <div class="mastery-stars" id="headerStars"></div>
+                </div>
+                <div class="rank-title" id="rankTitle">...</div>
+                <div class="xp-container"><div class="xp-fill" id="xpBar"></div></div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="stats-cluster">
+                <div class="stat-badge">
+                    <span class="stat-lbl">Précision</span>
+                    <span class="stat-val" id="precisionVal">0%</span>
+                </div>
+                <div class="stat-badge trophy score-group" id="scoreGroup">
+                    <span class="score-main" id="currentScoreVal">0</span>
+                    <span class="score-sub">TOP: <span id="highScoreVal">0</span></span>
+                </div>
+                <div class="stat-badge">
+                    <span class="stat-lbl">Série</span>
+                    <span class="stat-val" id="streakVal" style="color:var(--accent)">0</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="window.UI.openCodex()">📖</button>
+                <button class="icon-btn" onclick="window.UI.openModal('statsModal')">📊</button>
+                <button class="icon-btn" onclick="window.UI.openModal('settingsModal')">⚙️</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="tools-bar" id="toolsBar">
+        <div class="mode-selector">
+            <div class="mode-opt active" id="modeZen" onclick="window.App.setMode('zen')">🧘 Zen</div>
+            <div class="mode-opt" id="modeChrono" onclick="window.App.setMode('chrono')">⚡ Chrono</div>
+            <div class="mode-opt" id="modeSprint" onclick="window.App.setMode('sprint')">🏃 Sprint</div>
+            <div class="mode-opt" id="modeInverse" onclick="window.App.setMode('inverse')">🎧 Inverse</div>
+        </div>
+        <div class="vis-container">
+            <canvas id="visualizer"></canvas>
+            <canvas id="pianoCanvas"></canvas>
+            <div class="feedback-msg" id="statusText">Prêt ?</div>
+            <div class="sprint-bar-container"><div class="sprint-bar-fill" id="sprintFill"></div></div>
+        </div>
+        <div class="timer-badge" id="chronoDisplay">
+            <span id="timerVal">60</span><span class="lives" id="livesVal">❤️❤️❤️</span>
+        </div>
+    </div>
+
+    <div class="game-area" id="mainArea">
+        <div class="panel" id="panelChord">
+            <div class="panel-label"><span>Qualité</span><span>(1-6)</span></div>
+            <div class="pad-grid grid-c" id="chordGrid"></div>
+        </div>
+        
+        <div class="panel" id="invPanel">
+            <div class="panel-label"><span id="invPanelLabel">Renversement</span><span>(A Z E R)</span></div>
+            <div class="pad-grid grid-i" id="invGrid"></div>
+        </div>
+        
+        <div id="quizArea">
+            <div class="quiz-card">
+                <div class="quiz-hint-txt">Trouve le son :</div>
+                <div class="quiz-target" id="quizTargetLbl">...</div>
+            </div>
+            <div class="quiz-options">
+                <button class="quiz-btn" id="qbtn-0" onclick="window.App.selectQuiz(0)">A<span class="reveal">...</span></button>
+                <button class="quiz-btn" id="qbtn-1" onclick="window.App.selectQuiz(1)">B<span class="reveal">...</span></button>
+                <button class="quiz-btn" id="qbtn-2" onclick="window.App.selectQuiz(2)">C<span class="reveal">...</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="command-deck">
+        <button class="cmd-btn btn-listen" id="playBtn" onclick="window.App.playNew()">
+            <span class="icon-lg">▶</span><span>Écouter</span>
+        </button>
+        <button class="cmd-btn btn-listen" id="replayBtn" onclick="window.App.replay()" disabled>
+            <span class="icon-lg">↺</span><span>Rejouer</span>
+        </button>
+        <button class="cmd-btn btn-action" id="valBtn" onclick="window.App.handleMain()" disabled>Valider</button>
+        <button class="cmd-btn btn-listen" id="hintBtn" onclick="window.App.hint()" disabled style="flex:0.5; font-size:1.2rem;">🔍</button>
+    </div>
+    <div class="app-footer">Harmonist Academy © 2025 Louis Absil</div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <div style="display:flex; justify-content:flex-end;">
+            <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+        </div>
+        <div class="brand-title">
+            <span class="brand-primary">Harmonist</span> <span class="brand-accent">Academy</span>
+        </div>
+        
+        <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Chambre (Set)</h4>
+        <div class="settings-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="setting-chip active" id="set-academy" onclick="window.App.loadSet('academy')">🏛️ Académie</div>
+            <div class="setting-chip" id="set-jazz" onclick="window.App.loadSet('jazz')">🎷 Le Club</div>
+        </div>
+        
+        <div class="toggle-row" id="rowToggleOpen">
+            <span>Position Ouverte <span style="font-size:0.6rem; color:var(--gold); border:1px solid var(--gold); border-radius:4px; padding:1px 3px; margin-left:5px;">+50% XP</span></span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleOpen"><span class="slider"></span>
+            </label>
+        </div>
+
+        <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Accords</h4>
+        <div id="settingsChords" class="settings-grid"></div>
+        <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Variations</h4>
+        <div id="settingsInvs" class="settings-grid"></div>
+        <button class="cmd-btn" onclick="window.App.hardReset()" style="width:100%; margin-top:20px; background:rgba(239, 68, 68, 0.2); color:var(--error); padding:10px;">⚠️ Réinitialiser</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalProfile">
+    <div class="modal">
+        <div style="display:flex; justify-content:flex-end;">
+            <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+        </div>
+        <div class="profile-header">
+            <div class="profile-avatar" id="profileAvatar">🎓</div>
+            <h2 class="profile-title" id="profileName">Harmoniste</h2>
+            <div class="profile-subtitle" id="profileRank">Niveau 1</div>
+            <div class="profile-subtitle" id="profileMasteryName" style="color:var(--text); margin-top:2px; font-weight:400; font-size:0.8rem;"></div>
+            <div class="mastery-stars" id="profileStars" style="justify-content:center; margin-top:5px; font-size:1.2rem;"></div>
+        </div>
+
+        <div class="xp-big-container">
+            <div class="xp-big-fill" id="profileXpBar"></div>
+        </div>
+        <div class="xp-text">
+            <span id="profileXpVal">0 XP</span>
+            <span id="profileNextVal">100 XP</span>
+        </div>
+
+        <div class="stat-grid-profile">
+            <div class="stat-card">
+                <h3 id="profileTotal">0</h3>
+                <p>Accords Joués</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="profileAcc">0%</h3>
+                <p>Précision Globale</p>
+            </div>
+        </div>
+
+        <div id="prestigeSection">
+            <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:10px; line-height:1.4;">
+                Atteins le <strong>Niveau 20</strong> pour passer un cap de maîtrise et débloquer de nouveaux contenus.
+            </p>
+            <button class="btn-prestige" id="btnPrestige" onclick="window.App.passMastery()" disabled>
+                <span class="shiny"></span>
+                <span class="prestige-main-txt">✨ Valider la Maîtrise</span>
+                <span class="prestige-sub-txt" id="prestigeNextName">Vers : Le Club</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="statsModal">
+    <div class="modal" style="text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0;">Statistiques</h2>
+            <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+        </div>
+        <div class="coach-box" id="coachDisplay"></div>
+        <h4 style="margin:0 0 10px 0; font-size:0.8rem; color:var(--text-dim); text-transform:uppercase;">Historique de Précision</h4>
+        <div class="history-box" id="historyChart">
+            <div class="chart-limit-line"></div>
+        </div>
+        <h4 style="margin:15px 0 10px 0; font-size:0.8rem; color:var(--text-dim); text-transform:uppercase;">Détails</h4>
+        <div id="statsContent"></div>
+        
+        <div class="badges-section">
+            <h4 style="margin:0 0 10px 0; font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; display:flex; justify-content:space-between;">
+                <span>Trophées</span> <span id="badgeCount">0/25</span>
+            </h4>
+            <div class="badges-grid" id="badgesGrid"></div>
+            <div id="badgeDetail" style="font-size:0.7rem; color:var(--gold); text-align:center; min-height:20px; margin-top:5px; font-weight:700;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- CODEX MODAL -->
+<div class="modal-overlay" id="modalCodex">
+    <div class="modal" style="width:95%; max-width:500px; height:80vh; display:flex; flex-direction:column; padding:0; background: #0f172a; border-radius: 20px;">
+        <div style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--panel-border);">
+            <h2 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:10px; color:var(--text);">📖 Codex</h2>
+            <span style="cursor:pointer; font-size:1.5rem; color:var(--text-dim);" onclick="window.UI.closeModals()">✕</span>
+        </div>
+        
+        <!-- Grid View -->
+        <div id="codexGridView" style="flex:1; overflow-y:auto; padding:10px;">
+            <div class="codex-grid" id="codexGrid"></div>
+        </div>
+
+        <!-- Detail View -->
+        <div id="codexDetailView" class="codex-detail">
+            <div style="position:absolute; top:10px; left:10px; cursor:pointer; font-size:0.9rem; z-index:20; color:var(--primary); display:flex; align-items:center; gap:5px;" onclick="window.UI.backToCodex()">
+                <span>← Retour</span>
+            </div>
+            <div style="position:absolute; top:10px; right:10px; cursor:pointer; font-size:1.2rem; z-index:20; color:var(--text-dim);" onclick="window.UI.closeCodexCard()">✕</div>
+            
+            <div style="padding:20px; padding-top:40px; display:flex; flex-direction:column; height:100%;">
+                <div class="cd-header">
+                    <div class="cd-icon" id="cdIcon">🎹</div>
+                    <div class="cd-title">
+                        <h3 id="cdName">Majeur 7</h3>
+                        <span id="cdSub">Maj7</span>
+                    </div>
+                    <button id="cdPlayBtn" class="btn-gold-play" onclick="window.UI.playCodexSound()">▶</button>
+                </div>
+
+                <div class="cd-vis">
+                    <canvas id="codexPianoCanvas" width="300" height="100"></canvas>
+                </div>
+
+                <div class="cd-lore">
+                    <div class="cd-flavor" id="cdFlavor">...</div>
+                    <div class="cd-theory" id="cdTheory"></div>
+                    <div class="cd-coach">
+                        <span>🧠</span> <span id="cdCoach">Astuce...</span>
+                    </div>
+                    <button class="btn-action-train" onclick="window.UI.startTraining()">
+                        <span>🎯 S'entraîner sur cet accord</span>
+                    </button>
+                </div>
+
+                <div class="cd-nav">
+                    <button class="nav-btn-round" id="cdPrevBtn">←</button>
+                    <button class="nav-btn-round" id="cdNextBtn">→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalGameOver">
+    <div class="modal">
+        <div style="font-size:3rem;">🏁</div>
+        <h2 style="margin:10px 0;">Terminé !</h2>
+        <div style="font-size:3.5rem; font-weight:900; color:var(--gold); line-height:1;" id="endScore">0</div>
+        <div style="color:var(--text-dim); margin-bottom:20px;">Record: <span id="endHighScore">0</span></div>
+        <div>
+            <button class="cmd-btn btn-action next" style="width:100%; padding:15px;" onclick="window.App.replaySameMode()">Rejouer</button>
+            <button class="cmd-btn btn-listen" style="width:100%; margin-top:10px; padding:15px;" onclick="window.App.setMode('zen'); window.UI.closeModals()">Menu Principal</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./main.js"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
