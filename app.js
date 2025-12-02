@@ -1,3 +1,5 @@
+
+
 import { DB, BADGES, COACH_DB } from './data.js';
 import { Audio, Piano } from './audio.js';
 import { UI } from './ui.js';
@@ -24,9 +26,20 @@ export const App = {
         currentSprintTime: 10, roundLocked: false,
         startTime: 0, cleanStreak: 0, openStreak: 0, fullConfigStreak: 0, fastStreak: 0, lowLifeRecovery: false, lastActionTime: 0,
         
-        // TRACKERS
+        // TRACKERS & SECRETS
         replayCount: 0, djClickTimes: [], selectionHistory: [], prevChordHash: null,
-        str36Streak: 0, str45Streak: 0, geoStreak: 0, triStreak: 0, rootlessStreak: 0, monoStreak: 0, dejaVu: false
+        str36Streak: 0, str45Streak: 0, geoStreak: 0, triStreak: 0, rootlessStreak: 0, monoStreak: 0, dejaVu: false,
+        
+        // NEW BADGES TRACKERS
+        audioStartTime: 0,
+        lastReactionTime: Infinity,
+        hasReplayed: false,
+        pureStreak: 0,
+        razorTriggered: false,
+        titleClicks: 0,
+        lastChordType: null,
+        jackpotStreak: 0,
+        collectedRoots: null // Set object initialized in resetRound
     },
     timerRef: null,
     sprintRef: null,
@@ -265,14 +278,27 @@ export const App = {
             this.session.cleanStreak=0; this.session.openStreak=0; 
             this.session.fullConfigStreak=0; this.session.fastStreak=0;
             this.session.lowLifeRecovery = false;
-            this.session.startTime = Date.now(); 
+            this.session.startTime = Date.now();
+            
+            // Full Reset for session-persistent secrets
+            this.session.pureStreak = 0;
+            this.session.titleClicks = 0;
+            this.session.lastChordType = null;
+            this.session.jackpotStreak = 0;
+            this.session.collectedRoots = new Set();
         }
         this.session.time = 60; this.session.lives = 3; this.session.done = false; 
         this.session.roundLocked = false; 
         this.session.chord = null;
         this.session.quizUserChoice = null;
         this.session.lastActionTime = Date.now();
+        this.session.audioStartTime = Date.now(); // Init
         this.session.hint = false;
+        
+        // Reset per-round trackers
+        this.session.hasReplayed = false;
+        this.session.razorTriggered = false;
+        
         window.UI.resetVisuals(); window.UI.updateHeader(); window.UI.updateChrono(); window.UI.msg("Prêt ?");
         document.getElementById('playBtn').innerHTML = "<span class='icon-lg'>▶</span><span>Écouter</span>";
         document.getElementById('valBtn').innerText = "Valider";
@@ -280,6 +306,13 @@ export const App = {
         document.getElementById('valBtn').disabled = true;
         document.getElementById('hintBtn').disabled = false;
         document.getElementById('hintBtn').style.opacity = '1';
+    },
+
+    clickTitle() {
+        this.session.titleClicks = (this.session.titleClicks || 0) + 1;
+        // No Audio feedback as requested
+        window.UI.vibrate(20); // Tactile feedback only
+        this.checkBadges();
     },
 
     getNotes(type, invId, root, open, contextSet = null) {
@@ -384,6 +417,136 @@ export const App = {
             document.getElementById('playBtn').disabled = false;
         }
     },
+    
+    // --- QUIZ LOGIC MVC REFACTOR ---
+    generateQuizOption() {
+        const activeC = DB.chords.filter(c => this.data.settings.activeC.includes(c.id));
+        const type = activeC[Math.floor(Math.random() * activeC.length)];
+        let invId = 0;
+        
+        if(this.data.currentSet === 'laboratory') {
+            const availableInvs = this.data.settings.activeI.filter(idx => type.configs[idx]);
+            if(availableInvs.length === 0) return { type, inv: 0 };
+            invId = availableInvs[Math.floor(Math.random()*availableInvs.length)];
+        } else {
+            const ai = DB.currentInvs.filter(i => this.data.settings.activeI.includes(i.id));
+            if(ai.length === 0) return { type, inv: 0 };
+            const invObj = ai[Math.floor(Math.random()*ai.length)];
+            invId = invObj.id;
+            if(type.id === 'dim7' && this.data.currentSet !== 'jazz') invId = 0;
+        }
+        
+        // Lab mode specific check: ensure structure type has configs
+        if(this.data.currentSet === 'laboratory' && !type.configs) return this.generateQuizOption();
+        
+        return { type, inv: invId };
+    },
+
+    // HELPER to Calculate Root based on Fixed Bass (Audio Physics)
+    getNotesWithFixedBass(type, inv, fixedBass) {
+        // 1. Get raw intervals (root 0)
+        let tempNotes = this.getNotes(type, inv, 0, false);
+        // 2. Find lowest note (interval from 0)
+        let minInterval = Math.min(...tempNotes);
+        // 3. Calculate necessary root so that (Root + MinInterval) == FixedBass
+        let effectiveRoot = fixedBass - minInterval;
+        // 4. Generate final notes
+        return this.getNotes(type, inv, effectiveRoot, false);
+    },
+
+    playNewQuiz() {
+        Audio.init();
+        if(!DB.chords.length) { this.loadSet('academy'); return; }
+        
+        this.session.done = false;
+        this.session.roundLocked = false;
+        this.session.quizUserChoice = null;
+        this.session.hint = false;
+        window.UI.resetVisuals();
+        this.session.lastActionTime = Date.now();
+        
+        // 1. Generate options with COMBINATION Uniqueness (Type+Inv)
+        const opts = [];
+        let safeguard = 0;
+        while(opts.length < 3 && safeguard < 100) {
+            safeguard++;
+            const candidate = this.generateQuizOption();
+            const exists = opts.some(o => o.type.id === candidate.type.id && o.inv === candidate.inv);
+            if(!exists) opts.push(candidate);
+        }
+        
+        // 2. Calculate Preview Notes with SAME BASS NOTE (Isochrony)
+        // Fixed Bass raised to 60 (C4) for Audio Clarity as requested
+        const fixedBass = 60 + Math.floor(Math.random() * 5); 
+        this.session.quizOptions = opts.map(o => {
+            const notes = this.getNotesWithFixedBass(o.type, o.inv, fixedBass);
+            return {
+                ...o,
+                notes: notes, // Store pre-calculated notes
+                label: (this.data.currentSet === 'laboratory') ? o.type.configs[o.inv].name : o.type.name
+            };
+        });
+        
+        // 3. Pick Correct Answer
+        // Fix Pigeonhole Bug: Pick from actual length, not hardcoded 3
+        const correctIdx = Math.floor(Math.random() * opts.length);
+        this.session.quizCorrectIdx = correctIdx;
+        const target = this.session.quizOptions[correctIdx];
+        
+        if (!target) {
+            // Safety fallback if options generation failed completely
+            this.playNewQuiz();
+            return;
+        }
+
+        // Metadata for hints/history (approximate root)
+        this.session.chord = { ...target, root: fixedBass }; 
+        
+        // 4. RENDER VIEW via UI (MVC Pattern)
+        // Pass the FULL target object so UI can display the Question Name
+        window.UI.renderQuizOptions(this.session.quizOptions, target);
+        window.UI.msg("Quel est ce son ?", "");
+        
+        // 5. NO AUTO PLAY (Silence at start - Audition Mode)
+        
+        // Buttons state
+        document.getElementById('playBtn').disabled = true; 
+        document.getElementById('replayBtn').disabled = true; 
+        document.getElementById('hintBtn').disabled = false;
+        document.getElementById('valBtn').innerText = "Valider"; 
+        document.getElementById('valBtn').className = "cmd-btn btn-action"; 
+        document.getElementById('valBtn').disabled = true;
+        
+        // UI Fix for play button text
+        document.getElementById('playBtn').innerHTML = "<span class='icon-lg'>...</span><span>En cours</span>";
+        
+        // Reset Logic for Secrets
+        this.session.hasReplayed = false;
+        // Jackpot logic updates in playNew(), not here (Quiz is different mode)
+    },
+
+    selectQuiz(idx) {
+        // Mode Instrument: Allow playing even if done
+        const opt = this.session.quizOptions[idx];
+        if(!opt) return;
+
+        // PREVIEW SOUND (Audition)
+        Audio.chord(opt.notes);
+        
+        // VISUAL FLASH ON CLICK
+        const btn = document.getElementById(`qbtn-${idx}`);
+        if(btn) { 
+            btn.classList.add('playing'); 
+            setTimeout(() => btn.classList.remove('playing'), 200); 
+        }
+
+        if(this.session.done) return; // If done, just play sound (Instrument mode)
+        
+        window.UI.vibrate(10);
+        this.session.quizUserChoice = idx;
+        window.UI.updateQuizSelection(idx);
+        document.getElementById('valBtn').disabled = false;
+    },
 
     playNew() {
         Audio.init();
@@ -413,6 +576,7 @@ export const App = {
         this.session.replayCount = 0;
         this.session.djClickTimes = [];
         this.session.selectionHistory = [];
+        this.session.hasReplayed = false; // Secret Tracker Reset
 
         const ac = DB.chords.filter(c => this.data.settings.activeC.includes(c.id));
         
@@ -422,6 +586,14 @@ export const App = {
         }
         
         const type = ac[Math.floor(Math.random()*ac.length)];
+        
+        // Jackpot Logic Check
+        if (this.session.lastChordType === type.id) {
+            this.session.jackpotStreak++;
+        } else {
+            this.session.jackpotStreak = 1;
+        }
+        this.session.lastChordType = type.id;
         
         let invId = 0;
         if(this.data.currentSet === 'laboratory') {
@@ -449,6 +621,8 @@ export const App = {
             this.session.chord = { type, inv: invId, notes, root, open };
             
             Audio.chord(notes);
+            this.session.audioStartTime = Date.now(); // Post-Audio Timestamp for Speed Badge
+
             if(this.data.currentSet === 'jazz' && invId === 3) {
                 const bassFreq = 440 * Math.pow(2, (root - 69) / 12);
                 Audio.playPureTone(bassFreq, Audio.ctx.currentTime, 1.5, 'sine'); 
@@ -490,6 +664,8 @@ export const App = {
     replay() { 
         if(this.session.chord) {
             this.session.replayCount++;
+            this.session.hasReplayed = true; // Mark as dirty for Pure Badge
+
             const now = Date.now();
             this.session.djClickTimes.push(now);
             this.session.djClickTimes = this.session.djClickTimes.filter(t => now - t <= 5000);
@@ -579,20 +755,12 @@ export const App = {
         let okI = userOpt.inv === corrOpt.inv;
         if (corrOpt.type.id === 'dim7' && this.data.currentSet !== 'jazz') okI = true;
         
-        const win = (userIdx === correctIdx);
-        
+        // Play the CORRECT Sound for reinforcement
+        Audio.chord(corrOpt.notes);
+
         this.processWin(okC, okI);
         
-        document.querySelectorAll('.quiz-btn').forEach((btn, i) => {
-            const o = this.session.quizOptions[i];
-            if(this.data.currentSet === 'laboratory') {
-                btn.innerHTML = o.label;
-            } else {
-                btn.querySelector('.reveal').innerHTML = o.label;
-            }
-            if(i === correctIdx) btn.classList.add('correct');
-            else if(i === userIdx && !win) btn.classList.add('wrong');
-        });
+        window.UI.revealQuiz(userIdx, correctIdx, this.session.quizOptions);
     },
 
     processWin(okC, okI) {
@@ -677,12 +845,26 @@ export const App = {
                 else newInvObj = this.data.stats.i[c.inv];
                 if(newInvObj) newIRank = getRank(newInvObj.ok);
                 
+                const rankMessagesC = {
+                    1: `${c.type.sub} : Rang Bronze débloqué !`,
+                    2: `${c.type.sub} : Rang Argent (Solide) !`,
+                    3: `${c.type.sub} : Rang Or (Maîtrise) !`
+                };
+                
+                const rankMessagesI = {
+                    1: "Variation : Rang Bronze atteint",
+                    2: "Variation : Niveau Argent",
+                    3: "Variation : Virtuose (Or)"
+                };
+
                 if(newCRank > oldCRank) {
                     rankUp = true;
-                    window.UI.showToast(`${c.type.sub} est passé en Or/Argent !`);
+                    const msg = rankMessagesC[newCRank] || `${c.type.sub} : Niveau Supérieur !`;
+                    window.UI.showToast(msg);
                 } else if (!isDim && newIRank > oldIRank) {
                     rankUp = true;
-                    window.UI.showToast(`Variation passée en Or/Argent !`);
+                    const msg = rankMessagesI[newIRank] || "Variation améliorée !";
+                    window.UI.showToast(msg);
                 }
                 
                 this.data.tempToday.tot++; this.data.tempToday.ok++;
@@ -720,6 +902,11 @@ export const App = {
                 const reactionTime = (Date.now() - this.session.lastActionTime);
                 if(reactionTime < 2000) this.session.fastStreak++; else this.session.fastStreak = 0; 
                 
+                // LOGIC UPDATE FOR INSTINCT PRIMAL (Vitesse pure < 1s)
+                // Use the audio timestamp for precise audio-to-click measurement
+                const reactionFromAudio = (Date.now() - this.session.audioStartTime);
+                this.session.lastReactionTime = reactionFromAudio;
+
                 if(c.type.id === 'maj7' || c.type.id === 'min7') this.data.stats.str_jazz++;
                 if(c.type.id === 'minmaj7') this.data.stats.str_007++;
                 if(c.type.id === 'dim7') this.data.stats.str_dim++;
@@ -737,6 +924,21 @@ export const App = {
                 const curHash = `${c.type.id}-${c.inv}-${c.root}`;
                 this.session.dejaVu = (this.session.prevChordHash === curHash);
                 this.session.prevChordHash = curHash;
+                
+                // SECRET LOGIC: PURE STREAK (Audiophile)
+                if (!this.session.hasReplayed) this.session.pureStreak++;
+                else this.session.pureStreak = 0;
+
+                // SECRET LOGIC: RAZOR EDGE (Fil du Rasoir)
+                if (this.session.mode === 'chrono' && this.session.time <= 2) {
+                    this.session.razorTriggered = true;
+                } else {
+                    this.session.razorTriggered = false;
+                }
+                
+                // SECRET LOGIC: ALCHEMIST (12 Roots)
+                if (!this.session.collectedRoots) this.session.collectedRoots = new Set();
+                this.session.collectedRoots.add(this.session.chord.root % 12);
 
                 window.UI.vibrate([50,50,50]); 
                 window.UI.confetti(); 
@@ -765,6 +967,10 @@ export const App = {
             this.session.geoStreak = 0; this.session.triStreak = 0;
             this.session.rootlessStreak = 0; this.session.monoStreak = 0;
             this.session.dejaVu = false;
+            
+            // RESET SECRETS ON FAIL
+            this.session.pureStreak = 0;
+            this.session.jackpotStreak = 0;
 
             Audio.sfx('lose'); window.UI.vibrate(300); window.UI.updateBackground(0);
             
@@ -846,15 +1052,21 @@ export const App = {
         // 2. CORRECTIVE PRIORITY: SPECIFIC WEAKNESS
         // Scan current weakness
         if (d.stats && d.stats.c) {
+            let candidates = [];
             for(let cid in d.stats.c) {
                 const st = d.stats.c[cid];
                 if(st && st.tot >= 5 && (st.ok / st.tot) < 0.45) {
                     if(COACH_DB.weakness[cid]) {
-                        // Return specific chord tip
-                        const tip = rand(COACH_DB.weakness[cid]);
-                        return { t: tip.t, m: tip.m };
+                        candidates.push(cid);
                     }
                 }
+            }
+            
+            if(candidates.length > 0) {
+                const chosenCid = rand(candidates);
+                const tip = rand(COACH_DB.weakness[chosenCid]);
+                // INJECT TARGET CONTEXT ID
+                return { t: tip.t, m: tip.m, target: chosenCid };
             }
         }
 
