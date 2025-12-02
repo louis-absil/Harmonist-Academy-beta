@@ -28,7 +28,7 @@ Harmonist Academy est une "Single Page Application" (SPA) gamifiée conçue pour
 
 ### 🏆 Gamification & Progression
 *   **Système de Niveaux :** Montez du niveau 1 au niveau 20.
-*   **Prestige & Lore :** Système de "Maîtrise Infinie" avec 16 rangs de matière (Cristal, Or, Plasma, Absolu...).
+*   **Prestige & Lore :** Système de "Maîtrise Infinie" avec rangs.
 *   **Badges & Trophées :** Plus de 30 succès à débloquer, incluant des défis de carrière et des secrets ("Easter Eggs").
 *   **Le Coach IA :** Un algorithme analyse vos erreurs en temps réel et vous donne des conseils ciblés.
 
