@@ -8,8 +8,8 @@ Gameplay Spécifique : Remplacement des renversements par des variations de Dens
 Moteur Audio : Calibrage précis des intervalles pour restituer les frottements et battements spécifiques à ces structures dissonantes.
 ### 💠 Système de Maîtrise "Lore" Étendu
 Refonte du système de progression au-delà du niveau 20 pour offrir des objectifs à long terme.
-Nouveaux Rangs de Matière : Ajout de 16 paliers de maîtrise symbolisés par des matériaux (du Cristal à l'Absolu), remplaçant l'ancien système cyclique.
-Titres Évolutifs : Génération procédurale des titres de rang (ex: "Virtuose de l'Obsidienne") avec gestion grammaticale automatique des particules.
+Nouveaux Rangs de Matière : Ajout de 16 paliers de maîtrise symbolisés par des matériaux, remplaçant l'ancien système cyclique.
+Titres Évolutifs : Génération procédurale des titres de rang avec gestion grammaticale automatique des particules.
 Design Dynamique : L'interface utilisateur (Aura, Ombres, Couleurs) s'adapte désormais visuellement à la matière du rang actuel.
 ### 📖 Refonte du Codex : Terminal Harmonique
 Transformation de l'outil de référence en une base de connaissances interactive et détaillée.
