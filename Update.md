@@ -4,7 +4,7 @@ Cette mise à jour majeure enrichit considérablement l'expérience d'apprentiss
 ### 🧪 Extension de Contenu : Le Laboratoire
 Introduction d'un nouvel ensemble d'accords axé sur l'acoustique et la structure, distinct de l'harmonie tonale classique.
 Nouvelles Entités : Intégration des Trichordes (Clusters), des Accords Suspendus Symétriques, et des Structures intervalliques 3-6 et 4/5-Tr.
-Gameplay Spécifique : Remplacement des renversements par des variations de Densité (Contracté/Dilaté) et de Symétrie, avec une génération dynamique des boutons de réponse.
+Gameplay Spécifique : Remplacement des renversements par des variations de Densité (8ve Contractée/Dilatée) et de Symétrie, avec une génération dynamique des boutons de réponse.
 Moteur Audio : Calibrage précis des intervalles pour restituer les frottements et battements spécifiques à ces structures dissonantes.
 ### 💠 Système de Maîtrise "Lore" Étendu
 Refonte du système de progression au-delà du niveau 20 pour offrir des objectifs à long terme.
