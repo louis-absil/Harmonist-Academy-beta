@@ -359,11 +359,10 @@ export const COACH_DB = {
     ],
     // Fast but inaccurate
     speed_warn: [
-        "Ralentis. Laisse le son résonner avant de cliquer.",
-        "La vitesse sans précision ne construit pas d'oreille solide.",
-        "Prends le temps de chanter intérieurement l'accord.",
-        "Tu confonds vitesse et précipitation. Respire.",
-        "Laisse l'accord se déposer en toi."
+        "Votre temps de réponse est inférieur au temps de résonance nécessaire à une analyse fiable.",
+        "La précipitation nuit à l'ancrage mémoriel. Prenez le temps de confirmer votre intuition.",
+        "Vous répondez avant d'avoir entendu la couleur complète de l'accord. Ralentissez.",
+        "L'harmonie s'apprécie dans la durée. Laissez le son résonner."
     ],
     // High level advice
     master: [
@@ -375,72 +374,80 @@ export const COACH_DB = {
     ],
     // General Theory
     theory: [
-        "La 7ème majeure crée une tension qui veut monter vers l'octave.",
-        "Le triton (3 tons) divise l'octave en deux parties égales.",
-        "La tierce est l'âme de l'accord : elle le rend Majeur ou Mineur.",
-        "La quinte est le pilier : elle stabilise l'ensemble.",
-        "Les renversements changent la basse, mais la couleur globale reste la même."
+        "Rappel : Un intervalle de 3 tons est appelé Triton. C'est l'intervalle le plus instable.",
+        "En jazz, la 3ème et la 7ème sont appelées 'Notes Guides'. Elles définissent la qualité de l'accord.",
+        "La quinte bémol (b5) est caractéristique des accords diminués et demi-diminués.",
+        "Une cadence est une progression d'accords qui marque une ponctuation musicale."
     ],
     // Encouragement (Diesel / Struggle)
     effort: [
-        "L'harmonie s'apprend par la répétition. Ton cerveau construit des ponts.",
-        "L'erreur est une information précieuse. Compare ce que tu as entendu avec la correction.",
-        "Ne lâche rien. La neuroplasticité demande du temps et de l'effort.",
-        "C'est dans la difficulté que l'oreille progresse le plus.",
-        "La régularité bat le talent. Continue."
+        "La neuroplasticité exige de la répétition. Chaque erreur corrigée renforce le réseau neuronal.",
+        "L'apprentissage de l'harmonie est non-linéaire. La stagnation précède souvent une progression soudaine.",
+        "Continuez. La distinction des couleurs harmoniques se construit par accumulation d'expériences.",
+        "Ne vous découragez pas. L'oreille relative est une compétence qui se forge par le travail."
     ],
     // Critical / Fatigue
     critical: [
-        "Attention à la saturation de l'oreille. Une pause n'est pas du temps perdu !",
-        "Ton attention baisse. Fais quelques pas, bois de l'eau.",
-        "L'oreille fatigue vite. Reviens dans 10 minutes, tu seras plus performant.",
-        "Ne force pas si tu ne sens plus les couleurs. Repose-toi.",
-        "La qualité de l'écoute dépend de la fraîcheur mentale."
+        "Saturation auditive détectée. La discrimination des fréquences baisse après 20 minutes d'effort intense.",
+        "Votre taux d'erreur augmente significativement. Une courte pause permettrait de réinitialiser votre écoute.",
+        "La fatigue mentale altère le jugement des intervalles. Revenez plus tard pour consolider vos acquis.",
+        "L'entraînement auditif est un sprint, pas un marathon. Reposez votre oreille.",
+        "Attention à la saturation. Une pause n'est pas du temps perdu, c'est une phase d'intégration."
     ],
     // Breakthrough (Low stats -> High streak)
     breakthrough: [
-        "Tu as trouvé le truc ! Garde cette sensation précise.",
-        "C'est le déclic. Tu entends enfin la différence.",
-        "Bravo, tu viens de franchir un palier de compréhension.",
-        "C'est ça ! Tu as connecté le son au concept."
+        "Excellente séquence. Vous semblez avoir assimilé la structure interne de ces accords.",
+        "Votre perception s'affine. Vous identifiez désormais les tensions avec justesse.",
+        "C'est un palier de progression. Votre oreille commence à classer les sons automatiquement.",
+        "La corrélation entre le son et la théorie est établie. Continuez ainsi."
     ],
     // Doubter (High acc, slow time, many replays)
     patience: [
-        "Le premier ressenti est souvent le bon. Fais-toi confiance.",
-        "Tu entends juste, n'hésite pas autant.",
-        "Ton instinct est bon. Arrête d'intellectualiser le son.",
-        "La patience est une vertu, mais la confiance est une force."
+        "L'analyse statistique montre que votre premier choix est souvent le bon. Fiez-vous à votre instinct.",
+        "L'hésitation introduit du bruit mental. Validez votre première impression.",
+        "Vous avez l'oreille juste. N'intellectualisez pas trop le processus."
     ],
     weakness: {
         maj7: [
             {t:"Sensation", m:"Le Maj7 est nostalgique. Cherche la 7ème qui frotte juste sous l'octave."},
             {t:"Technique", m:"Intervalles : 2 tons, 1.5 ton, 2 tons. Chante l'arpège de 'Gymnopédie'."},
-            {t:"Astuce", m:"Si tu n'entends pas la couleur, essaie de visualiser le clavier en secours."}
+            {t:"Astuce", m:"Si tu n'entends pas la couleur, essaie de visualiser le clavier en secours."},
+            {t:"Couleur", m:"La sonorité de cet accord est caractéristique du Jazz, avec une couleur Majeure très stable."},
+            {t:"Mélodie", m:"À l'état fondamental, l'arpège correspond aux quatre premières notes de la mélodie de 'Mr. Sandman'."}
         ],
         min7: [
             {t:"Sensation", m:"C'est un accord doux et stable, sans le frottement du Maj7 ni la tension du Dom7."},
             {t:"Technique", m:"Souvent le IIe degré. Il est neutre et contemplatif."},
-            {t:"Astuce", m:"Il sonne 'jazz' mais sans agressivité."}
+            {t:"Astuce", m:"Il sonne 'jazz' mais sans agressivité."},
+            {t:"Fonction", m:"Cet accord correspond naturellement au deuxième degré d'une tonalité majeure."},
+            {t:"Structure", m:"C'est un empilement de Tierce Mineure, Tierce Majeure, Tierce Mineure."}
         ],
         dom7: [
             {t:"Sensation", m:"Il contient un Triton. C'est ce frottement qui demande à être résolu."},
             {t:"Technique", m:"La tierce veut monter, la 7ème veut descendre. C'est un moteur."},
-            {t:"Astuce", m:"Repère le côté 'Blues' et instable."}
+            {t:"Astuce", m:"Repère le côté 'Blues' et instable."},
+            {t:"Fonction", m:"Identifiez la tension caractéristique de la Dominante qui appelle une résolution vers la Tonique."},
+            {t:"Singularité", m:"C'est le seul accord majeur qui contient une 7ème mineure."}
         ],
         hdim7: [
             {t:"Sensation", m:"C'est sombre et tendu. Comme un film noir."},
             {t:"Technique", m:"Appelé aussi Demi-Diminué. Le pivot du mode mineur."},
-            {t:"Astuce", m:"Plus sombre que le mineur 7, mais moins dramatique que le diminué complet."}
+            {t:"Astuce", m:"Plus sombre que le mineur 7, mais moins dramatique que le diminué complet."},
+            {t:"Structure", m:"C'est un accord mineur avec une quinte diminuée (bémol 5). Il est sombre et instable."}
         ],
         dim7: [
             {t:"Sensation", m:"Symétrique et angoissant. Le son des méchants de cinéma."},
             {t:"Technique", m:"Empilement de tierces mineures. Aucune note ne domine."},
-            {t:"Astuce", m:"Une tension extrême sans direction précise."}
+            {t:"Astuce", m:"Une tension extrême sans direction précise."},
+            {t:"Symétrie", m:"L'accord est symétrique : il divise l'octave en quatre parties égales de 1,5 tons."},
+            {t:"Piège", m:"Composé uniquement de tierces mineures, cet accord retombe sur ses notes initiales lors de l'arpège."}
         ],
         minmaj7: [
             {t:"Sensation", m:"Le son de détective privé. Une base triste avec une pointe acide."},
             {t:"Technique", m:"Mineur avec une 7ème Majeure. Forte dissonance interne."},
-            {t:"Astuce", m:"Repère le frottement dur entre la 7ème et la tonique."}
+            {t:"Astuce", m:"Repère le frottement dur entre la 7ème et la tonique."},
+            {t:"Cinéma", m:"C'est l'accord final emblématique du thème de James Bond."},
+            {t:"Image", m:"Imaginez un accord mineur classique perturbé par une note sensible très aiguë."}
         ]
     }
 };
