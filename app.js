@@ -24,7 +24,7 @@ export const App = {
         currentSprintTime: 10, roundLocked: false,
         startTime: 0, cleanStreak: 0, openStreak: 0, fullConfigStreak: 0, fastStreak: 0, lowLifeRecovery: false, lastActionTime: 0,
         
-        // NEW TRACKERS FOR V4.0 BADGES
+        // TRACKERS
         replayCount: 0, djClickTimes: [], selectionHistory: [], prevChordHash: null,
         str36Streak: 0, str45Streak: 0, geoStreak: 0, triStreak: 0, rootlessStreak: 0, monoStreak: 0, dejaVu: false
     },
@@ -77,22 +77,15 @@ export const App = {
         Piano.init(); 
     },
 
-    // CENTRALIZED LOCKING LOGIC
     isLocked(id) {
         const c = DB.chords.find(x => x.id === id);
         if(!c) return false;
-        
-        // Jazz Logic: Mastery 1 + Level progression
         if(this.data.currentSet === 'jazz' && this.data.mastery === 1) {
             return (c.unlockLvl && c.unlockLvl > this.data.lvl);
         }
-        
-        // Lab Logic: Level progression active only during discovery phase (Mastery <= 2)
-        // Once Mastery > 2, everything is unlocked from Level 1
         if(this.data.currentSet === 'laboratory' && this.data.mastery <= 2) {
             return (c.unlockLvl && c.unlockLvl > this.data.lvl);
         }
-        
         return false;
     },
 
@@ -105,8 +98,6 @@ export const App = {
             DB.currentInvs = DB.voicings;
             document.getElementById('invPanelLabel').innerText = "Voicing (Texture)";
         } else if (DB.sets[setName].mode === 'lab') {
-            // DATA RESTRUCTURING: No shared configs list.
-            // UI generates buttons dynamically based on active chord.
             DB.currentInvs = []; 
             document.getElementById('invPanelLabel').innerText = "Configuration";
         } else {
@@ -120,20 +111,15 @@ export const App = {
              this.data.settings.activeC = validIds;
         }
         
-        // Lab specific: settings.activeI stores available indexes (0,1,2,3)
-        // Standard/Jazz: settings.activeI stores IDs from DB.currentInvs
         if(this.data.currentSet === 'laboratory') {
-             // By default activate all 4 configs
              this.data.settings.activeI = [0,1,2,3];
         } else {
              const validInvIds = DB.currentInvs.map(i => i.id);
              this.data.settings.activeI = validInvIds;
         }
 
-        // SANITIZATION: Filter out locked items based on current level/mastery
         this.data.settings.activeC = this.data.settings.activeC.filter(id => !this.isLocked(id));
         
-        // Ensure at least one chord is active (fallback to first available)
         if(this.data.settings.activeC.length === 0) {
             const available = DB.chords.find(c => !this.isLocked(c.id));
             if(available) this.data.settings.activeC = [available.id];
@@ -156,10 +142,8 @@ export const App = {
         const activeI = this.data.settings.activeI.length;
         const maxC = DB.chords.length;
         
-        // ECONOMY PATCH 1: Dim7 Exploit (Academy)
-        // In Academy, Dim7 is forced to Inv 0. If it's the only chord active, the complexity is effectively 1x1 = 1 (Trivial).
         if(this.data.currentSet === 'academy' && activeC === 1 && this.data.settings.activeC[0] === 'dim7') {
-            return 0; // Trivial, no XP
+            return 0; 
         }
 
         if (activeC === 1 && activeI === 1) return 0;
@@ -172,11 +156,10 @@ export const App = {
         if(this.data.lvl < 20) return;
         if(confirm("Félicitations ! Vous allez valider ce niveau de Maîtrise.\n\nVotre Niveau reviendra à 1, mais vous gagnerez une Étoile et conserverez vos stats et badges.\n\nContinuer ?")) {
             this.data.mastery++;
-            this.data.lvl = 1; // Reset Level
+            this.data.lvl = 1;
             this.data.xp = 0;
             this.data.next = 100;
             
-            // CLEANUP: Remove locked items since Level dropped to 1
             this.data.settings.activeC = this.data.settings.activeC.filter(id => !this.isLocked(id));
             if(this.data.settings.activeC.length === 0) {
                  const available = DB.chords.find(c => !this.isLocked(c.id));
@@ -185,7 +168,7 @@ export const App = {
 
             this.save();
             window.UI.closeModals();
-            window.UI.renderBoard(); // Update visual board
+            window.UI.renderBoard(); 
             window.UI.updateHeader();
             Audio.sfx('prestige');
             window.UI.confetti();
@@ -245,7 +228,6 @@ export const App = {
     },
 
     toggleSetting(type, id) {
-        // Use Centralized Locking Logic
         if(type === 'c' && this.isLocked(id)) {
             const chord = DB.chords.find(c => c.id === id);
             window.UI.showToast(`🔒 Débloqué au Niveau ${chord.unlockLvl}`);
@@ -300,17 +282,14 @@ export const App = {
         document.getElementById('hintBtn').style.opacity = '1';
     },
 
-    // MODIFIED: Support contextSet for Codex
     getNotes(type, invId, root, open, contextSet = null) {
         const currentSet = contextSet || this.data.currentSet;
 
         if(currentSet === 'laboratory') {
             let intervals = [];
-            // Retrieve intervals from the chord's own configs (POLYMORPHIC DATA)
             if(type && type.configs && type.configs[invId]) {
                 intervals = type.configs[invId].iv;
             } else {
-                // Fallback safe
                 intervals = [0, 4, 7]; 
             }
             return intervals.map(i => root + i);
@@ -336,7 +315,6 @@ export const App = {
             return notes;
         }
         
-        // Academy Logic
         let notes = type.iv.map(x => root + x);
         for(let i=0; i<invId; i++) notes.push(notes.shift() + 12);
         if(open) {
@@ -409,8 +387,6 @@ export const App = {
 
     playNew() {
         Audio.init();
-        
-        // SAFEGUARD: Force reset if data corrupted
         if (!DB.chords.length) {
             this.loadSet(this.data.currentSet);
             return;
@@ -434,8 +410,6 @@ export const App = {
         this.session.hint = false; 
         window.UI.resetVisuals();
         this.session.lastActionTime = Date.now();
-        
-        // RESET ROUND TRACKERS
         this.session.replayCount = 0;
         this.session.djClickTimes = [];
         this.session.selectionHistory = [];
@@ -451,11 +425,8 @@ export const App = {
         
         let invId = 0;
         if(this.data.currentSet === 'laboratory') {
-            // Pick from the chord's specific configs
-            // ActiveI in Lab contains [0,1,2,3] indexes
             const availableInvs = this.data.settings.activeI.filter(idx => type.configs[idx]);
             if(availableInvs.length === 0) {
-                // If corrupted settings, force all
                 this.data.settings.activeI = [0,1,2,3];
                 invId = 0;
             } else {
@@ -504,7 +475,6 @@ export const App = {
             this.startSprintTimer(duration);
         }
         
-        // Auto-select if only 1 choice available
         if(this.data.settings.activeC.length === 1) { this.select('c', this.data.settings.activeC[0]); }
         if(this.data.currentSet !== 'laboratory' && this.data.settings.activeI.length === 1) { this.select('i', this.data.settings.activeI[0]); }
     },
@@ -645,7 +615,6 @@ export const App = {
             
             if(this.data.currentSet === 'jazz') { invObj = this.data.stats.v[c.inv]; } 
             else if (this.data.currentSet === 'laboratory') { 
-                // Lab Stats are now tracked by unique Key
                 invObj = this.data.stats.l[`${c.type.id}_${c.inv}`]; 
             } 
             else { invObj = this.data.stats.i[c.inv]; }
@@ -653,13 +622,11 @@ export const App = {
         }
         
         if(!isTrivial) {
-            // UPDATE INVERSION/CONFIG STATS
             if(this.data.currentSet === 'jazz') {
                  if(!this.data.stats.v[c.inv]) this.data.stats.v[c.inv] = {ok:0, tot:0};
                  this.data.stats.v[c.inv].tot++;
                  if(okI) this.data.stats.v[c.inv].ok++;
             } else if(this.data.currentSet === 'laboratory') {
-                 // LAB: Use Unique Key (Type_Index)
                  const lKey = `${c.type.id}_${c.inv}`;
                  if(!this.data.stats.l[lKey]) this.data.stats.l[lKey] = {ok:0, tot:0};
                  this.data.stats.l[lKey].tot++;
@@ -672,7 +639,6 @@ export const App = {
                  }
             }
 
-            // UPDATE CHORD STATS
             if(!this.data.stats.c[c.type.id]) this.data.stats.c[c.type.id] = {ok:0, tot:0};
             this.data.stats.c[c.type.id].tot++; 
             if(okC) this.data.stats.c[c.type.id].ok++;
@@ -693,9 +659,6 @@ export const App = {
                 const speedMultiplier = 10 / this.session.currentSprintTime; 
                 basePts = Math.round(basePts * speedMultiplier);
             }
-            
-            // ECONOMY PATCH 2: Apply multiplier to the TOTAL (Base + Streak)
-            // This prevents streak farming on easy settings
             const rawBonus = this.session.hint ? 0 : (this.session.streak * 10);
             const totalRaw = basePts + rawBonus;
             let totalGain = Math.round(totalRaw * difficultyMult);
@@ -751,8 +714,6 @@ export const App = {
                 if(!this.session.hint) this.session.cleanStreak++; else this.session.cleanStreak = 0;
                 if(c.open) this.session.openStreak++; else this.session.openStreak = 0;
                 const allC = this.data.settings.activeC.length === DB.chords.length;
-                
-                // For Lab, full config is just all chords active, ignoring invs because they are implicit
                 const allI = (this.data.currentSet === 'laboratory') ? true : (this.data.settings.activeI.length === DB.currentInvs.length);
                 if(allC && allI) this.session.fullConfigStreak++; else this.session.fullConfigStreak = 0;
                 
@@ -765,7 +726,6 @@ export const App = {
                 if(!isDim && c.inv !== 0) this.data.stats.str_inv++;
                 if(this.session.lives === 1) this.session.lowLifeRecovery = true;
                 
-                // NEW STREAK UPDATES
                 if(c.type.id === 'struct_36') this.session.str36Streak++; else this.session.str36Streak = 0;
                 if(c.type.id === 'struct_45tr') this.session.str45Streak++; else this.session.str45Streak = 0;
                 if(['struct_36', 'struct_45tr'].includes(c.type.id)) this.session.geoStreak++; else this.session.geoStreak = 0;
@@ -858,231 +818,80 @@ export const App = {
     
     replaySameMode() { window.UI.closeModals(); this.setMode(this.session.mode); },
 
-    playNewQuiz() {
-        Audio.init();
-        this.session.done = false; 
-        this.session.roundLocked = false;
-        this.session.hint = false; 
-        this.session.quizUserChoice = null;
-        window.UI.resetVisuals();
-        this.session.lastActionTime = Date.now();
-        this.session.replayCount = 0;
-        this.session.djClickTimes = [];
-        this.session.selectionHistory = [];
-
-        const ac = DB.chords.filter(c => this.data.settings.activeC.includes(c.id));
-        
-        if(!ac.length) { 
-            this.data.settings.activeC = DB.chords.map(c=>c.id); 
-            this.playNew(); return; 
-        }
-        
-        const type = ac[Math.floor(Math.random()*ac.length)];
-        let inv = 0;
-        
-        const isLab = this.data.currentSet === 'laboratory';
-        if (isLab) {
-            // Pick random config
-            inv = Math.floor(Math.random() * type.configs.length);
-        } else {
-            const ai = DB.currentInvs.filter(i => this.data.settings.activeI.includes(i.id));
-            if(!ai.length) { this.playNew(); return; }
-            inv = ai[Math.floor(Math.random()*ai.length)].id;
-            if(type.id === 'dim7' && this.data.currentSet !== 'jazz') inv = 0;
-        }
-        
-        const open = document.getElementById('toggleOpen').checked && this.data.currentSet === 'academy';
-        const root = (open ? 36 : 48) + Math.floor(Math.random()*12);
-        
-        const notes = this.getNotes(type, inv, root, open);
-        const realBass = Math.min(...notes);
-        this.session.chord = { type, inv: inv, notes, root, open };
-        
-        let options = [];
-        const poolC = ac.length ? ac : DB.chords;
-        
-        // --- QUIZ LABEL GENERATOR ---
-        const genLbl = (t, iIdx) => {
-            if (isLab) {
-                const config = t.configs[iIdx];
-                const configId = config.id;
-                
-                if (t.id === 'trichord') {
-                    let top='?', bot='?';
-                    if(configId===0){top='1/2';bot='1/2';}
-                    if(configId===1){top='1/2';bot='Tr';}
-                    if(configId===2){top='1';bot='1';}
-                    if(configId===3){top='1/2';bot='3M';}
-                    return `<div class="figured-bass quiz-huge"><span>${top}</span><span>${bot}</span></div>`;
-                }
-                
-                if (t.id === 'sus_sym') {
-                    let txt = "Sus ?";
-                    if(configId===0) txt="Sus 2";
-                    if(configId===1) txt="Sus 4";
-                    if(configId===2) txt="Quartal";
-                    if(configId===3) txt="Quintal";
-                    return `<div style="font-size:2rem; font-weight:900;">${txt}</div>`;
-                }
-
-                let top = "?", bot = "?";
-                if (t.id === 'struct_36') {
-                    if(configId === 0) { top='6m'; bot='3m'; } 
-                    if(configId === 1) { top='3m'; bot='6m'; } 
-                    if(configId === 2) { top='6M'; bot='3M'; } 
-                    if(configId === 3) { top='3M'; bot='6M'; } 
-                } else if (t.id === 'struct_45tr') {
-                    if(configId === 0) { top='Tr'; bot='4J'; }
-                    if(configId === 1) { top='4J'; bot='Tr'; }
-                    if(configId === 2) { top='Tr'; bot='5J'; }
-                    if(configId === 3) { top='5J'; bot='Tr'; }
-                }
-                return `<div class="figured-bass quiz-huge"><span>${top}</span><span>${bot}</span></div>`;
-            }
-            
-            const invObj = DB.currentInvs.find(i=>i.id===iIdx);
-            let invH = "";
-            if (invObj.figure && invObj.figure.length > 0) {
-                invH = `<div class="figured-bass" style="font-size:0.6em; vertical-align:middle; margin-left:8px;">${invObj.figure.map(n=>`<span>${n}</span>`).join('')}</div>`;
-            } else { invH = invObj.corr; }
-            return `${t.tech} ${invH}`;
-        };
-
-        const targetHTML = genLbl(type, inv);
-        document.getElementById('quizTargetLbl').innerHTML = targetHTML;
-        
-        options.push({ type, inv: inv, notes, correct: true, label: targetHTML });
-        
-        let attempts = 0;
-        while(options.length < 3 && attempts < 50) {
-            attempts++;
-            let pC = (attempts < 10) ? poolC : (attempts < 20 ? poolC : DB.chords);
-            const cType = pC[Math.floor(Math.random()*pC.length)];
-            
-            let cInv = 0;
-            if(isLab) cInv = Math.floor(Math.random() * cType.configs.length);
-            else {
-                const pI = DB.currentInvs;
-                cInv = pI[Math.floor(Math.random()*pI.length)].id;
-                if(cType.id === 'dim7' && this.data.currentSet !== 'jazz') cInv = 0;
-            }
-
-            const exists = options.find(o => o.type.id === cType.id && o.inv === cInv);
-            if(exists) continue;
-            
-            const draftNotes = this.getNotes(cType, cInv, 60, open);
-            const draftBass = Math.min(...draftNotes);
-            const diff = realBass - draftBass;
-            const finalNotes = draftNotes.map(n => n + diff);
-            
-            options.push({ type: cType, inv: cInv, notes: finalNotes, correct: false, label: genLbl(cType, cInv) });
-        }
-        options.sort(() => Math.random() - 0.5);
-        this.session.quizOptions = options;
-        this.session.quizCorrectIdx = options.findIndex(o => o.correct);
-        
-        const letters = ['A', 'B', 'C'];
-        document.querySelectorAll('.quiz-btn').forEach((btn, i) => {
-            btn.className = 'quiz-btn' + (isLab ? ' lab-mode' : '');
-            if (isLab) {
-                btn.innerHTML = '<span class="reveal">●</span>'; 
-            } else {
-                btn.innerHTML = letters[i] + '<span class="reveal">...</span>';
-            }
-        });
-        window.UI.msg("Trouve l'accord !", "");
-        document.getElementById('playBtn').disabled = true; 
-        document.getElementById('replayBtn').disabled = true; 
-        document.getElementById('hintBtn').disabled = true;     
-        document.getElementById('valBtn').innerText = "Valider";
-        document.getElementById('valBtn').className = "cmd-btn btn-action";
-        document.getElementById('valBtn').disabled = true;
-    },
-    
-    selectQuiz(idx) {
-         if(Audio.ctx && Audio.ctx.state === 'suspended') Audio.ctx.resume();
-        if(!Audio.ctx) Audio.init();
-        if(this.session.done) {
-            const opt = this.session.quizOptions[idx];
-            const btn = document.getElementById('qbtn-'+idx);
-            btn.classList.add('playing');
-            setTimeout(() => btn.classList.remove('playing'), 200);
-            Audio.chord(opt.notes);
-            return;
-        }
-        this.session.quizUserChoice = idx;
-        document.querySelectorAll('.quiz-btn').forEach(b => b.classList.remove('selected'));
-        document.getElementById('qbtn-'+idx).classList.add('selected');
-        try {
-            Audio.chord(this.session.quizOptions[idx].notes);
-        } catch(e) {}
-        document.getElementById('valBtn').disabled = false;
-    },
+    // --- COACH LOGIC 2.0 (WATERFALL PRIORITY) ---
     analyzeCoach() {
         const s = this.session;
         const d = this.data;
-        const tot = s.globalTot;
-        if(tot < 10) {
-            const m = COACH_DB.start[Math.floor(Math.random()*COACH_DB.start.length)];
-            return { t: "Débutant", m: m };
+        const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+        const sTot = s.globalTot;
+        const sOk = s.globalOk;
+        const sAcc = sTot > 0 ? (sOk / sTot) : 0;
+        
+        let gOk = 0, gTot = 0;
+        for(let k in d.stats.c) { gOk += d.stats.c[k].ok; gTot += d.stats.c[k].tot; }
+        const gAcc = gTot > 0 ? (gOk / gTot) : 0;
+
+        // 0. NEW PLAYER
+        if(sTot < 5 && gTot < 20) {
+            return { t: "Débutant", m: rand(COACH_DB.start) };
         }
-        let weakTips = [];
+
+        // 1. CRITICAL PRIORITY: TILT / FATIGUE
+        // Condition: Good Global Acc (>70%) BUT Low Session Acc (<50%) OR very low recent streak
+        if(gAcc > 0.70 && sTot > 10 && sAcc < 0.50) {
+            return { t: "Santé ☕", m: rand(COACH_DB.critical) };
+        }
+
+        // 2. CORRECTIVE PRIORITY: SPECIFIC WEAKNESS
+        // Scan current weakness
         if (d.stats && d.stats.c) {
             for(let cid in d.stats.c) {
                 const st = d.stats.c[cid];
-                if(st && st.tot >= 5 && (st.ok / st.tot) < 0.60) {
+                if(st && st.tot >= 5 && (st.ok / st.tot) < 0.45) {
                     if(COACH_DB.weakness[cid]) {
-                        weakTips.push(...COACH_DB.weakness[cid]);
+                        // Return specific chord tip
+                        const tip = rand(COACH_DB.weakness[cid]);
+                        return { t: tip.t, m: tip.m };
                     }
                 }
             }
-        }
-        const currentSet = d.currentSet || 'academy'; 
-        const isJazz = currentSet === 'jazz';
-        const invStats = isJazz ? (d.stats && d.stats.v) : (d.stats && d.stats.i);
-        const invList = isJazz ? DB.voicings : DB.invs;
-        if (invStats && invList) {
-            for (let iid in invStats) {
-                const st = invStats[iid];
-                if (st && st.tot >= 5 && (st.ok / st.tot) < 0.60) {
-                    const info = invList.find(x => x.id == iid);
-                    const name = info ? (info.name || info.corr) : 'Variation';
-                    let msg = "";
-                    let type = "Technique";
-                    if(isJazz) {
-                        msg = `Le voicing **${name}** semble te poser problème (${Math.round((st.ok/st.tot)*100)}%). Écoute bien la note la plus aiguë (top note).`;
-                    } else {
-                        msg = `Tu as du mal avec le **${name}** (${Math.round((st.ok/st.tot)*100)}%). Essaie de repérer l'intervalle entre la basse et le reste de l'accord.`;
-                    }
-                    weakTips.push({ t: type, m: msg });
-                }
-            }
-        }
-        if(weakTips.length > 0) {
-            return weakTips[Math.floor(Math.random() * weakTips.length)];
-        }
-        if(s.streak >= 10) {
-            const m = COACH_DB.streak[Math.floor(Math.random() * COACH_DB.streak.length)];
-            return { t: "En Feu 🔥", m: m };
-        }
-        if(s.fastStreak >= 5) {
-             const m = COACH_DB.speed[Math.floor(Math.random() * COACH_DB.speed.length)];
-             return { t: "Vitesse ⚡", m: m };
-        }
-        const acc = tot > 0 ? (s.globalOk / tot) : 0;
-        
-        if(acc >= 0.80) {
-            const m = COACH_DB.master[Math.floor(Math.random() * COACH_DB.master.length)];
-            return { t: "Expert 🎓", m: m };
-        }
-        if(acc >= 0.50) {
-             const m = COACH_DB.theory[Math.floor(Math.random() * COACH_DB.theory.length)];
-             return { t: "Solide 🛡️", m: m };
         }
 
-        const m = COACH_DB.boost[Math.floor(Math.random() * COACH_DB.boost.length)];
-        return { t: "Motivation 💪", m: m };
+        // 3. CORRECTIVE: SPEED VS ACCURACY (The Rusher)
+        // If speed bonus is high (fastStreak) but accuracy is low
+        if(s.fastStreak > 3 && sAcc < 0.60) {
+            return { t: "Vitesse ⚠️", m: rand(COACH_DB.speed_warn) };
+        }
+
+        // 4. BEHAVIORAL: BREAKTHROUGH (Déclic)
+        // Global avg is low, but current streak is high
+        if(gAcc < 0.60 && s.streak >= 8) {
+            return { t: "Déclic 💡", m: rand(COACH_DB.breakthrough) };
+        }
+
+        // 5. BEHAVIORAL: DIESEL (Effort)
+        // Long session, low accuracy, but still playing
+        if(sTot > 40 && sAcc < 0.50) {
+            return { t: "Persévérance 💪", m: rand(COACH_DB.effort) };
+        }
+
+        // 6. BEHAVIORAL: DOUBTER (Patience)
+        // High accuracy but excessive replays
+        // Heuristic: replayCount average > 2 (Total Replays / Total Questions)
+        if(sTot > 5 && (s.replayCount / sTot) > 2.5 && sAcc > 0.80) {
+            return { t: "Confiance 🦁", m: rand(COACH_DB.patience) };
+        }
+
+        // 7. REWARD: FLOW
+        if(s.streak >= 12) {
+            return { t: "En Feu 🔥", m: rand(COACH_DB.streak) };
+        }
+
+        // 8. FALLBACK: GENERAL THEORY
+        return { t: "Rappel 🧠", m: rand(COACH_DB.theory) };
     },
+
     cheat(scenario) {
         const d = this.data;
         switch(scenario) {
