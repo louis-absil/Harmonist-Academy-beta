@@ -1,5 +1,3 @@
-
-
 import { DB, BADGES, COACH_DB } from './data.js';
 import { Audio, Piano } from './audio.js';
 import { UI } from './ui.js';
@@ -157,6 +155,13 @@ export const App = {
         const activeC = this.data.settings.activeC.length;
         const activeI = this.data.settings.activeI.length;
         const maxC = DB.chords.length;
+        
+        // ECONOMY PATCH 1: Dim7 Exploit (Academy)
+        // In Academy, Dim7 is forced to Inv 0. If it's the only chord active, the complexity is effectively 1x1 = 1 (Trivial).
+        if(this.data.currentSet === 'academy' && activeC === 1 && this.data.settings.activeC[0] === 'dim7') {
+            return 0; // Trivial, no XP
+        }
+
         if (activeC === 1 && activeI === 1) return 0;
         if ((activeC * activeI) <= 4) return 0.2;
         if (activeC === maxC && activeI === 1) return 0.75;
@@ -688,10 +693,15 @@ export const App = {
                 const speedMultiplier = 10 / this.session.currentSprintTime; 
                 basePts = Math.round(basePts * speedMultiplier);
             }
-            let finalXP = Math.round(basePts * difficultyMult);
-            const bonus = this.session.hint ? 0 : (this.session.streak * 10);
-            let totalGain = finalXP + bonus;
+            
+            // ECONOMY PATCH 2: Apply multiplier to the TOTAL (Base + Streak)
+            // This prevents streak farming on easy settings
+            const rawBonus = this.session.hint ? 0 : (this.session.streak * 10);
+            const totalRaw = basePts + rawBonus;
+            let totalGain = Math.round(totalRaw * difficultyMult);
+            
             if(isTrivial) totalGain = 0;
+            
             this.session.score += totalGain;
             let badgeUnlocked = false; let levelUp = false; let rankUp = false;
             
