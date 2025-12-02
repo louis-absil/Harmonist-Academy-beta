@@ -1,3 +1,5 @@
+
+
 import { Audio, Piano } from './audio.js';
 import { BADGES, CODEX_DATA, DB, LORE_MATERIALS } from './data.js';
 
@@ -38,6 +40,137 @@ export const UI = {
             return item.tech || item.name;
         }
         return item.corr || item.name;
+    },
+    
+    // --- QUIZ VIEW LOGIC (MVC IMPLEMENTATION) ---
+    renderQuizOptions(options, targetOpt) {
+        // Reset styles for new round
+        document.querySelectorAll('.quiz-btn').forEach(b => {
+            b.className = 'quiz-btn';
+            b.classList.remove('selected', 'correct', 'wrong', 'lab-mode');
+        });
+        
+        const isLab = window.App.data.currentSet === 'laboratory';
+        let targetVisual = "";
+
+        // RENDER TARGET (QUESTION) VISUAL IMMEDIATELY
+        if (isLab) {
+            // Lab Mode Visual logic for Target
+            const config = targetOpt.type.configs[targetOpt.inv];
+            let top='?', bot='?';
+            
+            if(targetOpt.type.id === 'trichord') {
+                const vals = [['1/2','1/2'], ['Tr','1/2'], ['1','1'], ['3M','1/2']];
+                [top, bot] = vals[targetOpt.inv] || ['?','?'];
+            } else if (targetOpt.type.id === 'struct_36') {
+                const vals = [['6m','3m'], ['3m','6m'], ['6M','3M'], ['3M','6M']];
+                [top, bot] = vals[targetOpt.inv] || ['?','?'];
+            } else if (targetOpt.type.id === 'struct_45tr') {
+                const vals = [['Tr','4J'], ['4J','Tr'], ['Tr','5J'], ['5J','Tr']];
+                [top, bot] = vals[targetOpt.inv] || ['?','?'];
+            } else if (targetOpt.type.id === 'sus_sym') {
+                 const txts = ["Sus 2", "Sus 4", "Quartal", "Quintal"];
+                 top = txts[targetOpt.inv]; bot = "";
+            }
+            
+            if(targetOpt.type.id === 'sus_sym') {
+                targetVisual = `<div style="font-size:2rem; font-weight:900;">${top}</div><div class="lab-tag">${targetOpt.type.name}</div>`;
+            } else {
+                targetVisual = `<div class="figured-bass quiz-huge"><span>${top}</span><span>${bot}</span></div><div class="lab-tag">${config.name}</div>`;
+            }
+        } else {
+            // Standard Academy/Jazz Target Visual
+            const labelC = this.getLabel(targetOpt.type, 'c');
+            let labelI = "";
+            if (targetOpt.type.id !== 'dim7') {
+                 const invList = (window.App.data.currentSet === 'jazz') ? DB.voicings : DB.invs;
+                 const invObj = invList.find(i => i.id === targetOpt.inv);
+                 if(invObj) labelI = this.getLabel(invObj, 'i');
+            }
+            targetVisual = `${labelC}<div style="font-size:0.4em; opacity:0.7; margin-top:5px;">${labelI}</div>`;
+        }
+        
+        document.getElementById('quizTargetLbl').innerHTML = targetVisual;
+
+        // RENDER BUTTONS (BLIND CONTAINERS) with DYNAMIC HIDING
+        [0, 1, 2].forEach(idx => {
+            const btn = document.getElementById(`qbtn-${idx}`);
+            if(!btn) return;
+            
+            // Check if this option actually exists (Dynamic Pool Size)
+            if(options[idx]) {
+                btn.style.display = 'flex';
+                if (isLab) btn.classList.add('lab-mode');
+                // Just Letters, content hidden until reveal
+                const letters = ['A', 'B', 'C'];
+                btn.innerHTML = `${letters[idx]}<span class="reveal">...</span>`;
+            } else {
+                btn.style.display = 'none';
+            }
+        });
+    },
+
+    updateQuizSelection(idx) {
+        document.querySelectorAll('.quiz-btn').forEach(b => b.classList.remove('selected'));
+        if(idx !== null) {
+            const btn = document.getElementById(`qbtn-${idx}`);
+            if(btn) btn.classList.add('selected');
+        }
+    },
+    
+    revealQuiz(userChoiceIdx, correctIdx, options) {
+         const isLab = window.App.data.currentSet === 'laboratory';
+         
+         options.forEach((opt, idx) => {
+            const btn = document.getElementById(`qbtn-${idx}`);
+            if(!btn) return;
+            
+            btn.classList.remove('selected');
+            
+            if(idx === correctIdx) {
+                btn.classList.add('correct');
+            } else if (idx === userChoiceIdx && userChoiceIdx !== correctIdx) {
+                btn.classList.add('wrong');
+            }
+            
+            // REVEAL LOGIC : GENERATE LABEL CONTENT
+            let visual = "";
+            
+            if (isLab) {
+                const config = opt.type.configs[opt.inv];
+                let top='?', bot='?';
+                if(opt.type.id === 'trichord') {
+                    const vals = [['1/2','1/2'], ['Tr','1/2'], ['1','1'], ['3M','1/2']];
+                    [top, bot] = vals[opt.inv] || ['?','?'];
+                } else if (opt.type.id === 'struct_36') {
+                    const vals = [['6m','3m'], ['3m','6m'], ['6M','3M'], ['3M','6M']];
+                    [top, bot] = vals[opt.inv] || ['?','?'];
+                } else if (opt.type.id === 'struct_45tr') {
+                    const vals = [['Tr','4J'], ['4J','Tr'], ['Tr','5J'], ['5J','Tr']];
+                    [top, bot] = vals[opt.inv] || ['?','?'];
+                }
+                
+                if (opt.type.id === 'sus_sym') {
+                     const txts = ["Sus 2", "Sus 4", "Quartal", "Quintal"];
+                     visual = `<div style="font-size:1.1rem; font-weight:900;">${txts[opt.inv]}</div>`;
+                } else {
+                     visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
+                }
+            } else {
+                const labelC = this.getLabel(opt.type, 'c');
+                let labelI = "";
+                if (opt.type.id !== 'dim7') {
+                     const invList = (window.App.data.currentSet === 'jazz') ? DB.voicings : DB.invs;
+                     const invObj = invList.find(i => i.id === opt.inv);
+                     // FIXED: Use getLabel (Figured Bass) instead of plain text name
+                     if(invObj) labelI = this.getLabel(invObj, 'i');
+                }
+                visual = `${labelC}<br><span style="font-size:0.6em; opacity:0.7;">${labelI}</span>`;
+            }
+            
+            const letters = ['A', 'B', 'C'];
+            btn.innerHTML = `${letters[idx]}<span class="reveal">${visual}</span>`;
+         });
     },
 
     // --- MASTERY LORE SYSTEM (Hybrid & Scalable) ---
@@ -168,10 +301,11 @@ export const UI = {
                 
                 if (contextId === 'trichord') {
                     let top='?', bot='?';
+                    // FIX: VISUAL SWAP REQUESTED
                     if(id===0){top='1/2';bot='1/2';}
-                    if(id===1){top='1/2';bot='Tr';}
+                    if(id===1){top='Tr';bot='1/2';} // Swapped from 1/2,Tr
                     if(id===2){top='1';bot='1';}
-                    if(id===3){top='1/2';bot='3M';}
+                    if(id===3){top='3M';bot='1/2';} // Swapped from 1/2,3M
                     visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
                 }
                 else if (contextId === 'sus_sym') {
@@ -247,14 +381,18 @@ export const UI = {
         if(c.type.id !== 'dim7') { document.getElementById('i-'+c.inv).classList.add(okI?'correct':'correction'); if(!okI && window.App.session.selI !== null) document.getElementById('i-'+window.App.session.selI).classList.add('wrong'); }
     },
     resetVisuals() { 
-        document.querySelectorAll('.pad').forEach(p => p.className='pad'); window.UI.renderBoard(); 
+        document.querySelectorAll('.pad').forEach(p => p.className='pad'); 
+        
+        // Reset Quiz Buttons specifically
+        document.querySelectorAll('.quiz-btn').forEach(b => {
+             b.className = 'quiz-btn';
+             b.classList.remove('selected', 'correct', 'wrong', 'lab-mode');
+        });
+        
+        window.UI.renderBoard(); 
         const p = document.getElementById('invPanel');
         if(p) { p.style.opacity = '1'; p.style.pointerEvents = 'auto'; }
-        document.querySelectorAll('.quiz-btn').forEach(b => {
-            b.className='quiz-btn';
-            const rev = b.querySelector('.reveal');
-            if(rev) rev.innerText='...';
-        });
+        
         document.getElementById('pianoCanvas').classList.remove('show');
         document.getElementById('visualizer').style.opacity = '0.5';
     },
@@ -834,10 +972,33 @@ export const UI = {
 
     renderStats() {
         const advice = window.App.analyzeCoach ? window.App.analyzeCoach() : {t:"Conseil", m:"Joue un peu plus !"};
-         let msg = advice.m;
+        
+        let badgeHTML = "";
+        // INJECTED CONTEXT BADGE
+        if(advice.target) {
+            let targetName = advice.target;
+            // Lookup name
+            const allChords = [
+                ...DB.sets.academy.chords,
+                ...DB.sets.jazz.chords,
+                ...DB.sets.laboratory.chords
+            ];
+            const found = allChords.find(c => c.id === advice.target);
+            if(found) targetName = found.name;
+            
+            // Lab structure name fix
+            if(advice.target.startsWith('struct') || advice.target === 'trichord' || advice.target === 'sus_sym') {
+                 if(found) targetName = found.name;
+            }
+
+            badgeHTML = `<span class="coach-tag context-badge" style="background:var(--accent); margin-right:5px;">${targetName}</span>`;
+        }
+
+        let msg = advice.m;
         msg = msg.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         msg = msg.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        document.getElementById('coachDisplay').innerHTML = `<div class="coach-avatar">🧠</div><div class="coach-bubble"><span class="coach-tag">${advice.t}</span><br>${msg}</div>`;
+        
+        document.getElementById('coachDisplay').innerHTML = `<div class="coach-avatar">🧠</div><div class="coach-bubble"><div><span class="coach-tag">${advice.t}</span> ${badgeHTML}</div>${msg}</div>`;
 
         const histContainer = document.getElementById('historyChart');
         let histHTML = '<div class="chart-limit-line"></div><div class="chart-container">';
