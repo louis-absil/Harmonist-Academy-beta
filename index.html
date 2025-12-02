@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -11,7 +13,10 @@
   "imports": {
     "vite": "https://aistudiocdn.com/vite@^7.2.4",
     "path": "https://aistudiocdn.com/path@^0.12.7",
-    "url": "https://aistudiocdn.com/url@^0.11.4"
+    "url": "https://aistudiocdn.com/url@^0.11.4",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
   }
 }
 </script>
@@ -131,7 +136,7 @@
         <button class="cmd-btn btn-action" id="valBtn" onclick="window.App.handleMain()" disabled>Valider</button>
         <button class="cmd-btn btn-listen" id="hintBtn" onclick="window.App.hint()" disabled style="flex:0.5; font-size:1.2rem;">🔍</button>
     </div>
-    <div class="app-footer">Harmonist Academy © 2025 Louis Absil</div>
+    <div class="app-footer" onclick="window.App.clickTitle()">Harmonist Academy © 2025 Louis Absil</div>
 </div>
 
 <div class="modal-overlay" id="settingsModal">
@@ -139,7 +144,7 @@
         <div style="display:flex; justify-content:flex-end;">
             <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
         </div>
-        <div class="brand-title">
+        <div class="brand-title" onclick="window.App.clickTitle()">
             <span class="brand-primary">Harmonist</span> <span class="brand-accent">Academy</span>
         </div>
         
