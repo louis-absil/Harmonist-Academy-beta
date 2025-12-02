@@ -1,5 +1,3 @@
-
-
 // --- MASTERY & SETS ---
 export const MASTERY_NAMES = [
     "🏛️ L'Académie", "🎷 Le Club", "🧪 Le Laboratoire", "🌌 Le Cosmos"
@@ -70,7 +68,7 @@ export const DB = {
                 { 
                     id: 'struct_36', name: 'Structure 3-6', tech: '3/6', sub: 'Struct. A', unlockLvl: 1,
                     configs: [
-                        { id: 0, name: 'Contractée Basse', sub: '6m - 3m', iv: [0,3,11] }, // 3m + 6m = 3 + 8 = 11 (Wait... 0-3 is m3, 3-11 is m6)
+                        { id: 0, name: 'Contractée Basse', sub: '6m - 3m', iv: [0,3,11] }, // 3m + 6m = 3 + 8 = 11
                         { id: 1, name: 'Contractée Haute', sub: '3m - 6m', iv: [0,8,11] }, // 0-8 is m6, 8-11 is m3
                         { id: 2, name: 'Dilatée Basse', sub: '6M - 3M', iv: [0,4,13] },    // 0-4 is M3, 4-13 is M6 (9st)
                         { id: 3, name: 'Dilatée Haute', sub: '3M - 6M', iv: [0,9,13] }     // 0-9 is M6, 9-13 is M3
@@ -89,7 +87,7 @@ export const DB = {
                     id: 'trichord', name: 'Trichordes', tech: '3-X', sub: 'Texture', unlockLvl: 10,
                     configs: [
                         { id: 0, name: 'Chromatique', sub: '1/2 + 1/2', iv: [0,1,2] },
-                        { id: 1, name: 'Viennois', sub: '1/2 + Tr', iv: [0,1,6] }, // Or 0,6,7? Viennese is usually 0,1,6 or 0,5,6
+                        { id: 1, name: 'Viennois', sub: '1/2 + Tr', iv: [0,1,6] },
                         { id: 2, name: 'Par Tons', sub: '1 + 1', iv: [0,2,4] },
                         { id: 3, name: 'Octatonique', sub: '1/2 + 3M', iv: [0,1,4] }
                     ]
@@ -118,7 +116,6 @@ export const DB = {
         { id: 2, name: 'Shell Voicing', sub: 'Main Gauche', corr: 'Shell', type: 'voc' },
         { id: 3, name: 'Rootless', sub: 'Sans Basse', corr: 'Rootless', type: 'voc' }
     ],
-    // DB.lab_configs removed. Dynamic now.
     ranks: [ 
         {t:"Tourneur de pages enthousiaste",i:"📄"}, 
         {t:"Régisseur distrait",i:"🔦"}, 
@@ -343,20 +340,107 @@ export const PHYSICAL_MAP = {
     'KeyQ': 0, 'KeyW': 1, 'KeyE': 2, 'KeyR': 3, 'KeyT': 4, 'KeyY': 5, 'KeyZ': 5
 };
 
-// COACH DATABASE
+// COACH DATABASE V2 (Pedagogy & Psychology)
 export const COACH_DB = {
-    start: ["Prends une grande respiration.", "Ferme les yeux pour mieux entendre.", "Visualise le clavier.", "Écoute la basse en premier.", "Chante la note la plus aiguë."],
-    streak: ["Tu es en feu !", "Rien ne t'arrête !", "Quelle concentration !", "Ton oreille s'affine.", "Zone de Flow activée."],
-    speed: ["Vif comme l'éclair !", "Réflexes impressionnants.", "Ton cerveau traite le son instantanément.", "Vitesse lumière !", "Tu anticipes l'harmonie."],
-    master: ["Une oreille absolue en devenir ?", "Maîtrise totale.", "Tu entends les couleurs.", "L'harmonie n'a plus de secrets.", "Niveau professionnel."],
-    theory: ["La 7ème majeure est sensible.", "Le triton divise l'octave en deux.", "La tierce définit la couleur (Majeur/Mineur).", "La quinte stabilise l'accord.", "Les renversements changent la basse, pas la nature."],
-    boost: ["L'erreur est la meilleure professeure.", "Respire, et réécoute.", "Ne lâche rien, ça va venir.", "Chaque essai construit ton cerveau.", "La régularité est la clé."],
+    start: [
+        "Bienvenue. Prends une grande respiration avant de commencer.",
+        "Ferme les yeux. Ton oreille voit mieux quand tes yeux sont clos.",
+        "Ne cherche pas à deviner. Écoute la résonance jusqu'au bout.",
+        "Chante la note la plus aiguë dans ta tête, cela t'aidera à t'orienter.",
+        "L'objectif n'est pas la vitesse, mais la précision de ta sensation."
+    ],
+    // High accuracy, high streak
+    streak: [
+        "Ton cerveau anticipe la couleur avant même la fin de l'accord.",
+        "Tu es en état de flux (Flow). Ne force rien, laisse venir.",
+        "Tes connexions neuronales se renforcent à chaque bonne réponse.",
+        "Tu ne réfléchis plus, tu entends. C'est ça, l'intériorisation.",
+        "Excellent. Garde cette détente, c'est là que réside la justesse."
+    ],
+    // Fast but inaccurate
+    speed_warn: [
+        "Ralentis. Laisse le son résonner avant de cliquer.",
+        "La vitesse sans précision ne construit pas d'oreille solide.",
+        "Prends le temps de chanter intérieurement l'accord.",
+        "Tu confonds vitesse et précipitation. Respire.",
+        "Laisse l'accord se déposer en toi."
+    ],
+    // High level advice
+    master: [
+        "Essaie maintenant d'entendre chaque note individuellement.",
+        "Peux-tu identifier la quinte de cet accord ?",
+        "Concentre-toi sur la 'texture' du son plutôt que sur les notes.",
+        "L'harmonie n'a plus de secrets pour toi.",
+        "Tu entends les couleurs avec une clarté impressionnante."
+    ],
+    // General Theory
+    theory: [
+        "La 7ème majeure crée une tension qui veut monter vers l'octave.",
+        "Le triton (3 tons) divise l'octave en deux parties égales.",
+        "La tierce est l'âme de l'accord : elle le rend Majeur ou Mineur.",
+        "La quinte est le pilier : elle stabilise l'ensemble.",
+        "Les renversements changent la basse, mais la couleur globale reste la même."
+    ],
+    // Encouragement (Diesel / Struggle)
+    effort: [
+        "L'harmonie s'apprend par la répétition. Ton cerveau construit des ponts.",
+        "L'erreur est une information précieuse. Compare ce que tu as entendu avec la correction.",
+        "Ne lâche rien. La neuroplasticité demande du temps et de l'effort.",
+        "C'est dans la difficulté que l'oreille progresse le plus.",
+        "La régularité bat le talent. Continue."
+    ],
+    // Critical / Fatigue
+    critical: [
+        "Attention à la saturation de l'oreille. Une pause n'est pas du temps perdu !",
+        "Ton attention baisse. Fais quelques pas, bois de l'eau.",
+        "L'oreille fatigue vite. Reviens dans 10 minutes, tu seras plus performant.",
+        "Ne force pas si tu ne sens plus les couleurs. Repose-toi.",
+        "La qualité de l'écoute dépend de la fraîcheur mentale."
+    ],
+    // Breakthrough (Low stats -> High streak)
+    breakthrough: [
+        "Tu as trouvé le truc ! Garde cette sensation précise.",
+        "C'est le déclic. Tu entends enfin la différence.",
+        "Bravo, tu viens de franchir un palier de compréhension.",
+        "C'est ça ! Tu as connecté le son au concept."
+    ],
+    // Doubter (High acc, slow time, many replays)
+    patience: [
+        "Le premier ressenti est souvent le bon. Fais-toi confiance.",
+        "Tu entends juste, n'hésite pas autant.",
+        "Ton instinct est bon. Arrête d'intellectualiser le son.",
+        "La patience est une vertu, mais la confiance est une force."
+    ],
     weakness: {
-        maj7: [{t:"Technique", m:"Essaie d'entendre la 7ème majeure qui frotte juste sous l'octave."}],
-        min7: [{t:"Technique", m:"C'est un accord doux, sans le frottement du Maj7 ni la tension du Dom7."}],
-        dom7: [{t:"Technique", m:"Repère le Triton. Ça sonne 'bluesy' et instable."}],
-        hdim7: [{t:"Technique", m:"C'est sombre et tendu. Comme un film noir."}],
-        dim7: [{t:"Technique", m:"Symétrique et effrayant. Le son des méchants de cinéma."}],
-        minmaj7: [{t:"Technique", m:"Le son de détective privé. Mineur + Tension aiguë."}]
+        maj7: [
+            {t:"Sensation", m:"Le Maj7 est nostalgique. Cherche la 7ème qui frotte juste sous l'octave."},
+            {t:"Technique", m:"Intervalles : 2 tons, 1.5 ton, 2 tons. Chante l'arpège de 'Gymnopédie'."},
+            {t:"Astuce", m:"Si tu n'entends pas la couleur, essaie de visualiser le clavier en secours."}
+        ],
+        min7: [
+            {t:"Sensation", m:"C'est un accord doux et stable, sans le frottement du Maj7 ni la tension du Dom7."},
+            {t:"Technique", m:"Souvent le IIe degré. Il est neutre et contemplatif."},
+            {t:"Astuce", m:"Il sonne 'jazz' mais sans agressivité."}
+        ],
+        dom7: [
+            {t:"Sensation", m:"Il contient un Triton. C'est ce frottement qui demande à être résolu."},
+            {t:"Technique", m:"La tierce veut monter, la 7ème veut descendre. C'est un moteur."},
+            {t:"Astuce", m:"Repère le côté 'Blues' et instable."}
+        ],
+        hdim7: [
+            {t:"Sensation", m:"C'est sombre et tendu. Comme un film noir."},
+            {t:"Technique", m:"Appelé aussi Demi-Diminué. Le pivot du mode mineur."},
+            {t:"Astuce", m:"Plus sombre que le mineur 7, mais moins dramatique que le diminué complet."}
+        ],
+        dim7: [
+            {t:"Sensation", m:"Symétrique et angoissant. Le son des méchants de cinéma."},
+            {t:"Technique", m:"Empilement de tierces mineures. Aucune note ne domine."},
+            {t:"Astuce", m:"Une tension extrême sans direction précise."}
+        ],
+        minmaj7: [
+            {t:"Sensation", m:"Le son de détective privé. Une base triste avec une pointe acide."},
+            {t:"Technique", m:"Mineur avec une 7ème Majeure. Forte dissonance interne."},
+            {t:"Astuce", m:"Repère le frottement dur entre la 7ème et la tonique."}
+        ]
     }
 };
