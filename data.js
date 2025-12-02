@@ -1,3 +1,5 @@
+
+
 // --- MASTERY & SETS ---
 export const MASTERY_NAMES = [
     "🏛️ L'Académie", "🎷 Le Club", "🧪 Le Laboratoire", "🌌 Le Cosmos"
@@ -270,40 +272,53 @@ export const BADGES = [
     { id: 'b_pur', category: 'career', setID: 'core', icon: '🧐', title: "Le Puriste", desc: "Série de 25 sans faute avec TOUS réglages", check: (d, s) => s.fullConfigStreak >= 25 },
     
     // ACADEMY SPECIFIC (Moved to Core for simplicity or explicit setID)
-    { id: 'b_ency', category: 'career', setID: 'academy', icon: '📚', title: "L'Encyclopédie", desc: "Valider les 21 combinaisons uniques (Acad.)", check: (d) => d.stats.combos && d.stats.combos.length >= 21 },
+    { id: 'b_ency', category: 'career', setID: 'academy', icon: '📚', title: "L'Encyclopédie", desc: "Valider les 21 combinaisons uniques (Acad.)", check: (d) => d.currentSet === 'academy' && d.stats.combos && d.stats.combos.length >= 21 },
     { id: 'b_init', category: 'career', setID: 'academy', icon: '🥉', title: "L'Initié", desc: "Rang Bronze min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 20) },
     { id: 'b_conf', category: 'career', setID: 'academy', icon: '🥈', title: "Le Confirmé", desc: "Rang Argent min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 50) },
     { id: 'b_virt', category: 'career', setID: 'academy', icon: '🥇', title: "Le Virtuose", desc: "Rang Or sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 100) },
     { id: 'b_bat', category: 'career', setID: 'academy', icon: '🔨', title: "Le Bâtisseur", desc: "Rang Bronze min. sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 20) },
     { id: 'b_ing', category: 'career', setID: 'academy', icon: '📐', title: "L'Ingénieur", desc: "Rang Argent min. sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 50) },
     { id: 'b_arch', category: 'career', setID: 'academy', icon: '🏗️', title: "L'Architecte", desc: "Rang Or sur les 4 renversements (Acad.)", check: (d) => checkRankColl(d, 'i', 100) },
-    { id: 'b_duke', category: 'career', setID: 'academy', icon: '🎩', title: "The Duke", desc: "10 réussites consécutives sur Maj7/min7 (Acad.)", check: (d) => d.stats.str_jazz >= 10 },
-    { id: 'b_007', category: 'career', setID: 'academy', icon: '🕵️', title: "Agent 007", desc: "10 réussites consécutives sur MinMaj7", check: (d) => d.stats.str_007 >= 10 },
-    { id: 'b_dem', category: 'career', setID: 'academy', icon: '💣', title: "Démineur", desc: "10 réussites consécutives sur Dim7", check: (d) => d.stats.str_dim >= 10 },
-    { id: 'b_acro', category: 'career', setID: 'academy', icon: '🤸', title: "L'Acrobate", desc: "10 réussites consécutives sur Renversements", check: (d) => d.stats.str_inv >= 10 },
-    { id: 'b_grand', category: 'career', setID: 'academy', icon: '🌊', title: "Grand Large", desc: "Série de 15 sans faute en Mode Ouvert (Acad.)", check: (d, s) => s.openStreak >= 15 },
+    { id: 'b_duke', category: 'career', setID: 'academy', icon: '🎩', title: "The Duke", desc: "10 réussites consécutives sur Maj7/min7 (Acad.)", check: (d) => d.currentSet === 'academy' && d.stats.str_jazz >= 10 },
+    { id: 'b_007', category: 'career', setID: 'academy', icon: '🕵️', title: "Agent 007", desc: "10 réussites consécutives sur MinMaj7", check: (d) => d.currentSet === 'academy' && d.stats.str_007 >= 10 },
+    { id: 'b_dem', category: 'career', setID: 'academy', icon: '💣', title: "Démineur", desc: "10 réussites consécutives sur Dim7", check: (d) => d.currentSet === 'academy' && d.stats.str_dim >= 10 },
+    { id: 'b_acro', category: 'career', setID: 'academy', icon: '🤸', title: "L'Acrobate", desc: "10 réussites consécutives sur Renversements", check: (d) => d.currentSet === 'academy' && d.stats.str_inv >= 10 },
+    { id: 'b_grand', category: 'career', setID: 'academy', icon: '🌊', title: "Grand Large", desc: "Série de 15 sans faute en Mode Ouvert (Acad.)", check: (d, s) => d.currentSet === 'academy' && s.openStreak >= 15 },
 
     // JAZZ SPECIFIC
-    { id: 'b_blue', category: 'career', setID: 'jazz', icon: '🎷', title: "Blue Note", desc: "Réussir 50 accords Jazz (Club)", check: (d) => { if(!d.stats.v) return false; let tot = 0; for(let k in d.stats.v) tot += d.stats.v[k].ok; return tot >= 50; }},
-    { id: 'b_velvet', category: 'career', setID: 'jazz', icon: '🧤', title: "Doigts de Velours", desc: "Série de 10 sur Voicing Rootless", check: (d, s) => s.rootlessStreak >= 10 },
-    { id: 'b_alt', category: 'career', setID: 'jazz', icon: '💥', title: "Altered Beast", desc: "20 réussites sur l'accord Altéré", check: (d) => (d.stats.c['alt']?.ok || 0) >= 20 },
+    { id: 'b_blue', category: 'career', setID: 'jazz', icon: '🎷', title: "Blue Note", desc: "Réussir 50 accords Jazz (Club)", check: (d) => { if(d.currentSet !== 'jazz' || !d.stats.v) return false; let tot = 0; for(let k in d.stats.v) tot += d.stats.v[k].ok; return tot >= 50; }},
+    { id: 'b_velvet', category: 'career', setID: 'jazz', icon: '🧤', title: "Doigts de Velours", desc: "Série de 10 sur Voicing Rootless", check: (d, s) => d.currentSet === 'jazz' && s.rootlessStreak >= 10 },
+    { id: 'b_alt', category: 'career', setID: 'jazz', icon: '💥', title: "Altered Beast", desc: "20 réussites sur l'accord Altéré", check: (d) => d.currentSet === 'jazz' && (d.stats.c['alt']?.ok || 0) >= 20 },
     { id: 'b_bebop', category: 'career', setID: 'jazz', icon: '🎺', title: "Bebop Flow", desc: "5 réponses rapides en mode Jazz", check: (d, s) => s.fastStreak >= 5 && d.currentSet === 'jazz' },
 
     // LAB SPECIFIC
-    { id: 'b_lab', category: 'career', setID: 'laboratory', icon: '🧪', title: "Rat de Labo", desc: "Réussir 50 accords Laboratoire", check: (d) => { if(!d.stats.l) return false; let tot = 0; for(let k in d.stats.l) tot += d.stats.l[k].ok; return tot >= 50; }},
-    { id: 'b_geo', category: 'career', setID: 'laboratory', icon: '📐', title: "L'Œil du Géomètre", desc: "Série de 15 sur les Structures (36/45tr)", check: (d, s) => s.geoStreak >= 15 },
-    { id: 'b_cryst', category: 'career', setID: 'laboratory', icon: '💠', title: "Cristallographe", desc: "Série de 10 sur Structure 3-6", check: (d, s) => s.str36Streak >= 10 },
-    { id: 'b_tri', category: 'career', setID: 'laboratory', icon: '😈', title: "Détecteur de Tritons", desc: "Tirer le Diabolus in Musica par la queue", check: (d, s) => s.str45Streak >= 10 },
-    { id: 'b_arch_abs', category: 'career', setID: 'laboratory', icon: '🏗️', title: "L'Architecte Abstrait", desc: "50 réussites sur Struct 3-6 ET 45tr", check: (d) => (d.stats.c['struct_36']?.ok || 0) >= 50 && (d.stats.c['struct_45tr']?.ok || 0) >= 50 },
-    { id: 'b_quant', category: 'career', setID: 'laboratory', icon: '⚛️', title: "Oreille Quantique", desc: "Série de 10 sur Trichordes", check: (d, s) => s.triStreak >= 10 },
-    { id: 'b_sym', category: 'career', setID: 'laboratory', icon: '🦋', title: "Symétrie Parfaite", desc: "30 réussites sur Suspendus", check: (d) => (d.stats.c['sus_sym']?.ok || 0) >= 30 },
+    { id: 'b_lab', category: 'career', setID: 'laboratory', icon: '🧪', title: "Rat de Labo", desc: "Réussir 50 accords Laboratoire", check: (d) => { if(d.currentSet !== 'laboratory' || !d.stats.l) return false; let tot = 0; for(let k in d.stats.l) tot += d.stats.l[k].ok; return tot >= 50; }},
+    { id: 'b_geo', category: 'career', setID: 'laboratory', icon: '📐', title: "L'Œil du Géomètre", desc: "Série de 15 sur les Structures (36/45tr)", check: (d, s) => d.currentSet === 'laboratory' && s.geoStreak >= 15 },
+    { id: 'b_cryst', category: 'career', setID: 'laboratory', icon: '💠', title: "Cristallographe", desc: "Série de 10 sur Structure 3-6", check: (d, s) => d.currentSet === 'laboratory' && s.str36Streak >= 10 },
+    { id: 'b_tri', category: 'career', setID: 'laboratory', icon: '😈', title: "Détecteur de Tritons", desc: "Tirer le Diabolus in Musica par la queue", check: (d, s) => d.currentSet === 'laboratory' && s.str45Streak >= 10 },
+    { id: 'b_arch_abs', category: 'career', setID: 'laboratory', icon: '🏗️', title: "L'Architecte Abstrait", desc: "50 réussites sur Struct 3-6 ET 45tr", check: (d) => d.currentSet === 'laboratory' && (d.stats.c['struct_36']?.ok || 0) >= 50 && (d.stats.c['struct_45tr']?.ok || 0) >= 50 },
+    { id: 'b_quant', category: 'career', setID: 'laboratory', icon: '⚛️', title: "Oreille Quantique", desc: "Série de 10 sur Trichordes", check: (d, s) => d.currentSet === 'laboratory' && s.triStreak >= 10 },
+    { id: 'b_sym', category: 'career', setID: 'laboratory', icon: '🦋', title: "Symétrie Parfaite", desc: "30 réussites sur Suspendus", check: (d) => d.currentSet === 'laboratory' && (d.stats.c['sus_sym']?.ok || 0) >= 30 },
 
     // --- SUPER-CATÉGORIE: HÉRITAGE (Lore & Progression) ---
     // setID: 'lore'
-    { id: 'b_leg', category: 'lore', setID: 'lore', icon: '👑', title: "La Légende", desc: "Débloquer tous les badges standards", check: (d) => d.badges.filter(bid => !bid.startsWith('b_mat_')).length >= (BADGES.filter(b => !b.secret).length - 1) },
+    { 
+        id: 'b_leg', category: 'lore', setID: 'lore', icon: '👑', title: "La Légende", 
+        desc: "Débloquer tous les badges Généraux et Académiques", 
+        check: (d) => {
+            const visibleTargets = BADGES.filter(b => !b.secret && (b.setID === 'core' || b.setID === 'academy'));
+            const playerUnlocked = d.badges.filter(bid => {
+                const b = BADGES.find(x => x.id === bid);
+                return b && (b.setID === 'core' || b.setID === 'academy');
+            });
+            return playerUnlocked.length >= visibleTargets.length;
+        } 
+    },
 
     // EASTER EGGS (SECRETS)
-    { id: 'b_audio', category: 'lore', setID: 'lore', secret: true, icon: '🤔', title: "L'Audiophile", desc: "La patience est une vertu", check: (d, s) => s.replayCount > 5 },
+    // RENOMMAGE ANCIEN b_audio -> b_sceptic pour laisser la place au nouveau
+    { id: 'b_sceptic', category: 'lore', setID: 'lore', secret: true, icon: '🤔', title: "Le Sceptique", desc: "La patience est une vertu (5 Replay)", check: (d, s) => s.replayCount > 5 },
+    
     { id: 'b_auto', category: 'lore', setID: 'lore', secret: true, icon: '🤖', title: "L'Automate", desc: "Votre régularité n'est plus humaine (Série 50)", check: (d, s) => s.streak >= 50 },
     { id: 'b_dj', category: 'lore', setID: 'lore', secret: true, icon: '🎧', title: "Le DJ", desc: "Remix en cours... (Spam Rejouer)", check: (d, s) => s.djClickTimes.length >= 5 },
     { id: 'b_ind', category: 'lore', setID: 'lore', secret: true, icon: '🤷', title: "L'Indécis", desc: "Il n'y a que les imbéciles qui ne changent pas d'avis", check: (d, s) => {
@@ -317,7 +332,15 @@ export const BADGES = [
     }},
     { id: 'b_deja', category: 'lore', setID: 'lore', secret: true, icon: '🐈', title: "Déjà-Vu", desc: "Une faille dans la matrice ?", check: (d, s) => s.dejaVu === true },
     { id: 'b_surv', category: 'lore', setID: 'lore', secret: true, icon: '🚑', title: "Le Survivant", desc: "Ce qui ne vous tue pas vous donne de l'XP", check: (d, s) => (s.mode === 'chrono' || s.mode === 'sprint') && s.lives === 1 && s.score >= 500 },
-    { id: 'b_mono', category: 'lore', setID: 'lore', secret: true, icon: '🥋', title: "Monomaniaque", desc: "Plus un esprit se limite, plus il touche à l'infini", check: (d, s) => s.monoStreak >= 20 }
+    { id: 'b_mono', category: 'lore', setID: 'lore', secret: true, icon: '🥋', title: "Monomaniaque", desc: "Plus un esprit se limite, plus il touche à l'infini", check: (d, s) => s.monoStreak >= 20 },
+
+    // --- NOUVEAUX BADGES SECRETS ---
+    { id: 'b_fast', category: 'lore', setID: 'lore', secret: true, icon: '🐆', title: "Instinct Primal", desc: "Plus rapide que la pensée (<1s)", check: (d, s) => s.lastReactionTime < 1000 },
+    { id: 'b_pure', category: 'lore', setID: 'lore', secret: true, icon: '✨', title: "L'Audiophile", desc: "Série de 10 sans jamais réécouter", check: (d, s) => s.pureStreak >= 10 },
+    { id: 'b_razor', category: 'lore', setID: 'lore', secret: true, icon: '💣', title: "Le Fil du Rasoir", desc: "L'efficacité sous pression maximale (<2s)", check: (d, s) => s.razorTriggered === true },
+    { id: 'b_curieux', category: 'lore', setID: 'lore', secret: true, icon: '👆', title: "Touche-à-tout", desc: "La curiosité est un vilain défaut ?", check: (d, s) => s.titleClicks >= 10 },
+    { id: 'b_jack', category: 'lore', setID: 'lore', secret: true, icon: '🎰', title: "Jackpot", desc: "La chance sourit aux audacieux (3x même type)", check: (d, s) => s.jackpotStreak >= 3 },
+    { id: 'b_alchi', category: 'lore', setID: 'lore', secret: true, icon: '⚗️', title: "L'Alchimiste", desc: "Transmuter les 12 tons en Or (Cycle complet)", check: (d, s) => s.collectedRoots && s.collectedRoots.size >= 12 }
 ];
 
 // GÉNÉRATION DES BADGES SECRETS DE MATIÈRE
@@ -343,19 +366,19 @@ export const PHYSICAL_MAP = {
 // COACH DATABASE V2 (Pedagogy & Psychology)
 export const COACH_DB = {
     start: [
-        "Bienvenue. Prends une grande respiration avant de commencer.",
-        "Ferme les yeux. Ton oreille voit mieux quand tes yeux sont clos.",
-        "Ne cherche pas à deviner. Écoute la résonance jusqu'au bout.",
-        "Chante la note la plus aiguë dans ta tête, cela t'aidera à t'orienter.",
-        "L'objectif n'est pas la vitesse, mais la précision de ta sensation."
+        "Bienvenue. Prenez une grande respiration avant de commencer.",
+        "Fermez les yeux. Votre oreille voit mieux quand vos yeux sont clos.",
+        "Ne cherchez pas à deviner. Écoutez la résonance jusqu'au bout.",
+        "Arpègez l'accord dans ta tête, cela vous aidera à vous orienter.",
+        "L'objectif n'est pas la vitesse, mais la précision de votre sensation."
     ],
     // High accuracy, high streak
     streak: [
-        "Ton cerveau anticipe la couleur avant même la fin de l'accord.",
-        "Tu es en état de flux (Flow). Ne force rien, laisse venir.",
-        "Tes connexions neuronales se renforcent à chaque bonne réponse.",
-        "Tu ne réfléchis plus, tu entends. C'est ça, l'intériorisation.",
-        "Excellent. Garde cette détente, c'est là que réside la justesse."
+        "Votre cerveau anticipe la couleur avant même la fin de l'accord.",
+        "Vous êtes en état de flux (Flow). Ne forcez rien, laissez venir.",
+        "Vos connexions neuronales se renforcent à chaque bonne réponse.",
+        "Vous ne réfléchissez plus, vous faites confiance à ton intuition.",
+        "Excellent. Gardez cette détente, c'est là que réside la justesse."
     ],
     // Fast but inaccurate
     speed_warn: [
@@ -366,17 +389,17 @@ export const COACH_DB = {
     ],
     // High level advice
     master: [
-        "Essaie maintenant d'entendre chaque note individuellement.",
-        "Peux-tu identifier la quinte de cet accord ?",
-        "Concentre-toi sur la 'texture' du son plutôt que sur les notes.",
-        "L'harmonie n'a plus de secrets pour toi.",
-        "Tu entends les couleurs avec une clarté impressionnante."
+        "Votre niveau est excellent. Essayez d'accélérer votre cadence pour travailler votre intuition",
+        "Bravo! Vous pouvez essayer les positions 'Ouvertes' pour augmenter la difficulté",
+        "Concentrez-vous sur la 'texture' du son plutôt que sur les notes.",
+        "L'harmonie n'a plus de secrets pour vous.",
+        "Vous entendez les couleurs avec une clarté impressionnante."
     ],
     // General Theory
     theory: [
         "Rappel : Un intervalle de 3 tons est appelé Triton. C'est l'intervalle le plus instable.",
         "En jazz, la 3ème et la 7ème sont appelées 'Notes Guides'. Elles définissent la qualité de l'accord.",
-        "La quinte bémol (b5) est caractéristique des accords diminués et demi-diminués.",
+        "La quinte abaissée (b5) est caractéristique des accords diminués et demi-diminués.",
         "Une cadence est une progression d'accords qui marque une ponctuation musicale."
     ],
     // Encouragement (Diesel / Struggle)
@@ -398,7 +421,7 @@ export const COACH_DB = {
     breakthrough: [
         "Excellente séquence. Vous semblez avoir assimilé la structure interne de ces accords.",
         "Votre perception s'affine. Vous identifiez désormais les tensions avec justesse.",
-        "C'est un palier de progression. Votre oreille commence à classer les sons automatiquement.",
+        "C'est un palier de progression. Votre oreille commence à classer les couleurs automatiquement.",
         "La corrélation entre le son et la théorie est établie. Continuez ainsi."
     ],
     // Doubter (High acc, slow time, many replays)
@@ -409,43 +432,44 @@ export const COACH_DB = {
     ],
     weakness: {
         maj7: [
-            {t:"Sensation", m:"Le Maj7 est nostalgique. Cherche la 7ème qui frotte juste sous l'octave."},
-            {t:"Technique", m:"Intervalles : 2 tons, 1.5 ton, 2 tons. Chante l'arpège de 'Gymnopédie'."},
-            {t:"Astuce", m:"Si tu n'entends pas la couleur, essaie de visualiser le clavier en secours."},
+            {t:"Sensation", m:"Le Maj7 est stable, mais on peut chercher la 7ème, à 1/2 ton de l'octave."},
+            {t:"Technique", m:"Intervalles : 2 tons, 1.5 ton, 2 tons. On retrouve la couleur de la première 'Gymnopédie' d'Eric Satie."},
+            {t:"Astuce", m:"Si vous n'entendez pas la couleur, la visualisation du clavier est une aide précieuse."},
             {t:"Couleur", m:"La sonorité de cet accord est caractéristique du Jazz, avec une couleur Majeure très stable."},
             {t:"Mélodie", m:"À l'état fondamental, l'arpège correspond aux quatre premières notes de la mélodie de 'Mr. Sandman'."}
         ],
         min7: [
             {t:"Sensation", m:"C'est un accord doux et stable, sans le frottement du Maj7 ni la tension du Dom7."},
-            {t:"Technique", m:"Souvent le IIe degré. Il est neutre et contemplatif."},
+            {t:"Technique", m:"Il est neutre et contemplatif."},
             {t:"Astuce", m:"Il sonne 'jazz' mais sans agressivité."},
-            {t:"Fonction", m:"Cet accord correspond naturellement au deuxième degré d'une tonalité majeure."},
-            {t:"Structure", m:"C'est un empilement de Tierce Mineure, Tierce Majeure, Tierce Mineure."}
+            {t:"Fonction", m:"Cet accord correspond naturellement au deuxième degré d'une tonalité Majeure."},
+            {t:"Structure", m:"Les renversements du min7 ont une sonorité presque Majeure."}
         ],
         dom7: [
-            {t:"Sensation", m:"Il contient un Triton. C'est ce frottement qui demande à être résolu."},
-            {t:"Technique", m:"La tierce veut monter, la 7ème veut descendre. C'est un moteur."},
-            {t:"Astuce", m:"Repère le côté 'Blues' et instable."},
+            {t:"Sensation", m:"Il contient un Triton. C'est cette tension qui appelle une résolution."},
+            {t:"Technique", m:"La tierce veut monter, la 7ème veut descendre. C'est un accord tendu."},
+            {t:"Astuce", m:"Repérez le côté instable lié au Vème degré."},
             {t:"Fonction", m:"Identifiez la tension caractéristique de la Dominante qui appelle une résolution vers la Tonique."},
-            {t:"Singularité", m:"C'est le seul accord majeur qui contient une 7ème mineure."}
+            {t:"Singularité", m:"C'est le seul accord Majeur qui contient une 7ème mineure."}
         ],
         hdim7: [
-            {t:"Sensation", m:"C'est sombre et tendu. Comme un film noir."},
+            {t:"Sensation", m:"La couleur est sombre et tendue. Elle évoque les films noirs."},
             {t:"Technique", m:"Appelé aussi Demi-Diminué. Le pivot du mode mineur."},
             {t:"Astuce", m:"Plus sombre que le mineur 7, mais moins dramatique que le diminué complet."},
-            {t:"Structure", m:"C'est un accord mineur avec une quinte diminuée (bémol 5). Il est sombre et instable."}
+            {t:"Structure", m:"C'est un accord mineur avec une quinte diminuée (bémol 5). Il est sombre et instable."},
+            {t:"Fonction", m:"Cet accord correspond naturellement au deuxième degré d'une tonalité mineure."}
         ],
         dim7: [
-            {t:"Sensation", m:"Symétrique et angoissant. Le son des méchants de cinéma."},
-            {t:"Technique", m:"Empilement de tierces mineures. Aucune note ne domine."},
-            {t:"Astuce", m:"Une tension extrême sans direction précise."},
+            {t:"Sensation", m:"Symétrique et angoissant. Sa sonorité est associée aux effets spectaculaires et dramatiques au cinéma."},
+            {t:"Technique", m:"Empilement de tierces mineures. Il est composé de deux tritons enchâssés."},
+            {t:"Astuce", m:"Chacune des notes de l'accord peut jouer le rôle de sensible."},
             {t:"Symétrie", m:"L'accord est symétrique : il divise l'octave en quatre parties égales de 1,5 tons."},
             {t:"Piège", m:"Composé uniquement de tierces mineures, cet accord retombe sur ses notes initiales lors de l'arpège."}
         ],
         minmaj7: [
-            {t:"Sensation", m:"Le son de détective privé. Une base triste avec une pointe acide."},
+            {t:"Sensation", m:"Une sonorité dramatique. Une base sombre avec une pointe acide."},
             {t:"Technique", m:"Mineur avec une 7ème Majeure. Forte dissonance interne."},
-            {t:"Astuce", m:"Repère le frottement dur entre la 7ème et la tonique."},
+            {t:"Astuce", m:"Repère la dissonance particulièrement forte de l'accord, surtout lorsqu'il est renversé."},
             {t:"Cinéma", m:"C'est l'accord final emblématique du thème de James Bond."},
             {t:"Image", m:"Imaginez un accord mineur classique perturbé par une note sensible très aiguë."}
         ]
