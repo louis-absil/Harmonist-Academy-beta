@@ -539,7 +539,12 @@ canvas { width: 100%; height: 100%; position: absolute; top:0; left:0; }
 
 .app-container.quiz-mode .btn-listen { display: none; }
 .app-container.quiz-mode .btn-action { flex-grow: 1; }
-.app-footer { text-align: center; font-size: 0.6rem; color: var(--text-dim); opacity: 0.5; margin-top: 2px; pointer-events: none; }
+.app-footer { 
+    text-align: center; font-size: 0.6rem; color: var(--text-dim); opacity: 0.5; margin-top: 2px; 
+    pointer-events: auto; cursor: pointer; transition: opacity 0.2s;
+}
+.app-footer:hover { opacity: 1; color: var(--gold); }
+.app-footer:active { transform: scale(0.95); }
 
 /* MODALS - Z-INDEX FIX APPLIED HERE */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; backdrop-filter: blur(5px); align-items: center; justify-content: center; perspective: 1000px; }
@@ -606,6 +611,12 @@ input:checked + .slider { background: var(--primary); } input:checked + .slider:
 .coach-bubble:after { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); border-width: 0 8px 8px; border-style: solid; border-color: #334155 transparent; display: block; width: 0; }
 .coach-bubble strong { color: var(--gold); font-weight: 800; }
 .coach-tag { display: inline-block; background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; }
+/* --- CORRECTIF TYPOGRAPHIE ACCORDS --- */
+.coach-tag.context-badge {
+    text-transform: none; /* Respecte les minuscules (ex: m7M) */
+    font-size: 0.75rem;   /* Un tout petit peu plus gros pour être lisible */
+    letter-spacing: 0;    /* Enlève l'espacement forcé des titres */
+}
 .history-box { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
 .chart-limit-line { position: absolute; top: 50%; left: 10px; right: 10px; height: 1px; background: rgba(255,255,255,0.1); border-top: 1px dashed rgba(255,255,255,0.3); pointer-events: none; }
 .chart-container { display: flex; align-items: flex-end; justify-content: space-between; height: 80px; gap: 6px; z-index: 1; position: relative; }
