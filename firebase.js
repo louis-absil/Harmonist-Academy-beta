@@ -1,7 +1,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAMA9hH3hjlkjp-a4lpb3Dg9IusUB-AiMQ",
@@ -60,7 +60,6 @@ export const Cloud = {
         if (!userUid || !db || score <= 0) return;
         
         // On crée une entrée unique dans la collection 'scores' du mode
-        // Note: Dans une vraie prod, on utiliserait une Cloud Function pour vérifier le HighScore
         const payload = {
             uid: userUid,
             pseudo: username || "Anonyme",
@@ -70,23 +69,35 @@ export const Cloud = {
         };
 
         try {
-            // On ajoute simplement le score à l'historique global
             await addDoc(collection(db, `leaderboards/${mode}/scores`), payload);
             console.log(`Score ${score} envoyé vers ${mode}`);
         } catch (e) { console.error("Score Submit Fail:", e); }
     },
 
-    async getLeaderboard(mode) {
+    async getLeaderboard(mode, period = 'weekly') {
         if (!db) return [];
         try {
             const ref = collection(db, `leaderboards/${mode}/scores`);
-            const q = query(ref, orderBy("score", "desc"), limit(20));
+            let q;
+
+            if (period === 'weekly') {
+                // Calcul de la date il y a 7 jours
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+                // Nécessite un Index Composite (timestamp ASC, score DESC)
+                // Si l'index manque, la console JS donnera le lien pour le créer.
+                q = query(ref, where("timestamp", ">=", sevenDaysAgo), orderBy("score", "desc"), limit(20));
+            } else {
+                // Classement global (All-Time)
+                q = query(ref, orderBy("score", "desc"), limit(20));
+            }
+
             const snap = await getDocs(q);
             const results = [];
             snap.forEach(d => results.push(d.data()));
             return results;
         } catch (e) {
             console.error("Leaderboard Read Fail:", e);
+            // Fallback vide si erreur d'index ou réseau
             return [];
         }
     }
