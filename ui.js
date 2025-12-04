@@ -7,19 +7,54 @@ const LORE_GRADES = ['Novice', 'Initié', 'Adepte', 'Virtuose', 'Maître'];
 const LORE_PLACES = ['Le Club', 'Le Labo', 'Le Cosmos', "L'Institut", 'La Source'];
 
 export const UI = {
+    // STATE POUR LE LEADERBOARD
+    lbState: { mode: 'chrono', period: 'weekly' },
+
     // --- LEADERBOARD & CLOUD UI ---
     async showLeaderboard() {
         this.openModal('leaderboardModal');
-        this.loadLeaderboard('chrono'); // Default tab
+        // Reset à l'état par défaut ou garder le dernier état ? Gardons le dernier pour l'UX, ou reset mode courant.
+        // On aligne le leaderboard sur le mode de jeu actuel s'il est pertinent
+        if (['chrono', 'sprint', 'inverse'].includes(window.App.session.mode)) {
+            this.lbState.mode = window.App.session.mode;
+        } else {
+            this.lbState.mode = 'chrono';
+        }
+        this.lbState.period = 'weekly'; // Reset période par défaut pour montrer l'activité récente
+        this.updateLeaderboardView();
     },
 
-    async loadLeaderboard(mode) {
-        // Highlight active tab
-        document.querySelectorAll('#leaderboardModal .mode-opt').forEach(b => {
-            b.classList.remove('active');
-            if(b.innerText.toLowerCase().includes(mode)) b.classList.add('active');
-        });
+    setLbMode(mode) {
+        this.lbState.mode = mode;
+        this.updateLeaderboardView();
+    },
 
+    setLbPeriod(period) {
+        this.lbState.period = period;
+        this.updateLeaderboardView();
+    },
+
+    // Charge les données selon le state actuel
+    async updateLeaderboardView() {
+        const mode = this.lbState.mode;
+        const period = this.lbState.period;
+
+        // Update UI Tabs (Mode)
+        document.querySelectorAll('#leaderboardModal .mode-opt').forEach(b => b.classList.remove('active'));
+        const activeModeBtn = document.getElementById(`lb-mode-${mode}`);
+        if(activeModeBtn) activeModeBtn.classList.add('active');
+
+        // Update UI Tabs (Period)
+        document.querySelectorAll('.lb-period-btn').forEach(b => b.classList.remove('active'));
+        const activePeriodBtn = document.getElementById(`lb-period-${period}`);
+        if(activePeriodBtn) activePeriodBtn.classList.add('active');
+
+        // Fetch Data
+        await this.loadLeaderboardData(mode, period);
+    },
+
+    // Anciennement loadLeaderboard, maintenant interne
+    async loadLeaderboardData(mode, period) {
         const list = document.getElementById('lb-list');
         const loader = document.getElementById('lb-loader');
         list.innerHTML = '';
@@ -27,12 +62,13 @@ export const UI = {
 
         try {
             const { Cloud } = await import('./firebase.js');
-            const scores = await Cloud.getLeaderboard(mode);
+            const scores = await Cloud.getLeaderboard(mode, period);
             
             loader.style.display = 'none';
             
             if(scores.length === 0) {
-                list.innerHTML = '<div style="text-align:center; color:var(--text-dim); margin-top:20px;">Aucun score pour le moment.<br>Soyez le premier !</div>';
+                const periodText = period === 'weekly' ? "cette semaine" : "pour le moment";
+                list.innerHTML = `<div style="text-align:center; color:var(--text-dim); margin-top:20px;">Aucun score ${periodText}.<br>Soyez le premier !</div>`;
                 return;
             }
 
@@ -67,6 +103,11 @@ export const UI = {
             console.error(e);
             loader.innerHTML = "Erreur de chargement...";
         }
+    },
+
+    // Pour compatibilité si appelé directement depuis console ou autre
+    loadLeaderboard(mode) {
+        this.setLbMode(mode);
     },
 
     // --- HELPER: SYMBOLS & LABELS ---
