@@ -769,6 +769,48 @@ input:checked + .slider { background: var(--primary); } input:checked + .slider:
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 @keyframes holoSweep { 0% { transform: translateX(-100%) rotate(25deg); } 100% { transform: translateX(200%) rotate(25deg); } }
 
+/* LEADERBOARD SUB-NAV */
+.lb-sub-nav {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 5px;
+}
+
+.lb-period-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 5px 10px;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.lb-period-btn:hover {
+    color: white;
+}
+
+.lb-period-btn.active {
+    color: var(--gold);
+}
+
+.lb-period-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; /* Align with border-bottom of container */
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--gold);
+    box-shadow: 0 -2px 5px rgba(251, 191, 36, 0.5);
+}
+
 @media (min-width: 769px) { .grid-c { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 768px) { .game-area { grid-template-columns: 1fr; grid-template-rows: 1.5fr 1fr; } .header-left { flex: 1; min-width: 0; gap: 8px; } .rank-text { display: flex; min-width: 0; } .lvl-pill { display: none; } .stats-cluster { display: none; } .rank-title { font-size: 0.8rem; } .pad-main { font-size: 0.9rem; } .pad-sub { font-size: 0.5rem; } .level-hud h1 { font-size: 2rem; } .quiz-target { font-size: 3rem; } .quiz-btn { font-size: 1.5rem; } }
 @media (max-height: 700px) { .app-container { gap: 5px; padding: 5px; } header { padding: 4px 8px; min-height: 40px; } .rank-icon { font-size: 1.2rem; } .tools-bar { height: 32px; } .mode-opt { padding: 2px 8px; font-size: 0.65rem; } .command-deck { height: 50px; padding: 4px; } .icon-lg { font-size: 0.9rem; margin-bottom: 0; } .cmd-btn span { font-size: 0.65rem; } .btn-action { font-size: 0.9rem; } .panel-label { margin-bottom: 4px; } }
