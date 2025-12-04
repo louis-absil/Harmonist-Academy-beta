@@ -117,4 +117,4 @@ Ce projet est conçu pour être facilement extensible.
 
 ---
 
-**© 2025 Harmonist Academy** - *Fait avec passion pour la théorie musicale.*
+**© 2025 Harmonist Academy** - *Fait avec ❤️ et beaucoup de café.*
