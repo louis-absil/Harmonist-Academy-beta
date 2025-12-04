@@ -135,7 +135,7 @@
             <span class="brand-primary">Harmonist</span> <span class="brand-accent">Academy</span>
         </div>
         
-        <!-- SECTION CLASSEMENT AJOUTÉE -->
+        <!-- SECTION CLASSEMENT -->
         <h4 style="text-align:left; color:var(--gold); margin:5px 0 10px 0;">🏆 Compétition</h4>
         <div style="display:flex; gap:10px; margin-bottom:15px;">
              <!-- INPUT USERNAME -->
@@ -171,15 +171,22 @@
 <!-- LEADERBOARD MODAL -->
 <div class="modal-overlay" id="leaderboardModal">
     <div class="modal" style="height:80vh; display:flex; flex-direction:column;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h2 style="margin:0; color:var(--gold); display:flex; align-items:center; gap:10px;">🏆 Classement</h2>
             <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
         </div>
         
-        <div style="display:flex; gap:5px; margin-bottom:15px; overflow-x:auto; padding-bottom:5px;">
-            <button class="mode-opt active" onclick="window.UI.loadLeaderboard('chrono')" style="flex:1;">⚡ Chrono</button>
-            <button class="mode-opt" onclick="window.UI.loadLeaderboard('sprint')" style="flex:1;">🏃 Sprint</button>
-            <button class="mode-opt" onclick="window.UI.loadLeaderboard('inverse')" style="flex:1;">🎧 Inverse</button>
+        <!-- Sélecteur de Mode -->
+        <div style="display:flex; gap:5px; margin-bottom:10px; overflow-x:auto; padding-bottom:5px;">
+            <button class="mode-opt active" id="lb-mode-chrono" onclick="window.UI.setLbMode('chrono')" style="flex:1;">⚡ Chrono</button>
+            <button class="mode-opt" id="lb-mode-sprint" onclick="window.UI.setLbMode('sprint')" style="flex:1;">🏃 Sprint</button>
+            <button class="mode-opt" id="lb-mode-inverse" onclick="window.UI.setLbMode('inverse')" style="flex:1;">🎧 Inverse</button>
+        </div>
+
+        <!-- Sélecteur de Période (NOUVEAU) -->
+        <div class="lb-sub-nav">
+            <button class="lb-period-btn active" id="lb-period-weekly" onclick="window.UI.setLbPeriod('weekly')">📅 7 Jours</button>
+            <button class="lb-period-btn" id="lb-period-all" onclick="window.UI.setLbPeriod('all')">♾️ Toujours</button>
         </div>
 
         <div id="lb-loader" style="display:none; text-align:center; padding:20px; color:var(--text-dim);">Chargement...</div>
