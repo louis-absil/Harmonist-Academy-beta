@@ -1,5 +1,6 @@
 
 
+
 // --- MASTERY & SETS ---
 export const MASTERY_NAMES = [
     "🏛️ L'Académie", "🎷 Le Club", "🧪 Le Laboratoire", "🌌 Le Cosmos"
@@ -247,8 +248,8 @@ export const checkRankColl = (d, type, limit) => {
     const list = (type === 'c') ? DB.sets.academy.chords : DB.invs; 
     const stats = (type === 'c') ? d.stats.c : d.stats.i;
     if(!stats) return false;
-    const cleanList = (type==='i') ? list.filter(x => x.id !== 0) : list;
-    return cleanList.every(x => (stats[x.id] && stats[x.id].ok >= limit));
+    // Removed the filter (x.id !== 0) to ensure Root Position is included in mastery check
+    return list.every(x => (stats[x.id] && stats[x.id].ok >= limit));
 };
 
 export const BADGES = [
