@@ -1,5 +1,4 @@
 
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -7,19 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Harmonist Academy - V4.0 (Codex)</title>
     <link rel="stylesheet" href="./styles.css">
-<link rel="stylesheet" href="/index.css">
-<script type="importmap">
-{
-  "imports": {
-    "vite": "https://aistudiocdn.com/vite@^7.2.4",
-    "path": "https://aistudiocdn.com/path@^0.12.7",
-    "url": "https://aistudiocdn.com/url@^0.11.4",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
-  }
-}
-</script>
+    <!-- Suppression des styles React/Vite inutiles -->
 </head>
 <body>
 
@@ -148,6 +135,18 @@
             <span class="brand-primary">Harmonist</span> <span class="brand-accent">Academy</span>
         </div>
         
+        <!-- SECTION CLASSEMENT AJOUTÉE -->
+        <h4 style="text-align:left; color:var(--gold); margin:5px 0 10px 0;">🏆 Compétition</h4>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+             <!-- INPUT USERNAME -->
+             <input type="text" id="usernameInput" placeholder="Votre Pseudo" maxlength="15" 
+                    style="flex:1; background:rgba(0,0,0,0.3); border:1px solid var(--panel-border); color:white; padding:10px; border-radius:8px; font-weight:700;"
+                    onchange="window.App.setUsername(this.value)">
+        </div>
+        <button class="cmd-btn" onclick="window.UI.showLeaderboard()" style="width:100%; margin-bottom:20px; background:rgba(251, 191, 36, 0.1); border:1px solid var(--gold); color:var(--gold); padding:12px;">
+            Voir le Classement Mondial
+        </button>
+
         <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Chambre (Set)</h4>
         <div class="settings-grid" style="grid-template-columns:1fr 1fr;">
             <div class="setting-chip active" id="set-academy" onclick="window.App.loadSet('academy')">🏛️ Académie</div>
@@ -166,6 +165,32 @@
         <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Variations</h4>
         <div id="settingsInvs" class="settings-grid"></div>
         <button class="cmd-btn" onclick="window.App.hardReset()" style="width:100%; margin-top:20px; background:rgba(239, 68, 68, 0.2); color:var(--error); padding:10px;">⚠️ Réinitialiser</button>
+    </div>
+</div>
+
+<!-- LEADERBOARD MODAL -->
+<div class="modal-overlay" id="leaderboardModal">
+    <div class="modal" style="height:80vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h2 style="margin:0; color:var(--gold); display:flex; align-items:center; gap:10px;">🏆 Classement</h2>
+            <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+        </div>
+        
+        <div style="display:flex; gap:5px; margin-bottom:15px; overflow-x:auto; padding-bottom:5px;">
+            <button class="mode-opt active" onclick="window.UI.loadLeaderboard('chrono')" style="flex:1;">⚡ Chrono</button>
+            <button class="mode-opt" onclick="window.UI.loadLeaderboard('sprint')" style="flex:1;">🏃 Sprint</button>
+            <button class="mode-opt" onclick="window.UI.loadLeaderboard('inverse')" style="flex:1;">🎧 Inverse</button>
+        </div>
+
+        <div id="lb-loader" style="display:none; text-align:center; padding:20px; color:var(--text-dim);">Chargement...</div>
+        
+        <div id="lb-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+            <!-- INJECTED SCORES -->
+        </div>
+        
+        <div style="margin-top:10px; font-size:0.7rem; color:var(--text-dim); text-align:center;">
+            Top 20 Mondial • Mis à jour en temps réel
+        </div>
     </div>
 </div>
 
@@ -306,6 +331,5 @@
 </div>
 
 <script type="module" src="./main.js"></script>
-<script type="module" src="/index.tsx"></script>
 </body>
 </html>
