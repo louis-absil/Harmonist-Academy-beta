@@ -3,12 +3,14 @@ import { App } from './app.js';
 import { UI } from './ui.js';
 import { Audio, Piano } from './audio.js';
 import { PHYSICAL_MAP, DB } from './data.js';
+import { ChallengeManager } from './challenges.js';
 
 // Global assignments for HTML event listeners (onclick="window.App...")
 window.App = App;
 window.UI = UI;
 window.Piano = Piano;
 window.AudioEngine = Audio;
+window.ChallengeManager = ChallengeManager;
 
 // Keyboard Event Listeners
 document.addEventListener('keydown', e => {
