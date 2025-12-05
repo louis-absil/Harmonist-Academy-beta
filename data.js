@@ -1,6 +1,4 @@
 
-
-
 // --- MASTERY & SETS ---
 export const MASTERY_NAMES = [
     "🏛️ L'Académie", "🎷 Le Club", "🧪 Le Laboratoire", "🌌 Le Cosmos"
@@ -24,6 +22,24 @@ export const LORE_MATERIALS = [
     { name: "Météore",    icon: "☄️", particle: "de ",  color: "#f97316", shadow: "#c2410c" }, // Orange brûlé
     { name: "Quasar",     icon: "🌀", particle: "de ",  color: "#d946ef", shadow: "#a21caf" }, // Magenta
     { name: "Absolu",     icon: "🌟", particle: "de l'",  color: "#fcd34d", shadow: "#ffffff" }  // Or Blanc / Étoile
+];
+
+// --- GHOST PLAYERS (Historique) ---
+export const GHOSTS = [
+    // CHRONO (Endurance)
+    { mode: 'chrono', name: 'Erik Satie', mastery: 2, score: 800, quote: "Avant d'écrire une œuvre, j'en fais plusieurs fois le tour en accompagnant le tout de gestes très précis.", isGhost: true },
+    { mode: 'chrono', name: 'G. Rossini', mastery: 10, score: 3500, quote: "Donnez-moi une liste de blanchisserie et je la mettrai en musique.", isGhost: true },
+    { mode: 'chrono', name: 'J.S. Bach', mastery: 20, score: 9000, quote: "C'est facile : il suffit d'appuyer sur la bonne touche au bon moment et l'instrument joue tout seul.", isGhost: true },
+
+    // SPRINT (Vitesse)
+    { mode: 'sprint', name: 'C. Debussy', mastery: 4, score: 1200, quote: "La musique commence là où la parole est impuissante.", isGhost: true },
+    { mode: 'sprint', name: 'W.A. Mozart', mastery: 12, score: 4500, quote: "La musique ne doit jamais offenser l'oreille, mais toujours rester musique.", isGhost: true },
+    { mode: 'sprint', name: 'N. Paganini', mastery: 19, score: 12000, quote: "Paganini ne répète pas.", isGhost: true },
+
+    // INVERSE (Écoute / Mort Subite)
+    { mode: 'inverse', name: 'John Cage', mastery: 1, score: 350, quote: "Je n'ai pas d'oreille. Je n'ai jamais entendu de musique. Je ne fais qu'organiser des sons.", isGhost: true },
+    { mode: 'inverse', name: 'Nadia Boulanger', mastery: 15, score: 2500, quote: "Pour étudier la musique, nous devons apprendre les règles. Pour créer de la musique, nous devons les briser.", isGhost: true },
+    { mode: 'inverse', name: 'L.V. Beethoven', mastery: 20, score: 10000, quote: "Jouer une fausse note est insignifiant. Jouer sans passion est inexcusable !", isGhost: true }
 ];
 
 export const DB = {
