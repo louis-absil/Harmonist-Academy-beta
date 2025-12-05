@@ -3,10 +3,11 @@ import { DB, BADGES, COACH_DB } from './data.js';
 import { Audio, Piano } from './audio.js';
 import { UI } from './ui.js';
 import { Cloud } from './firebase.js';
+import { ChallengeManager } from './challenges.js';
 
 export const App = {
     data: { 
-        username: "Élève Anonyme", // NOUVEAU
+        username: "Élève Anonyme", 
         xp:0, lvl:1, next:100, mastery:0, currentSet: 'academy',
         bestChrono:0, bestSprint:0, bestInverse:0,
         stats:{
@@ -30,12 +31,17 @@ export const App = {
         str36Streak: 0, str45Streak: 0, geoStreak: 0, triStreak: 0, rootlessStreak: 0, monoStreak: 0, dejaVu: false,
         audioStartTime: 0, lastReactionTime: Infinity, hasReplayed: false, pureStreak: 0, razorTriggered: false,
         titleClicks: 0, lastChordType: null, jackpotStreak: 0, collectedRoots: null,
-        seed: null
+        isChallenge: false 
     },
     timerRef: null, sprintRef: null, vignetteRef: null,
+    
+    // Wrapper RNG pour permettre l'injection de Seed par ChallengeManager
+    rng() { return Math.random(); },
 
     init() {
-        Cloud.init(); 
+        Cloud.init();
+        ChallengeManager.checkRescue(); 
+
         try {
             const s = JSON.parse(localStorage.getItem('harmonist_v4_final') || '{}');
             if(s.xp !== undefined) { 
@@ -68,22 +74,16 @@ export const App = {
         const todayStr = new Date().toLocaleDateString('fr-FR', {day: 'numeric', month: 'numeric'});
         if(this.data.tempToday.date !== todayStr) { this.data.tempToday = { date: todayStr, ok: 0, tot: 0 }; }
         
-        this.loadSet(this.data.currentSet, true);
+        // On ne charge pas le set par défaut si une restauration de défi est en cours
+        if(!this.session.isChallenge) {
+            this.loadSet(this.data.currentSet, true);
+        }
+        
         this.calcGlobalStats(); 
         window.UI.renderBoard(); 
         window.UI.updateHeader();
         window.UI.updateModeLocks();
         Piano.init(); 
-    },
-
-    // NOUVEAU : ABSTRACTION RNG
-    rng() {
-        if(this.session.seed !== null) {
-            // Simple LCG pseudo-random if seeded (for reproducibility later)
-            this.session.seed = (this.session.seed * 9301 + 49297) % 233280;
-            return this.session.seed / 233280;
-        }
-        return Math.random();
     },
 
     setUsername(val) {
@@ -94,6 +94,9 @@ export const App = {
     },
 
     isLocked(id) {
+        // BYPASS: En mode Challenge, tous les accords sont débloqués pour l'examen
+        if(this.session.isChallenge) return false;
+        
         const c = DB.chords.find(x => x.id === id);
         if(!c) return false;
         if(this.data.currentSet === 'jazz' && this.data.mastery === 1) return (c.unlockLvl && c.unlockLvl > this.data.lvl);
@@ -147,6 +150,8 @@ export const App = {
     },
 
     setMode(m) {
+        if(this.session.isChallenge && m !== 'zen') return; // Bloquer changement mode en défi (force visual Zen)
+
         if(this.data.mastery === 0) {
             if(m === 'inverse' && this.data.lvl < 3) { window.UI.showToast("🔒 Débloqué au Niveau 3"); window.UI.vibrate([50,50]); return; }
             if(m === 'chrono' && this.data.lvl < 8) { window.UI.showToast("🔒 Débloqué au Niveau 8"); window.UI.vibrate([50,50]); return; }
@@ -162,7 +167,7 @@ export const App = {
         document.getElementById('chronoDisplay').style.display = (m==='chrono' || m==='sprint') ?'block':'none';
         if(m === 'sprint') { document.getElementById('timerVal').style.display = 'none'; } else { document.getElementById('timerVal').style.display = 'inline'; }
         document.getElementById('toolsBar').className = (m==='sprint') ? 'tools-bar sprint-active' : 'tools-bar';
-        if(m !== 'zen') { document.getElementById('scoreGroup').classList.add('active'); let best = 0; if(m === 'chrono') best = this.data.bestChrono; if(m === 'sprint') best = this.data.bestSprint; if(m === 'inverse') best = this.data.bestInverse; document.getElementById('highScoreVal').innerText = best; } else { document.getElementById('scoreGroup').classList.remove('active'); }
+        if(m !== 'zen' && !this.session.isChallenge) { document.getElementById('scoreGroup').classList.add('active'); let best = 0; if(m === 'chrono') best = this.data.bestChrono; if(m === 'sprint') best = this.data.bestSprint; if(m === 'inverse') best = this.data.bestInverse; document.getElementById('highScoreVal').innerText = best; } else { if (!this.session.isChallenge) document.getElementById('scoreGroup').classList.remove('active'); }
         const mainArea = document.getElementById('mainArea'); const appContainer = document.querySelector('.app-container');
         if(m === 'inverse') { mainArea.classList.add('quiz-mode'); appContainer.classList.add('quiz-mode'); document.getElementById('panelChord').style.display = 'none'; document.getElementById('invPanel').style.display = 'none'; document.getElementById('quizArea').style.display = 'flex'; } else { mainArea.classList.remove('quiz-mode'); appContainer.classList.remove('quiz-mode'); document.getElementById('panelChord').style.display = 'flex'; document.getElementById('invPanel').style.display = 'flex'; document.getElementById('quizArea').style.display = 'none'; }
         this.resetRound(true);
@@ -170,6 +175,8 @@ export const App = {
     },
 
     toggleSetting(type, id) {
+        if (this.session.isChallenge) { window.UI.showToast("🔒 Réglages verrouillés pendant le défi"); return; }
+
         if(type === 'c' && this.isLocked(id)) { const chord = DB.chords.find(c => c.id === id); window.UI.showToast(`🔒 Débloqué au Niveau ${chord.unlockLvl}`); window.UI.vibrate([50,50]); return; }
         const list = type === 'c' ? this.data.settings.activeC : this.data.settings.activeI;
         const idx = list.indexOf(id);
@@ -322,6 +329,7 @@ export const App = {
 
     playNew() {
         Audio.init(); if (!DB.chords.length) { this.loadSet(this.data.currentSet); return; }
+        
         if(this.sprintRef) { clearTimeout(this.sprintRef); this.sprintRef = null; }
         if(this.vignetteRef) { clearTimeout(this.vignetteRef); this.vignetteRef = null; }
         document.getElementById('sprintFill').style.transition = 'none'; document.getElementById('sprintFill').style.transform = 'scaleX(1)'; document.getElementById('vignette').className = 'vignette-overlay';
@@ -409,8 +417,18 @@ export const App = {
     },
 
     handleMain() { 
-         if(this.session.done) { if(this.session.mode === 'inverse') this.playNewQuiz(); else this.playNew(); } 
-         else if(!document.getElementById('valBtn').disabled) { if(this.session.mode === 'inverse') this.validateQuiz(); else this.validate(); }
+         if(this.session.done) { 
+             // FIX: En mode challenge, la progression est gérée par le ChallengeManager (timer)
+             // On empêche le double déclenchement manuel.
+             if(this.session.isChallenge) return;
+             
+             if(this.session.mode === 'inverse') this.playNewQuiz(); 
+             else this.playNew(); 
+         } 
+         else if(!document.getElementById('valBtn').disabled) { 
+             if(this.session.mode === 'inverse') this.validateQuiz(); 
+             else this.validate(); 
+         }
     },
 
     validate() {
@@ -419,6 +437,17 @@ export const App = {
         if(this.vignetteRef) { clearTimeout(this.vignetteRef); this.vignetteRef = null; }
         document.getElementById('sprintFill').style.transition = 'none'; document.getElementById('vignette').className = 'vignette-overlay';
         const c = this.session.chord; const okC = this.session.selC === c.type.id; const isDim = c.type.id === 'dim7' && this.data.currentSet !== 'jazz'; const okI = isDim ? true : (this.session.selI === c.inv);
+        
+        // HOOK POUR LE MODE DÉFI (V5.0)
+        if(this.session.isChallenge) {
+            this.session.done = true; this.session.roundLocked = true;
+            const win = okC && okI;
+            window.UI.reveal(okC, okI);
+            // On délègue la gestion de la réponse au ChallengeManager
+            ChallengeManager.handleAnswer(win, c, {type: this.session.selC, inv: this.session.selI});
+            return;
+        }
+
         this.session.done = true; this.session.roundLocked = true; 
         this.processWin(okC, okI); window.UI.reveal(okC, okI);
     },
@@ -429,6 +458,15 @@ export const App = {
         const userIdx = this.session.quizUserChoice; const correctIdx = this.session.quizCorrectIdx; const userOpt = this.session.quizOptions[userIdx]; const corrOpt = this.session.quizOptions[correctIdx];
         const okC = userOpt.type.id === corrOpt.type.id; let okI = userOpt.inv === corrOpt.inv; if (corrOpt.type.id === 'dim7' && this.data.currentSet !== 'jazz') okI = true;
         Audio.chord(corrOpt.notes);
+        
+        // HOOK POUR LE MODE DÉFI (V5.0 - Variante Quiz)
+        if(this.session.isChallenge) {
+             const win = okC && okI;
+             window.UI.revealQuiz(userIdx, correctIdx, this.session.quizOptions);
+             ChallengeManager.handleAnswer(win, corrOpt, userOpt);
+             return;
+        }
+
         this.processWin(okC, okI);
         window.UI.revealQuiz(userIdx, correctIdx, this.session.quizOptions);
     },
