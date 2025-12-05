@@ -1,29 +1,362 @@
 
 import { Audio, Piano } from './audio.js';
-import { BADGES, CODEX_DATA, DB, LORE_MATERIALS } from './data.js';
+import { BADGES, CODEX_DATA, DB, LORE_MATERIALS, GHOSTS } from './data.js';
+import { ChallengeManager } from './challenges.js';
+import { Cloud } from './firebase.js';
 
 // --- CONFIGURATION LORE (MAÎTRISE) ---
 const LORE_GRADES = ['Novice', 'Initié', 'Adepte', 'Virtuose', 'Maître'];
 const LORE_PLACES = ['Le Club', 'Le Labo', 'Le Cosmos', "L'Institut", 'La Source'];
 
 export const UI = {
-    // STATE POUR LE LEADERBOARD
+    // STATE
     lbState: { mode: 'chrono', period: 'weekly' },
+    createConfig: { length: 10 }, // FIX: Default matches HTML "active" class
 
-    // --- LEADERBOARD & CLOUD UI ---
-    async showLeaderboard() {
-        this.openModal('leaderboardModal');
-        // Reset à l'état par défaut ou garder le dernier état ? Gardons le dernier pour l'UX, ou reset mode courant.
-        // On aligne le leaderboard sur le mode de jeu actuel s'il est pertinent
-        if (['chrono', 'sprint', 'inverse'].includes(window.App.session.mode)) {
-            this.lbState.mode = window.App.session.mode;
+    // --- CHALLENGE HUB (V5.0) ---
+    
+    showChallengeHub() {
+        this.openModal('challengeHubModal');
+        // Ouvrir par défaut l'onglet Arcade (Classements)
+        this.switchChallengeTab('arcade'); 
+        
+        // On charge aussi le Daily pour qu'il soit prêt si on clique dessus
+        this.loadDailyChallengeUI();
+    },
+    
+    // Changes the Settings button to an Exit button during challenges
+    updateChallengeControls(active) {
+        const btn = document.getElementById('btnSettings');
+        if(!btn) return;
+        
+        if (active) {
+            // Mode Défi : Bouton Quitter (Porte)
+            btn.innerHTML = "🚪";
+            btn.onclick = () => {
+                if(confirm("Quitter le défi en cours ? Tout progrès sera perdu.")) {
+                    window.ChallengeManager.exit();
+                }
+            };
+            btn.style.borderColor = "var(--error)";
+            btn.style.color = "var(--error)";
         } else {
-            this.lbState.mode = 'chrono';
+            // Mode Normal : Bouton Settings (Engrenage)
+            btn.innerHTML = "⚙️";
+            btn.onclick = () => window.UI.openModal('settingsModal');
+            btn.style.borderColor = "";
+            btn.style.color = "";
         }
-        this.lbState.period = 'weekly'; // Reset période par défaut pour montrer l'activité récente
-        this.updateLeaderboardView();
     },
 
+    switchChallengeTab(tabName) {
+        document.querySelectorAll('.challenge-tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.challenge-tab-btn').forEach(el => el.classList.remove('active'));
+        
+        const tabContent = document.getElementById(`c-tab-${tabName}`);
+        if(tabContent) tabContent.style.display = 'block';
+        
+        // Gestion des boutons d'onglets (Mapping manuel basé sur l'ordre HTML)
+        // 0: Arcade, 1: Mondial, 2: Rejoindre, 3: Créer
+        const btns = document.querySelectorAll('.challenge-tab-btn');
+        if(btns.length >= 4) {
+            if(tabName === 'arcade') {
+                btns[0].classList.add('active');
+                this.updateLeaderboardView(); // Recharger les données Arcade quand on clique
+            }
+            if(tabName === 'global') btns[1].classList.add('active');
+            if(tabName === 'join') btns[2].classList.add('active');
+            if(tabName === 'create') btns[3].classList.add('active');
+        }
+    },
+
+    async loadDailyChallengeUI() {
+        const id = Cloud.getDailyChallengeID();
+        const dateEl = document.getElementById('dailyDateStr');
+        if(dateEl) dateEl.innerText = id.split('-').slice(1).join('/');
+        
+        const list = document.getElementById('dailyLeaderboardList');
+        if(list) {
+            list.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-dim);">Chargement...</div>';
+            
+            const scores = await Cloud.getChallengeLeaderboard(id);
+            list.innerHTML = '';
+            if(scores.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:var(--text-dim);">Soyez le premier à jouer aujourd\'hui !</div>';
+            } else {
+                scores.forEach((s, idx) => {
+                    let rank = idx+1;
+                    let color = 'white';
+                    if(idx===0) { rank='🥇'; color='var(--gold)'; }
+                    else if(idx===1) { rank='🥈'; color='#e2e8f0'; }
+                    else if(idx===2) { rank='🥉'; color='#b45309'; }
+                    
+                    list.innerHTML += `
+                        <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">
+                            <div style="width:30px; text-align:center; font-weight:700;">${rank}</div>
+                            <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
+                            <div style="font-weight:900;">${s.note}/20</div>
+                        </div>
+                    `;
+                });
+            }
+        }
+    },
+
+    async joinDailyChallenge() {
+        const id = Cloud.getDailyChallengeID();
+        // Config standard pour le Daily
+        const settings = {
+            activeC: DB.sets.academy.chords.map(c=>c.id), 
+            activeI: DB.invs.map(i=>i.id),
+            set: 'academy'
+        };
+        const challengeData = {
+            id: id,
+            seed: id,
+            length: 20,
+            settings: settings
+        };
+        if(confirm(`Lancer le Défi du Jour ?\n\n20 Questions • Mode Académie`)) {
+            await ChallengeManager.start(challengeData);
+        }
+    },
+
+    async joinChallenge() {
+        const input = document.getElementById('challengeCodeInput');
+        if(!input) return;
+        const code = input.value.trim().toUpperCase();
+        if(code.length < 3) return;
+        
+        let data = await Cloud.getChallenge(code);
+        if(!data) {
+            // Fallback local si pas trouvé dans le cloud (pour tests ou seeds simples)
+            data = {
+                id: code,
+                seed: code,
+                length: 20,
+                settings: { 
+                    set: window.App.data.currentSet, 
+                    activeC: window.App.data.settings.activeC, 
+                    activeI: window.App.data.settings.activeI 
+                }
+            };
+        }
+        
+        if(confirm(`Rejoindre le défi "${code}" ?`)) {
+            await ChallengeManager.start(data);
+        }
+    },
+
+    // Affiche le classement d'un défi spécifique dans l'onglet Rejoindre
+    async viewChallengeLeaderboard() {
+        const input = document.getElementById('challengeCodeInput');
+        if(!input) return;
+        const code = input.value.trim().toUpperCase();
+        if(code.length < 3) {
+            window.UI.showToast("Code trop court");
+            return;
+        }
+
+        const container = document.getElementById('join-lb-results');
+        if(!container) return;
+
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Recherche du classement...</div>';
+        
+        const scores = await Cloud.getChallengeLeaderboard(code);
+        
+        if(scores.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim);">Aucun score trouvé pour <strong>${code}</strong>.</div>`;
+        } else {
+            let html = `<h4 style="margin:10px 0; color:var(--text-dim); text-align:center;">Classement : ${code}</h4><div style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;">`;
+            scores.forEach((s, idx) => {
+                let rank = idx+1;
+                let color = 'white';
+                if(idx===0) { rank='🥇'; color='var(--gold)'; }
+                else if(idx===1) { rank='🥈'; color='#e2e8f0'; }
+                else if(idx===2) { rank='🥉'; color='#b45309'; }
+                
+                html += `
+                    <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">
+                        <div style="width:30px; text-align:center; font-weight:700;">${rank}</div>
+                        <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
+                        <div style="font-weight:900;">${s.note}/20</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+    },
+
+    setCreateLength(n) {
+        this.createConfig.length = n;
+        document.querySelectorAll('#c-tab-create .mode-opt').forEach(b => {
+            b.classList.remove('active');
+            if(b.innerText == n) b.classList.add('active');
+        });
+    },
+
+    async createChallengeAction() {
+        const seedInput = document.getElementById('createSeedInput');
+        let seed = seedInput ? seedInput.value.trim().toUpperCase() : "";
+        if(!seed) seed = 'DEF-' + Math.floor(Math.random()*10000);
+        
+        const data = {
+            seed: seed,
+            length: this.createConfig.length,
+            settings: {
+                set: window.App.data.currentSet,
+                activeC: window.App.data.settings.activeC,
+                activeI: window.App.data.settings.activeI
+            }
+        };
+        
+        const id = await Cloud.createChallenge(data);
+        if(id) {
+            alert(`Défi créé ! Code : ${id}`);
+            if(document.getElementById('challengeCodeInput')) {
+                document.getElementById('challengeCodeInput').value = id;
+            }
+            this.switchChallengeTab('join');
+        } else {
+            alert("Erreur de création (Code déjà pris ?)");
+        }
+    },
+
+    renderChallengeReport(report) {
+        let coachMsg = "Bravo pour cet effort.";
+        if (report.mistakes.length > 0) {
+            const m = report.mistakes[0];
+            const cName = m.chord.type.name;
+            coachMsg = `Tu as confondu <strong>${cName}</strong>. Compare tes réponses ci-dessous.`;
+        } else {
+            coachMsg = "Un parcours sans faute ! Ton oreille est affûtée.";
+        }
+
+        const modal = document.getElementById('challengeReportModal');
+        if(!modal) return;
+        
+        // --- VIEW 1: MISTAKES LIST ---
+        const mistakesHTML = report.mistakes.map(m => {
+            const targetNotesStr = JSON.stringify(m.chord.notes);
+            const targetName = m.chord.type.name;
+            const targetSub = m.chord.type.sub;
+            
+            let userNotes = [];
+            let userLabel = "???";
+            let userSub = "";
+            
+            if (m.userResp.notes) {
+                userNotes = m.userResp.notes;
+                userLabel = m.userResp.label || m.userResp.type.name;
+            } else {
+                const uType = m.userResp.type;
+                const uInv = m.userResp.inv;
+                const uTypeObj = DB.chords.find(c => c.id === uType);
+                if (uTypeObj) {
+                    userLabel = uTypeObj.name;
+                    userSub = uTypeObj.sub;
+                    userNotes = window.App.getNotes(uTypeObj, uInv, m.chord.root, m.chord.open);
+                }
+            }
+            const userNotesStr = JSON.stringify(userNotes);
+
+            return `
+                <div class="mistake-row" style="flex-direction:column; align-items:stretch; cursor:default; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; padding-bottom:5px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <span style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase;">Question ${report.mistakes.indexOf(m) + 1}</span>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1; background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.3); border-radius:8px; padding:8px; cursor:pointer;" onclick="window.AudioEngine.chord(${targetNotesStr})">
+                            <div style="font-size:0.6rem; color:var(--success); font-weight:700;">CIBLE</div>
+                            <div style="font-weight:700; color:white;">${targetName}</div>
+                            <div style="font-size:0.7rem; opacity:0.7;">${targetSub}</div>
+                            <div style="margin-top:5px; font-size:1.2rem;">🔊</div>
+                        </div>
+                        <div style="flex:1; background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); border-radius:8px; padding:8px; cursor:pointer;" onclick="window.AudioEngine.chord(${userNotesStr})">
+                            <div style="font-size:0.6rem; color:var(--error); font-weight:700;">RÉPONSE</div>
+                            <div style="font-weight:700; color:white;">${userLabel}</div>
+                            <div style="font-size:0.7rem; opacity:0.7;">${userSub}</div>
+                            <div style="margin-top:5px; font-size:1.2rem;">🔊</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // --- VIEW 2: STATISTICS GRID ---
+        let statsHTML = "";
+        if (report.attempts) {
+            const stats = {};
+            report.attempts.forEach(a => {
+                const id = a.chord.type.id;
+                if(!stats[id]) stats[id] = {ok:0, tot:0, name: a.chord.type.name, sub: a.chord.type.sub};
+                stats[id].tot++;
+                if(a.win) stats[id].ok++;
+            });
+            
+            statsHTML = Object.values(stats).map(s => {
+                const pct = Math.round((s.ok / s.tot) * 100);
+                const col = pct >= 80 ? 'var(--success)' : (pct >= 50 ? 'var(--warning)' : 'var(--error)');
+                return `
+                    <div class="stat-item">
+                        <div class="stat-header">
+                            <span style="color:white; font-weight:700;">${s.name}</span>
+                            <span>${s.ok}/${s.tot} (${pct}%)</span>
+                        </div>
+                        <div class="stat-track">
+                            <div class="stat-fill" style="width:${pct}%; background:${col}"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        modal.innerHTML = `
+            <div class="modal" style="text-align:center;">
+                <h4 style="color:var(--text-dim); margin-bottom:10px;">Rapport de Session</h4>
+                <h2 style="margin:0; color:white; font-size:1.5rem;">${report.seed}</h2>
+                
+                <div class="report-score-circle" style="border-color:${report.note >= 10 ? 'var(--success)' : 'var(--error)'}; color:${report.note >= 10 ? 'var(--success)' : 'var(--error)'};">
+                    <span style="font-size:3.5rem; font-weight:900;">${report.note}</span>
+                    <span style="font-size:1rem; opacity:0.8;">/ 20</span>
+                </div>
+
+                <div class="coach-bubble" style="margin-bottom:20px;">
+                    <strong>🧠 Coach:</strong> ${coachMsg}
+                </div>
+
+                <div class="report-tabs" style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
+                    <button id="btn-rep-err" class="mode-opt active" onclick="window.UI.switchReportTab('err')">Erreurs</button>
+                    <button id="btn-rep-stat" class="mode-opt" onclick="window.UI.switchReportTab('stat')">Statistiques</button>
+                </div>
+
+                <div style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px; max-height:250px; overflow-y:auto; text-align:left;">
+                    <div id="view-rep-err">
+                        ${mistakesHTML}
+                        ${report.mistakes.length === 0 ? '<div style="text-align:center; opacity:0.5; padding:20px;">Aucune erreur ! Une oreille parfaite.</div>' : ''}
+                    </div>
+                    <div id="view-rep-stat" style="display:none;">
+                        ${statsHTML}
+                    </div>
+                </div>
+
+                <button class="cmd-btn btn-action" style="width:100%; margin-top:20px; padding:15px;" onclick="window.ChallengeManager.exit()">Quitter</button>
+            </div>
+        `;
+        modal.classList.add('open');
+        Audio.sfx('win');
+    },
+
+    switchReportTab(tab) {
+        document.getElementById('view-rep-err').style.display = tab === 'err' ? 'block' : 'none';
+        document.getElementById('view-rep-stat').style.display = tab === 'stat' ? 'block' : 'none';
+        document.getElementById('btn-rep-err').classList.toggle('active', tab === 'err');
+        document.getElementById('btn-rep-stat').classList.toggle('active', tab === 'stat');
+    },
+
+    // --- LEADERBOARD ARCADE ---
+    
     setLbMode(mode) {
         this.lbState.mode = mode;
         this.updateLeaderboardView();
@@ -34,83 +367,116 @@ export const UI = {
         this.updateLeaderboardView();
     },
 
-    // Charge les données selon le state actuel
     async updateLeaderboardView() {
         const mode = this.lbState.mode;
         const period = this.lbState.period;
+        
+        // Update Buttons (Active State)
+        const container = document.getElementById('c-tab-arcade'); // New container
+        if(!container) return; // Should not happen if tab is active
 
-        // Update UI Tabs (Mode)
-        document.querySelectorAll('#leaderboardModal .mode-opt').forEach(b => b.classList.remove('active'));
+        container.querySelectorAll('.mode-opt').forEach(b => b.classList.remove('active'));
         const activeModeBtn = document.getElementById(`lb-mode-${mode}`);
         if(activeModeBtn) activeModeBtn.classList.add('active');
-
-        // Update UI Tabs (Period)
-        document.querySelectorAll('.lb-period-btn').forEach(b => b.classList.remove('active'));
+        
+        container.querySelectorAll('.lb-period-btn').forEach(b => b.classList.remove('active'));
         const activePeriodBtn = document.getElementById(`lb-period-${period}`);
         if(activePeriodBtn) activePeriodBtn.classList.add('active');
-
-        // Fetch Data
+        
         await this.loadLeaderboardData(mode, period);
     },
 
-    // Anciennement loadLeaderboard, maintenant interne
     async loadLeaderboardData(mode, period) {
         const list = document.getElementById('lb-list');
         const loader = document.getElementById('lb-loader');
-        list.innerHTML = '';
-        loader.style.display = 'block';
-
+        if(list) list.innerHTML = '';
+        if(loader) loader.style.display = 'block';
         try {
-            const { Cloud } = await import('./firebase.js');
-            const scores = await Cloud.getLeaderboard(mode, period);
-            
-            loader.style.display = 'none';
-            
-            if(scores.length === 0) {
+            // 1. Get Real Scores
+let realScores = await Cloud.getLeaderboard(mode, period);
+
+// GARANTIE : On ne garde que les 20 meilleurs humains
+realScores = realScores.slice(0, 20); 
+
+// 2. Get Ghost Scores
+const modeGhosts = GHOSTS.filter(g => g.mode === mode);
+
+// 3. Merge (20 Humains + 3 Fantômes = 23 entrées max)
+// Les fantômes sont ajoutés APRÈS la découpe des humains, donc ils sont "indestructibles"
+let scores = [...realScores, ...modeGhosts];
+
+// 4. Sort (Pour mélanger les fantômes à leur juste place)
+scores.sort((a, b) => b.score - a.score);
+
+// 5. Slice (Optionnel, mais on s'assure de tout garder)
+// On ne coupe plus, ou on coupe large (50) pour être sûr de garder les 23.
+// Le code actuel .slice(0, 50) est correct SI on a bien limité les humains AVANT.
+
+            if(loader) loader.style.display = 'none';
+            if(scores.length === 0 && list) {
                 const periodText = period === 'weekly' ? "cette semaine" : "pour le moment";
                 list.innerHTML = `<div style="text-align:center; color:var(--text-dim); margin-top:20px;">Aucun score ${periodText}.<br>Soyez le premier !</div>`;
                 return;
             }
-
             scores.forEach((s, idx) => {
                 let rankVisual = `<span style="width:25px; font-weight:700; color:var(--text-dim);">${idx+1}</span>`;
                 if(idx === 0) rankVisual = '🥇';
                 if(idx === 1) rankVisual = '🥈';
                 if(idx === 2) rankVisual = '🥉';
-
-                const row = document.createElement('div');
-                row.className = 'leaderboard-row';
-                row.style.cssText = `
-                    display:flex; align-items:center; background:rgba(255,255,255,0.05); 
-                    padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);
-                `;
                 
+                const row = document.createElement('div');
+                row.className = s.isGhost ? 'leaderboard-row ghost' : 'leaderboard-row';
+                
+                // Styles
                 const masteryStars = "★".repeat(Math.max(0, (s.mastery || 0) % 5));
                 const masteryColor = LORE_MATERIALS[Math.floor((s.mastery || 0)/5)]?.color || 'var(--text-dim)';
+                
+                // Content Logic
+                let nameHtml = s.pseudo || s.name;
+                let subHtml = `Maîtrise ${s.mastery||0} ${masteryStars}`;
+                
+                if (s.isGhost) {
+                    nameHtml = `${s.name} ✨`;
+                    // Ghost Rank Display
+                    let levelLabel = "Initié";
+                    if (s.mastery >= 19) levelLabel = "Divin";
+                    else if (s.mastery >= 10) levelLabel = "Maître";
+                    
+                    subHtml = `<span style="color:var(--text-dim)">Légende</span> • ${levelLabel}`;
+                    row.style.cursor = 'help';
+                    row.onclick = () => window.UI.showGhostQuote(s.name, s.quote);
+                }
 
                 row.innerHTML = `
                     <div style="font-size:1.2rem; width:30px; text-align:center;">${rankVisual}</div>
                     <div style="flex:1; margin-left:10px;">
-                        <div style="font-weight:700; color:${masteryColor};">${s.pseudo}</div>
-                        <div style="font-size:0.7rem; opacity:0.6;">Maîtrise ${s.mastery||0} ${masteryStars}</div>
+                        <div style="font-weight:700; color:${s.isGhost ? '#a5f3fc' : masteryColor};">${nameHtml}</div>
+                        <div style="font-size:0.7rem; opacity:0.6;">${subHtml}</div>
                     </div>
                     <div style="font-weight:900; font-size:1.1rem; color:var(--gold);">${s.score}</div>
                 `;
-                list.appendChild(row);
+                
+                if(list) list.appendChild(row);
             });
-
-        } catch (e) {
-            console.error(e);
-            loader.innerHTML = "Erreur de chargement...";
-        }
+        } catch (e) { console.error(e); if(loader) loader.innerHTML = "Erreur de chargement..."; }
     },
 
-    // Pour compatibilité si appelé directement depuis console ou autre
-    loadLeaderboard(mode) {
-        this.setLbMode(mode);
+    showGhostQuote(name, quote) {
+        let el = document.getElementById('badgeOverlay');
+        if (!el) { el = document.createElement('div'); el.id = 'badgeOverlay'; el.className = 'modal-overlay badge-lightbox'; document.body.appendChild(el); el.onclick = () => { el.classList.remove('open'); }; }
+        
+        el.innerHTML = `<div class="modal" style="max-width:350px;">
+            <div style="font-size:3rem; margin-bottom:10px;">👻</div>
+            <h2 style="color:var(--cyan); margin:0; text-transform:uppercase; letter-spacing:1px; line-height:1.2;">${name}</h2>
+            <div style="margin-top:10px; height:2px; background:var(--panel-border); width:50%; margin-left:auto; margin-right:auto;"></div>
+            <p style="color:white; margin-top:20px; font-size:1.1rem; line-height:1.5; font-style:italic;">"${quote}"</p>
+            <button class="cmd-btn btn-listen" style="width:100%; margin-top:20px; padding:12px;" onclick="document.getElementById('badgeOverlay').classList.remove('open')">Fermer</button>
+        </div>`;
+        el.classList.add('open');
+        window.UI.vibrate(10);
     },
 
-    // --- HELPER: SYMBOLS & LABELS ---
+    // --- STANDARD HELPER METHODS ---
     getSymbol(id) {
         if(id.includes('maj7')) return 'Δ';
         if(id.includes('min7')) return '-'; 
@@ -184,7 +550,8 @@ export const UI = {
             targetVisual = `${labelC}<div style="font-size:0.4em; opacity:0.7; margin-top:5px;">${labelI}</div>`;
         }
         
-        document.getElementById('quizTargetLbl').innerHTML = targetVisual;
+        const labelEl = document.getElementById('quizTargetLbl');
+        if(labelEl) labelEl.innerHTML = targetVisual;
 
         [0, 1, 2].forEach(idx => {
             const btn = document.getElementById(`qbtn-${idx}`);
@@ -300,99 +667,137 @@ export const UI = {
             return '';
         };
 
-        const cg = document.getElementById('chordGrid'); cg.innerHTML='';
-        if(d.settings.activeC.length > 4) { cg.className = "pad-grid grid-c"; } else { cg.className = "pad-grid grid-i"; }
+        const cg = document.getElementById('chordGrid'); 
+        if(cg) {
+            cg.innerHTML='';
+            if(d.settings.activeC.length > 4) { cg.className = "pad-grid grid-c"; } else { cg.className = "pad-grid grid-i"; }
 
-        if(d.settings && d.settings.activeC) { 
-            DB.chords.forEach(c => { 
-                if(!d.settings.activeC.includes(c.id)) return; 
-                const ok = d.stats.c[c.id] ? d.stats.c[c.id].ok : 0;
-                const visual = this.getLabel(c, 'c');
-                cg.innerHTML += `<div class="pad ${getRankClass(ok)}" id="c-${c.id}" onclick="window.App.select('c','${c.id}')"><div class="pad-main">${visual}</div><div class="pad-sub">${c.sub}</div></div>`; 
-            }); 
-        }
-
-        const ig = document.getElementById('invGrid'); ig.innerHTML='';
-        if (isLab) {
-            ig.className = "pad-grid grid-lab";
-            const session = window.App.session;
-            let contextId = session.selC || (session.chord ? session.chord.type.id : d.settings.activeC[0]);
-            const chordObj = DB.sets.laboratory.chords.find(c => c.id === contextId);
-            const labConfig = { leftTitle: "8ve CONTRACTÉE >|<", rightTitle: "8ve DILATÉE <|>", leftColor: "var(--warning)", rightColor: "var(--primary)" };
-
-            if (contextId === 'trichord') { labConfig.leftTitle = "DISSONANCE"; labConfig.rightTitle = "COULEUR"; } 
-            else if (contextId === 'sus_sym') { labConfig.leftTitle = "TRIADES SUS"; labConfig.rightTitle = "EMPILEMENTS"; }
-
-            ig.innerHTML += `<div class="lab-header" style="color:${labConfig.leftColor}">${labConfig.leftTitle}</div><div class="lab-header" style="color:${labConfig.rightColor}">${labConfig.rightTitle}</div>`;
-
-            const createLabBtn = (id) => {
-                if(!chordObj || !chordObj.configs[id]) return `<div class="pad locked"></div>`;
-                const config = chordObj.configs[id];
-                const statKey = `${contextId}_${id}`;
-                const ok = d.stats.l[statKey] ? d.stats.l[statKey].ok : 0;
-                let visual = "";
-                let tagPos = config.name.toUpperCase();
-                
-                if (contextId === 'trichord') {
-                    let top='?', bot='?';
-                    if(id===0){top='1/2';bot='1/2';}
-                    if(id===1){top='Tr';bot='1/2';} 
-                    if(id===2){top='1';bot='1';}
-                    if(id===3){top='3M';bot='1/2';}
-                    visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
-                }
-                else if (contextId === 'sus_sym') {
-                    let txt = "";
-                    if(id===0){txt="Sus 2";} if(id===1){txt="Sus 4";} if(id===2){txt="Quartal";} if(id===3){txt="Quintal";}
-                    visual = `<div style="font-size:1.1rem; font-weight:900;">${txt}</div>`;
-                }
-                else if (contextId === 'struct_36') {
-                    let top='?', bot='?';
-                    if(id===0){top='6m';bot='3m';} if(id===1){top='3m';bot='6m';} if(id===2){top='6M';bot='3M';} if(id===3){top='3M';bot='6M';}
-                    visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
-                }
-                else if (contextId === 'struct_45tr') {
-                    let top='?', bot='?';
-                    if(id===0){top='Tr';bot='4J';} if(id===1){top='4J';bot='Tr';} if(id===2){top='Tr';bot='5J';} if(id===3){top='5J';bot='Tr';}
-                    visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
-                }
-                let extraClass = (id < 2) ? "lab-contracted" : "lab-expanded";
-                return `<div class="pad ${getRankClass(ok)} ${extraClass}" id="i-${id}" onclick="window.App.select('i',${id})"><div class="pad-main">${visual}</div><div class="lab-tag">${tagPos}</div></div>`;
-            };
-            ig.innerHTML += createLabBtn(0); ig.innerHTML += createLabBtn(2); ig.innerHTML += createLabBtn(1); ig.innerHTML += createLabBtn(3);
-        } else {
-            ig.className = "pad-grid grid-i"; 
-            if(d.settings && d.settings.activeI) { 
-                DB.currentInvs.forEach(i => { 
-                    if(!d.settings.activeI.includes(i.id)) return; 
-                    let ok = 0; let visual = ""; let subText = i.sub;
-                    if(d.currentSet === 'jazz') { ok = d.stats.v[i.id] ? d.stats.v[i.id].ok : 0; visual = this.getLabel(i, 'i'); } 
-                    else { ok = d.stats.i[i.id] ? d.stats.i[i.id].ok : 0; visual = this.getLabel(i, 'i'); }
-                    ig.innerHTML += `<div class="pad ${getRankClass(ok)}" id="i-${i.id}" onclick="window.App.select('i',${i.id})"><div class="pad-main">${visual}</div><div class="pad-sub">${subText}</div></div>`; 
+            if(d.settings && d.settings.activeC) { 
+                DB.chords.forEach(c => { 
+                    if(!d.settings.activeC.includes(c.id)) return; 
+                    const ok = d.stats.c[c.id] ? d.stats.c[c.id].ok : 0;
+                    const visual = this.getLabel(c, 'c');
+                    cg.innerHTML += `<div class="pad ${getRankClass(ok)}" id="c-${c.id}" onclick="window.App.select('c','${c.id}')"><div class="pad-main">${visual}</div><div class="pad-sub">${c.sub}</div></div>`; 
                 }); 
             }
         }
+
+        const ig = document.getElementById('invGrid'); 
+        if(ig) {
+            ig.innerHTML='';
+            if (isLab) {
+                ig.className = "pad-grid grid-lab";
+                const session = window.App.session;
+                let contextId = session.selC || (session.chord ? session.chord.type.id : d.settings.activeC[0]);
+                const chordObj = DB.sets.laboratory.chords.find(c => c.id === contextId);
+                const labConfig = { leftTitle: "8ve CONTRACTÉE >|<", rightTitle: "8ve DILATÉE <|>", leftColor: "var(--warning)", rightColor: "var(--primary)" };
+
+                if (contextId === 'trichord') { labConfig.leftTitle = "DISSONANCE"; labConfig.rightTitle = "COULEUR"; } 
+                else if (contextId === 'sus_sym') { labConfig.leftTitle = "TRIADES SUS"; labConfig.rightTitle = "EMPILEMENTS"; }
+
+                ig.innerHTML += `<div class="lab-header" style="color:${labConfig.leftColor}">${labConfig.leftTitle}</div><div class="lab-header" style="color:${labConfig.rightColor}">${labConfig.rightTitle}</div>`;
+
+                const createLabBtn = (id) => {
+                    if(!chordObj || !chordObj.configs[id]) return `<div class="pad locked"></div>`;
+                    const config = chordObj.configs[id];
+                    const statKey = `${contextId}_${id}`;
+                    const ok = d.stats.l[statKey] ? d.stats.l[statKey].ok : 0;
+                    let visual = "";
+                    let tagPos = config.name.toUpperCase();
+                    
+                    if (contextId === 'trichord') {
+                        let top='?', bot='?';
+                        if(id===0){top='1/2';bot='1/2';}
+                        if(id===1){top='Tr';bot='1/2';} 
+                        if(id===2){top='1';bot='1';}
+                        if(id===3){top='3M';bot='1/2';}
+                        visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
+                    }
+                    else if (contextId === 'sus_sym') {
+                        let txt = "";
+                        if(id===0){txt="Sus 2";} if(id===1){txt="Sus 4";} if(id===2){txt="Quartal";} if(id===3){txt="Quintal";}
+                        visual = `<div style="font-size:1.1rem; font-weight:900;">${txt}</div>`;
+                    }
+                    else if (contextId === 'struct_36') {
+                        let top='?', bot='?';
+                        if(id===0){top='6m';bot='3m';} if(id===1){top='3m';bot='6m';} if(id===2){top='6M';bot='3M';} if(id===3){top='3M';bot='6M';}
+                        visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
+                    }
+                    else if (contextId === 'struct_45tr') {
+                        let top='?', bot='?';
+                        if(id===0){top='Tr';bot='4J';} if(id===1){top='4J';bot='Tr';} if(id===2){top='Tr';bot='5J';} if(id===3){top='5J';bot='Tr';}
+                        visual = `<div class="figured-bass"><span>${top}</span><span>${bot}</span></div>`;
+                    }
+                    let extraClass = (id < 2) ? "lab-contracted" : "lab-expanded";
+                    return `<div class="pad ${getRankClass(ok)} ${extraClass}" id="i-${id}" onclick="window.App.select('i',${id})"><div class="pad-main">${visual}</div><div class="lab-tag">${tagPos}</div></div>`;
+                };
+                ig.innerHTML += createLabBtn(0); ig.innerHTML += createLabBtn(2); ig.innerHTML += createLabBtn(1); ig.innerHTML += createLabBtn(3);
+            } else {
+                ig.className = "pad-grid grid-i"; 
+                if(d.settings && d.settings.activeI) { 
+                    DB.currentInvs.forEach(i => { 
+                        if(!d.settings.activeI.includes(i.id)) return; 
+                        let ok = 0; let visual = ""; let subText = i.sub;
+                        if(d.currentSet === 'jazz') { ok = d.stats.v[i.id] ? d.stats.v[i.id].ok : 0; visual = this.getLabel(i, 'i'); } 
+                        else { ok = d.stats.i[i.id] ? d.stats.i[i.id].ok : 0; visual = this.getLabel(i, 'i'); }
+                        ig.innerHTML += `<div class="pad ${getRankClass(ok)}" id="i-${i.id}" onclick="window.App.select('i',${i.id})"><div class="pad-main">${visual}</div><div class="pad-sub">${subText}</div></div>`; 
+                    }); 
+                }
+            }
+        }
     },
+
     renderSel() {
         document.querySelectorAll('.pad').forEach(p => p.classList.remove('selected'));
-        if(window.App.session.selC) document.getElementById('c-'+window.App.session.selC).classList.add('selected');
-        if(window.App.session.selI !== null && window.App.session.selI !== -1) document.getElementById('i-'+window.App.session.selI).classList.add('selected');
-        document.getElementById('valBtn').disabled = !(window.App.session.selC && window.App.session.selI !== null);
+        if(window.App.session.selC) {
+            const el = document.getElementById('c-'+window.App.session.selC);
+            if(el) el.classList.add('selected');
+        }
+        if(window.App.session.selI !== null && window.App.session.selI !== -1) {
+            const el = document.getElementById('i-'+window.App.session.selI);
+            if(el) el.classList.add('selected');
+        }
+        const valBtn = document.getElementById('valBtn');
+        if(valBtn) valBtn.disabled = !(window.App.session.selC && window.App.session.selI !== null);
     },
+
     reveal(okC, okI) {
-        const c = window.App.session.chord; document.getElementById('c-'+c.type.id).classList.add(okC?'correct':'correction');
-        if(!okC && window.App.session.selC) document.getElementById('c-'+window.App.session.selC).classList.add('wrong');
-        if(c.type.id !== 'dim7') { document.getElementById('i-'+c.inv).classList.add(okI?'correct':'correction'); if(!okI && window.App.session.selI !== null) document.getElementById('i-'+window.App.session.selI).classList.add('wrong'); }
+        const c = window.App.session.chord; 
+        const cEl = document.getElementById('c-'+c.type.id);
+        if(cEl) cEl.classList.add(okC?'correct':'correction');
+        
+        if(!okC && window.App.session.selC) {
+            const selEl = document.getElementById('c-'+window.App.session.selC);
+            if(selEl) selEl.classList.add('wrong');
+        }
+        
+        if(c.type.id !== 'dim7') { 
+            const iEl = document.getElementById('i-'+c.inv);
+            if(iEl) iEl.classList.add(okI?'correct':'correction');
+            
+            if(!okI && window.App.session.selI !== null) {
+                const selIEl = document.getElementById('i-'+window.App.session.selI);
+                if(selIEl) selIEl.classList.add('wrong');
+            }
+        }
     },
+
     resetVisuals() { 
         document.querySelectorAll('.pad').forEach(p => p.className='pad'); 
         document.querySelectorAll('.quiz-btn').forEach(b => { b.className = 'quiz-btn'; b.classList.remove('selected', 'correct', 'wrong', 'lab-mode'); });
         window.UI.renderBoard(); 
         const p = document.getElementById('invPanel'); if(p) { p.style.opacity = '1'; p.style.pointerEvents = 'auto'; }
-        document.getElementById('pianoCanvas').classList.remove('show');
-        document.getElementById('visualizer').style.opacity = '0.5';
+        const piano = document.getElementById('pianoCanvas'); if(piano) piano.classList.remove('show');
+        const vis = document.getElementById('visualizer'); if(vis) vis.style.opacity = '0.5';
     },
-    msg(txt, state) { const el = document.getElementById('statusText'); el.innerText = txt; el.className = "feedback-msg " + (state==='correct'?'correct':state==='warning'?'warning':state===false?'wrong':''); },
+
+    msg(txt, state) { 
+        const el = document.getElementById('statusText'); 
+        if(!el) return;
+        el.innerText = txt; 
+        el.className = "feedback-msg " + (state==='correct'?'correct':state==='warning'?'warning':state===false?'wrong':''); 
+    },
+
     vibrate(ptr) { if(navigator.vibrate) navigator.vibrate(ptr); },
     
     updateHeader() {
@@ -411,16 +816,25 @@ export const UI = {
         const pct = window.App.session.globalTot ? Math.round((window.App.session.globalOk / window.App.session.globalTot) * 100) : 0; document.getElementById('precisionVal').innerText = pct + '%';
     },
 
-    updateChrono() { document.getElementById('timerVal').innerText = window.App.session.time; document.getElementById('livesVal').innerText = '❤️'.repeat(window.App.session.lives); },
+    updateChrono() { 
+        document.getElementById('timerVal').innerText = window.App.session.time; 
+        document.getElementById('livesVal').innerText = '❤️'.repeat(window.App.session.lives); 
+    },
+
     updateBackground(streak) { const body = document.body; if(streak >= 20) body.style.backgroundColor = '#370b1b'; else if(streak >= 10) body.style.backgroundColor = '#1e1b4b'; else body.style.backgroundColor = '#0f172a'; },
+    
     triggerCombo(streak) {
         this.updateBackground(streak);
         if(streak > 5) { const sv = document.getElementById('streakVal'); sv.style.transform = "scale(1.5)"; setTimeout(()=>sv.style.transform="scale(1)", 150); }
         if(streak > 0 && streak % 10 === 0) { const pop = document.getElementById('comboPopup'); document.getElementById('comboTitle').innerText = `COMBO x${streak}`; pop.classList.add('show'); Audio.sfx('win'); setTimeout(() => pop.classList.remove('show'), 1500); }
     },
+
     confetti() { const c=document.getElementById('confetti'); const x=c.getContext('2d'); c.width=window.innerWidth; c.height=window.innerHeight; let p=[]; for(let i=0;i<60;i++)p.push({x:c.width/2,y:c.height/2,vx:(Math.random()-0.5)*25,vy:(Math.random()-0.5)*25,c:`hsl(${Math.random()*360},100%,50%)`,l:1}); const u=()=>{x.clearRect(0,0,c.width,c.height); let a=false; p.forEach(k=>{if(k.l>0){k.x+=k.vx;k.y+=k.vy;k.vy+=0.6;k.l-=0.02;x.fillStyle=k.c;x.beginPath();x.arc(k.x,k.y,6,0,7);x.fill();a=true;}}); if(a)requestAnimationFrame(u);}; u(); },
+    
     showLevelUp() { const ov = document.getElementById('levelOverlay'); ov.classList.add('active'); setTimeout(() => { ov.classList.remove('active'); }, 3000); },
+    
     showToast(msg) { const t = document.getElementById('rankToast'); t.innerText = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); },
+    
     showBadge(b) { const el = document.getElementById('badgeRibbon'); const tit = document.getElementById('badgeRibbonTitle'); tit.innerText = b.title; document.querySelector('.badge-ribbon-icon').innerText = b.icon; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 4000); },
     
     openBadgeLightbox(b) {
