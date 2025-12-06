@@ -410,6 +410,126 @@ canvas { width: 100%; height: 100%; position: absolute; top:0; left:0; }
 .timer-badge { font-variant-numeric: tabular-nums; background: var(--primary); color: white; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 0 10px var(--primary-glow); display: none; white-space: nowrap; }
 .lives { font-size: 0.8rem; margin-left: 5px; opacity: 0.8; }
 
+/* --- STUDIO MODE (V5.1) --- */
+.studio-panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 8px;
+    margin-bottom: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.studio-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.bass-octave-ctrl {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.oct-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-weight: 900;
+    cursor: pointer;
+    padding: 2px 8px;
+}
+.oct-btn:hover { color: white; }
+.oct-lbl { font-size: 0.5rem; color: var(--text-dim); }
+
+.piano-strip {
+    flex: 1;
+    display: flex;
+    height: 50px;
+    gap: 2px;
+    position: relative;
+    background: #000;
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.piano-key {
+    flex: 1;
+    border: none;
+    border-radius: 0 0 3px 3px;
+    cursor: pointer;
+    font-size: 0.6rem;
+    font-weight: 700;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 4px;
+    position: relative;
+}
+
+.piano-key.white {
+    background: #e2e8f0;
+    color: #334155;
+    z-index: 1;
+}
+.piano-key.white.selected { background: var(--primary); color: white; }
+
+.piano-key.black {
+    background: #1e293b;
+    height: 60%;
+    width: 8%; /* visually accurate */
+    position: absolute;
+    z-index: 2;
+    border-radius: 0 0 2px 2px;
+    margin-left: -4%; /* center over crack */
+}
+/* Manual positioning for black keys based on 12-key layout logic */
+#pk-1 { left: 14.28%; }
+#pk-3 { left: 28.57%; }
+#pk-6 { left: 57.14%; }
+#pk-8 { left: 71.42%; }
+#pk-10 { left: 85.71%; }
+
+.piano-key.black.selected { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+.studio-timeline {
+    height: 40px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    overflow-x: auto;
+    white-space: nowrap;
+    border: 1px dashed var(--panel-border);
+}
+
+.timeline-placeholder {
+    width: 100%; text-align: center; color: var(--text-dim); font-size: 0.7rem; font-style: italic;
+}
+
+.timeline-item {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-right: 5px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+.timeline-item:hover { border-color: var(--gold); }
+.timeline-item-del { color: var(--error); font-weight: 900; cursor: pointer; padding: 0 4px; }
+
+
 /* GAME AREA */
 .game-area { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; overflow-y: auto; }
 .game-area.quiz-mode { grid-template-columns: 1fr; } 
