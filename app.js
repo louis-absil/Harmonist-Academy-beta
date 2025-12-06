@@ -17,6 +17,15 @@ export const App = {
             modesPlayed: [], 
             str_jazz: 0, str_007: 0, str_dim: 0, str_inv: 0
         }, 
+        // V5.2 - STATS ARENE
+        arenaStats: {
+            lastDailyDate: null,
+            currentStreak: 0,
+            maxStreak: 0,
+            totalScore: 0,
+            challengesCreated: 0,
+            podiumDates: [] // Stocke les dates des podiums (ex: ['DAILY-2023-10-27'])
+        },
         badges: [], 
         settings: { activeC: DB.sets.academy.chords.map(c=>c.id), activeI: DB.invs.map(i=>i.id) },
         history: [], tempToday: { date: null, ok: 0, tot: 0 }
@@ -31,7 +40,17 @@ export const App = {
         str36Streak: 0, str45Streak: 0, geoStreak: 0, triStreak: 0, rootlessStreak: 0, monoStreak: 0, dejaVu: false,
         audioStartTime: 0, lastReactionTime: Infinity, hasReplayed: false, pureStreak: 0, razorTriggered: false,
         titleClicks: 0, lastChordType: null, jackpotStreak: 0, collectedRoots: null,
-        isChallenge: false 
+        isChallenge: false,
+        // ÉTAT CHALLENGE TEMPORAIRE (Pour Badges de Rang Passifs)
+        challengeRank: null, challengeTotalPlayers: 0, challengeNetTime: 0,
+        // ÉTAT STUDIO (V5.1)
+        studio: {
+            chordId: 'maj7',
+            invId: 0,
+            bassMidi: 48, // C3
+            octaveShift: 0,
+            sequence: [] // [ { type:'maj7', inv:0, bass:48 }, ... ]
+        }
     },
     timerRef: null, sprintRef: null, vignetteRef: null,
     
@@ -67,6 +86,19 @@ export const App = {
                 this.data.stats.str_007 = s.stats?.str_007 || 0;
                 this.data.stats.str_dim = s.stats?.str_dim || 0;
                 this.data.stats.str_inv = s.stats?.str_inv || 0;
+                
+                // V5.2 Migration ArenaStats + Podium
+                this.data.arenaStats = s.arenaStats || {
+                    lastDailyDate: null,
+                    currentStreak: 0,
+                    maxStreak: 0,
+                    totalScore: 0,
+                    challengesCreated: 0,
+                    podiumDates: []
+                };
+                // Safety migration if podiumDates missing
+                if(!this.data.arenaStats.podiumDates) this.data.arenaStats.podiumDates = [];
+                
                 if(s.settings && s.settings.activeC) { this.data.settings = s.settings; }
             }
         } catch (e) { console.error("Save Corrupted, resetting", e); }
@@ -150,7 +182,7 @@ export const App = {
     },
 
     setMode(m) {
-        if(this.session.isChallenge && m !== 'zen') return; // Bloquer changement mode en défi (force visual Zen)
+        if(this.session.isChallenge && m !== 'zen' && m !== 'studio') return; 
 
         if(this.data.mastery === 0) {
             if(m === 'inverse' && this.data.lvl < 3) { window.UI.showToast("🔒 Débloqué au Niveau 3"); window.UI.vibrate([50,50]); return; }
@@ -164,14 +196,60 @@ export const App = {
         document.getElementById('modeSprint').className = m==='sprint'?'mode-opt active':'mode-opt';
         document.getElementById('modeInverse').className = m==='inverse'?'mode-opt active':'mode-opt';
         window.UI.updateModeLocks();
+        
         document.getElementById('chronoDisplay').style.display = (m==='chrono' || m==='sprint') ?'block':'none';
         if(m === 'sprint') { document.getElementById('timerVal').style.display = 'none'; } else { document.getElementById('timerVal').style.display = 'inline'; }
         document.getElementById('toolsBar').className = (m==='sprint') ? 'tools-bar sprint-active' : 'tools-bar';
-        if(m !== 'zen' && !this.session.isChallenge) { document.getElementById('scoreGroup').classList.add('active'); let best = 0; if(m === 'chrono') best = this.data.bestChrono; if(m === 'sprint') best = this.data.bestSprint; if(m === 'inverse') best = this.data.bestInverse; document.getElementById('highScoreVal').innerText = best; } else { if (!this.session.isChallenge) document.getElementById('scoreGroup').classList.remove('active'); }
+        
+        // Mode Studio UI Toggle
+        const studioPanel = document.getElementById('studioPanel');
+        const playBtn = document.getElementById('playBtn');
+        const replayBtn = document.getElementById('replayBtn');
+        const valBtn = document.getElementById('valBtn');
+
+        if(m === 'studio') {
+            studioPanel.style.display = 'flex';
+            document.getElementById('chronoDisplay').style.display = 'none';
+            document.getElementById('scoreGroup').classList.remove('active');
+            
+            // REAFFECTATION DES BOUTONS POUR LE STUDIO
+            valBtn.innerText = "+ Ajouter";
+            valBtn.disabled = false;
+            
+            playBtn.innerHTML = "<span class='icon-lg'>🚪</span><span>Quitter</span>";
+            playBtn.disabled = false;
+            playBtn.onclick = () => window.App.setMode('zen');
+            playBtn.style.borderColor = "var(--error)"; 
+
+            replayBtn.innerHTML = "<span class='icon-lg'>💾</span><span>Créer</span>";
+            replayBtn.disabled = false;
+            replayBtn.onclick = () => window.App.exportStudioChallenge();
+            
+            // Init Studio Defaults if first time
+            if(!this.session.studio.chordId) {
+                this.session.studio.chordId = this.data.settings.activeC[0];
+                this.session.studio.invId = 0;
+                this.session.studio.bassMidi = 48; // C3
+            }
+            // Update Visuals
+            window.UI.renderSel(); 
+            this.renderStudioTimeline();
+        } else {
+            if (studioPanel) studioPanel.style.display = 'none';
+            // Restauration des fonctions par défaut des boutons
+            playBtn.onclick = () => window.App.playNew();
+            playBtn.innerHTML = "<span class='icon-lg'>▶</span><span>Écouter</span>";
+            playBtn.style.borderColor = "";
+            replayBtn.onclick = () => window.App.replay();
+            replayBtn.innerHTML = "<span class='icon-lg'>↺</span><span>Rejouer</span>";
+        }
+
+        if(m !== 'zen' && m !== 'studio' && !this.session.isChallenge) { document.getElementById('scoreGroup').classList.add('active'); let best = 0; if(m === 'chrono') best = this.data.bestChrono; if(m === 'sprint') best = this.data.bestSprint; if(m === 'inverse') best = this.data.bestInverse; document.getElementById('highScoreVal').innerText = best; } else { if (!this.session.isChallenge) document.getElementById('scoreGroup').classList.remove('active'); }
+        
         const mainArea = document.getElementById('mainArea'); const appContainer = document.querySelector('.app-container');
         if(m === 'inverse') { mainArea.classList.add('quiz-mode'); appContainer.classList.add('quiz-mode'); document.getElementById('panelChord').style.display = 'none'; document.getElementById('invPanel').style.display = 'none'; document.getElementById('quizArea').style.display = 'flex'; } else { mainArea.classList.remove('quiz-mode'); appContainer.classList.remove('quiz-mode'); document.getElementById('panelChord').style.display = 'flex'; document.getElementById('invPanel').style.display = 'flex'; document.getElementById('quizArea').style.display = 'none'; }
         this.resetRound(true);
-        if(m === 'inverse') this.playNewQuiz(); else this.playNew();
+        if(m === 'inverse') this.playNewQuiz(); else if (m !== 'studio') this.playNew();
     },
 
     toggleSetting(type, id) {
@@ -186,7 +264,7 @@ export const App = {
 
     hardReset() { if(confirm("Sûr ?")) { localStorage.removeItem('harmonist_v4_final'); location.reload(); } },
     save() { localStorage.setItem('harmonist_v4_final', JSON.stringify(this.data)); Cloud.syncUserStats(this.data); },
-    closeSettings() { window.UI.closeModals(); this.resetRound(true); if(this.session.mode==='inverse') this.playNewQuiz(); else this.playNew(); },
+    closeSettings() { window.UI.closeModals(); this.resetRound(true); if(this.session.mode==='inverse') this.playNewQuiz(); else if(this.session.mode!=='studio') this.playNew(); },
 
     resetRound(full=false) {
         if(this.timerRef) { clearInterval(this.timerRef); this.timerRef = null; }
@@ -203,16 +281,27 @@ export const App = {
             this.session.pureStreak = 0; this.session.titleClicks = 0;
             this.session.lastChordType = null; this.session.jackpotStreak = 0;
             this.session.collectedRoots = new Set();
+            this.session.challengeRank = null;
+            this.session.challengeTotalPlayers = 0;
+            this.session.challengeNetTime = 0;
         }
         this.session.time = 60; this.session.lives = 3; this.session.done = false; 
         this.session.roundLocked = false; this.session.chord = null;
         this.session.quizUserChoice = null; this.session.lastActionTime = Date.now();
         this.session.audioStartTime = Date.now(); this.session.hint = false;
         this.session.hasReplayed = false; this.session.razorTriggered = false;
-        window.UI.resetVisuals(); window.UI.updateHeader(); window.UI.updateChrono(); window.UI.msg("Prêt ?");
-        document.getElementById('playBtn').innerHTML = "<span class='icon-lg'>▶</span><span>Écouter</span>";
-        document.getElementById('valBtn').innerText = "Valider"; document.getElementById('valBtn').classList.remove('next'); document.getElementById('valBtn').disabled = true;
-        document.getElementById('hintBtn').disabled = false; document.getElementById('hintBtn').style.opacity = '1';
+        window.UI.resetVisuals(); window.UI.updateHeader(); window.UI.updateChrono(); 
+        
+        if (this.session.mode !== 'studio') {
+            window.UI.msg("Prêt ?");
+            document.getElementById('playBtn').innerHTML = "<span class='icon-lg'>▶</span><span>Écouter</span>";
+            document.getElementById('valBtn').innerText = "Valider"; document.getElementById('valBtn').classList.remove('next'); document.getElementById('valBtn').disabled = true;
+            document.getElementById('hintBtn').disabled = false; document.getElementById('hintBtn').style.opacity = '1';
+        } else {
+             window.UI.msg("Mode Studio");
+             // En mode studio, on ne reset pas les boutons car setMode l'a fait
+             document.getElementById('valBtn').disabled = false;
+        }
     },
 
     clickTitle() { this.session.titleClicks = (this.session.titleClicks || 0) + 1; window.UI.vibrate(20); this.checkBadges(); },
@@ -236,6 +325,145 @@ export const App = {
         if(open) { const b = notes[0]; const r = notes.slice(1); r[0]+=12; if(this.rng()>0.5) r[1]+=12; r[2]+=12; notes = [b, ...r]; }
         return notes;
     },
+
+    // --- STUDIO PHASE 2 LOGIC ---
+    getNotesFromBass(typeObj, invId, targetBassMidi) {
+        const draftNotes = this.getNotes(typeObj, invId, 60, false);
+        const draftBass = Math.min(...draftNotes);
+        const shift = targetBassMidi - draftBass;
+        return draftNotes.map(n => n + shift);
+    },
+
+    updateStudioState(type, id) {
+        if(type === 'c') this.session.studio.chordId = id;
+        if(type === 'i') this.session.studio.invId = id;
+        window.UI.renderSel();
+        this.playStudioPreview();
+    },
+
+    setStudioBass(noteIndex) {
+        const octaveBase = 36 + this.session.studio.octaveShift; // Default C2 (36)
+        const targetMidi = octaveBase + noteIndex;
+        this.session.studio.bassMidi = targetMidi;
+        
+        document.querySelectorAll('.piano-key').forEach((k, idx) => {
+             if(idx === noteIndex) k.classList.add('selected');
+             else k.classList.remove('selected');
+        });
+        
+        this.playStudioPreview();
+    },
+
+    adjStudioOct(delta) {
+        this.session.studio.octaveShift += delta;
+        if (this.session.studio.octaveShift < 0) this.session.studio.octaveShift = 0;
+        if (this.session.studio.octaveShift > 24) this.session.studio.octaveShift = 24;
+        const currentKeyIdx = this.session.studio.bassMidi % 12;
+        this.setStudioBass(currentKeyIdx);
+    },
+
+    playStudioPreview() {
+        const s = this.session.studio;
+        const typeObj = DB.chords.find(c => c.id === s.chordId);
+        if(!typeObj) return;
+        const notes = this.getNotesFromBass(typeObj, s.invId, s.bassMidi);
+        Audio.chord(notes);
+        if(Piano) Piano.visualize(notes);
+    },
+
+    addToTimeline() {
+        const s = this.session.studio;
+        if(!s.chordId) return;
+        
+        // Store minimal data to reconstruct
+        const item = { type: s.chordId, inv: s.invId, bass: s.bassMidi };
+        s.sequence.push(item);
+        
+        window.UI.vibrate(20);
+        window.UI.showToast("Accord ajouté !");
+        this.renderStudioTimeline();
+    },
+
+    removeFromTimeline(index) {
+        this.session.studio.sequence.splice(index, 1);
+        this.renderStudioTimeline();
+    },
+
+    renderStudioTimeline() {
+        const container = document.getElementById('studioTimeline');
+        const seq = this.session.studio.sequence;
+        if(seq.length === 0) {
+            container.innerHTML = '<div class="timeline-placeholder">Timeline vide...</div>';
+            return;
+        }
+        
+        container.innerHTML = seq.map((item, idx) => {
+            const chordObj = DB.chords.find(c => c.id === item.type);
+            const invObj = DB.invs.find(i => i.id === item.inv);
+            const name = chordObj ? chordObj.name : '?';
+            const bassNote = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][item.bass % 12];
+            const oct = Math.floor(item.bass / 12) - 1;
+            
+            return `
+                <div class="timeline-item" onclick="window.App.previewTimelineItem(${idx})">
+                    <span style="color:var(--gold); font-weight:900;">${idx+1}.</span>
+                    <span>${bassNote}${oct} ${name}</span>
+                    <span class="timeline-item-del" onclick="event.stopPropagation(); window.App.removeFromTimeline(${idx})">×</span>
+                </div>
+            `;
+        }).join('');
+        
+        // Auto scroll to end
+        container.scrollLeft = container.scrollWidth;
+    },
+
+    previewTimelineItem(idx) {
+        const item = this.session.studio.sequence[idx];
+        if(!item) return;
+        const typeObj = DB.chords.find(c => c.id === item.type);
+        const notes = this.getNotesFromBass(typeObj, item.inv, item.bass);
+        Audio.chord(notes);
+    },
+
+    async exportStudioChallenge() {
+        const seq = this.session.studio.sequence;
+        if(seq.length < 5) {
+            alert("La séquence doit contenir au moins 5 accords.");
+            return;
+        }
+        
+        const seedName = prompt("Nommez votre défi (ex: JAZZ-EXAM-1) :");
+        if(!seedName) return;
+        
+        const finalSeed = seedName.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        
+        const data = {
+            seed: finalSeed,
+            length: seq.length,
+            sequence: seq, // STORE SEQUENCE
+            settings: {
+                set: this.data.currentSet,
+                activeC: this.data.settings.activeC,
+                activeI: this.data.settings.activeI
+            }
+        };
+        
+        const id = await Cloud.createChallenge(data);
+        if(id) {
+            // V5.2 - Increment Challenges Created
+            this.data.arenaStats.challengesCreated++;
+            this.save();
+            this.checkBadges();
+
+            alert(`Défi créé avec succès !\nCode : ${id}`);
+            // Reset Studio
+            this.session.studio.sequence = [];
+            this.renderStudioTimeline();
+        } else {
+            alert("Erreur : Ce nom de défi existe peut-être déjà.");
+        }
+    },
+    // ----------------------------
 
     startSprintTimer(duration) {
         if(this.sprintRef) clearTimeout(this.sprintRef);
@@ -339,10 +567,33 @@ export const App = {
         this.session.done = false; this.session.roundLocked = false; this.session.selC = null; this.session.selI = null; this.session.hint = false; 
         window.UI.resetVisuals(); this.session.lastActionTime = Date.now(); this.session.replayCount = 0; this.session.djClickTimes = []; this.session.selectionHistory = []; this.session.hasReplayed = false;
 
+        // --- CUSTOM CHALLENGE SEQUENCE OVERRIDE ---
+        if(this.session.isChallenge && ChallengeManager.config.sequence) {
+            const step = ChallengeManager.state.step;
+            if(step < ChallengeManager.config.sequence.length) {
+                const item = ChallengeManager.config.sequence[step];
+                const typeObj = DB.chords.find(c => c.id === item.type);
+                if(typeObj) {
+                    const notes = this.getNotesFromBass(typeObj, item.inv, item.bass);
+                    this.session.chord = { type: typeObj, inv: item.inv, notes: notes, root: notes[0], open: false }; // open false for custom
+                    
+                    Audio.chord(notes);
+                    this.session.audioStartTime = Date.now();
+                    
+                    window.UI.msg("Écoute...", "");
+                    document.getElementById('playBtn').disabled = true; document.getElementById('replayBtn').disabled = false; document.getElementById('hintBtn').disabled = false;
+                    document.getElementById('valBtn').innerText = "Valider"; document.getElementById('valBtn').className = "cmd-btn btn-action"; document.getElementById('valBtn').disabled = true;
+                    setTimeout(() => { document.getElementById('playBtn').innerHTML = "<span class='icon-lg'>...</span><span>En cours</span>"; }, 500);
+                    return;
+                }
+            }
+        }
+        // ------------------------------------------
+
         const ac = DB.chords.filter(c => this.data.settings.activeC.includes(c.id));
         if(!ac.length) { this.data.settings.activeC = DB.chords.map(c=>c.id); this.playNew(); return; }
         
-        const type = ac[Math.floor(this.rng()*ac.length)];
+        const type = ac[Math.floor(this.rng() * ac.length)];
         if (this.session.lastChordType === type.id) { this.session.jackpotStreak++; } else { this.session.jackpotStreak = 1; }
         this.session.lastChordType = type.id;
         
@@ -392,12 +643,11 @@ export const App = {
         let targetInvId = (typeStr === 'i') ? id : this.session.chord.inv;
         let targetType = DB.chords.find(c => c.id === targetTypeId); if(!targetType) return;
         if(targetTypeId === 'dim7' && this.data.currentSet !== 'jazz') targetInvId = 0;
-        const isOpen = this.session.chord.open;
+        
+        // REFACTORING V5.1 : Utilisation de getNotesFromBass
         const refBass = Math.min(...this.session.chord.notes);
-        const draftNotes = this.getNotes(targetType, targetInvId, 60, isOpen);
-        const draftBass = Math.min(...draftNotes);
-        const shift = refBass - draftBass;
-        const finalNotes = draftNotes.map(n => n + shift);
+        const finalNotes = this.getNotesFromBass(targetType, targetInvId, refBass);
+        
         Audio.chord(finalNotes);
         const elId = (typeStr === 'c') ? 'c-' + id : 'i-' + id;
         const el = document.getElementById(elId); if(el) { el.classList.add('playing'); setTimeout(() => el.classList.remove('playing'), 200); }
@@ -405,6 +655,13 @@ export const App = {
 
     select(type, id) {
         window.UI.vibrate(10);
+        
+        // HOOK STUDIO V5.1
+        if(this.session.mode === 'studio') {
+            this.updateStudioState(type, id);
+            return;
+        }
+
         if(this.session.done) { this.preview(type, id); return; }
         if(type === 'c') {
             this.session.selC = id; this.session.selectionHistory.push(id);
@@ -427,6 +684,10 @@ export const App = {
          } 
          else if(!document.getElementById('valBtn').disabled) { 
              if(this.session.mode === 'inverse') this.validateQuiz(); 
+             // STUDIO V5.1 : Logique d'ajout à la timeline
+             else if(this.session.mode === 'studio') { 
+                 this.addToTimeline();
+             }
              else this.validate(); 
          }
     },
