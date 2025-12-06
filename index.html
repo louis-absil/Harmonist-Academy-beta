@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Harmonist Academy - V5.0 (Challenger)</title>
+    <title>Harmonist Academy - V5.2 (Challenger)</title>
     <link rel="stylesheet" href="./styles.css">
     <!-- Suppression des styles React/Vite inutiles -->
 <link rel="stylesheet" href="/index.css">
@@ -88,6 +88,36 @@
         </div>
         <div class="timer-badge" id="chronoDisplay">
             <span id="timerVal">60</span><span class="lives" id="livesVal">❤️❤️❤️</span>
+        </div>
+    </div>
+
+    <!-- STUDIO PANEL (Phase 2) -->
+    <div id="studioPanel" class="studio-panel" style="display:none;">
+        <div class="studio-controls">
+            <div class="bass-octave-ctrl">
+                <button class="oct-btn" onclick="window.App.adjStudioOct(-12)">-</button>
+                <span class="oct-lbl">OCT</span>
+                <button class="oct-btn" onclick="window.App.adjStudioOct(12)">+</button>
+            </div>
+            <div class="piano-strip">
+                <!-- Do à Si (12 touches) -->
+                <button class="piano-key white" id="pk-0" onclick="window.App.setStudioBass(0)">C</button>
+                <button class="piano-key black" id="pk-1" onclick="window.App.setStudioBass(1)"></button>
+                <button class="piano-key white" id="pk-2" onclick="window.App.setStudioBass(2)">D</button>
+                <button class="piano-key black" id="pk-3" onclick="window.App.setStudioBass(3)"></button>
+                <button class="piano-key white" id="pk-4" onclick="window.App.setStudioBass(4)">E</button>
+                <button class="piano-key white" id="pk-5" onclick="window.App.setStudioBass(5)">F</button>
+                <button class="piano-key black" id="pk-6" onclick="window.App.setStudioBass(6)"></button>
+                <button class="piano-key white" id="pk-7" onclick="window.App.setStudioBass(7)">G</button>
+                <button class="piano-key black" id="pk-8" onclick="window.App.setStudioBass(8)"></button>
+                <button class="piano-key white" id="pk-9" onclick="window.App.setStudioBass(9)">A</button>
+                <button class="piano-key black" id="pk-10" onclick="window.App.setStudioBass(10)"></button>
+                <button class="piano-key white" id="pk-11" onclick="window.App.setStudioBass(11)">B</button>
+            </div>
+            <!-- Bouton Save retiré pour laisser la place au piano -->
+        </div>
+        <div class="studio-timeline" id="studioTimeline">
+            <div class="timeline-placeholder">Timeline vide...</div>
         </div>
     </div>
 
@@ -319,9 +349,21 @@
             </div>
         </div>
 
-        <!-- TAB CREATE -->
+        <!-- TAB CREATE (V5.1 - STUDIO LINK) -->
         <div id="c-tab-create" class="challenge-tab-content" style="display:none; text-align:center; padding-top:20px;">
-            <p style="color:var(--text-dim); font-size:0.9rem; margin-bottom:20px;">Créez un défi basé sur votre configuration actuelle (Settings).</p>
+            <button class="cmd-btn btn-action" style="width:100%; padding:20px; background:linear-gradient(135deg, #ec4899, #8b5cf6);" onclick="window.App.setMode('studio'); window.UI.closeModals();">
+                <span style="display:block; font-size:2rem; margin-bottom:10px;">🎹</span>
+                <span style="display:block; font-size:1.2rem;">OUVRIR LE STUDIO</span>
+                <span style="display:block; font-size:0.8rem; opacity:0.8; font-weight:400; margin-top:5px;">Composez votre propre dictée</span>
+            </button>
+            
+            <div style="margin:30px 0; display:flex; align-items:center; gap:10px; color:var(--text-dim);">
+                <div style="height:1px; background:var(--panel-border); flex:1;"></div>
+                <span>OU GÉNÉRER</span>
+                <div style="height:1px; background:var(--panel-border); flex:1;"></div>
+            </div>
+
+            <p style="color:var(--text-dim); font-size:0.8rem; margin-bottom:15px;">Création automatique basée sur vos réglages.</p>
             
             <div class="create-form-group">
                 <label>Nom du Défi (Seed)</label>
