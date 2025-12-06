@@ -12,9 +12,47 @@ window.Piano = Piano;
 window.AudioEngine = Audio;
 window.ChallengeManager = ChallengeManager;
 
+// MAPPING CLAVIER POUR LE MODE STUDIO (Positions physiques AZERTY/QWERTY standard)
+// Rangée du bas (W X C V B N ,) et milieu (S D G H J)
+const STUDIO_MAP = {
+    'KeyZ': 0, // Do (W sur Azerty)
+    'KeyS': 1, // Do#
+    'KeyX': 2, // Ré
+    'KeyD': 3, // Ré#
+    'KeyC': 4, // Mi
+    'KeyV': 5, // Fa
+    'KeyG': 6, // Fa#
+    'KeyB': 7, // Sol
+    'KeyH': 8, // Sol#
+    'KeyN': 9, // La
+    'KeyJ': 10, // La#
+    'KeyM': 11, // Si (La virgule à droite du N sur Azerty a le code KeyM)
+    'Comma': 11 // Fallback pour clavier Qwerty physique ou la virgule est Comma
+};
+
 // Keyboard Event Listeners
 document.addEventListener('keydown', e => {
     if(e.code === 'Escape') UI.closeModals();
+
+    // Raccourcis spécifiques au Mode Studio
+    if (App.session.mode === 'studio') {
+        if (e.code === 'ArrowUp') { 
+            e.preventDefault(); 
+            App.adjStudioOct(12); 
+            return; 
+        }
+        if (e.code === 'ArrowDown') { 
+            e.preventDefault(); 
+            App.adjStudioOct(-12); 
+            return; 
+        }
+        if (STUDIO_MAP[e.code] !== undefined) {
+            e.preventDefault();
+            App.setStudioBass(STUDIO_MAP[e.code]);
+            return;
+        }
+    }
+
     if(e.code === 'Space') { 
         e.preventDefault(); 
         const valBtn = document.getElementById('valBtn');
