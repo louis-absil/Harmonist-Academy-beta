@@ -1,4 +1,5 @@
 
+
 // --- MASTERY & SETS ---
 export const MASTERY_NAMES = [
     "🏛️ L'Académie", "🎷 Le Club", "🧪 Le Laboratoire", "🌌 Le Cosmos"
@@ -264,14 +265,26 @@ export const checkRankColl = (d, type, limit) => {
     const list = (type === 'c') ? DB.sets.academy.chords : DB.invs; 
     const stats = (type === 'c') ? d.stats.c : d.stats.i;
     if(!stats) return false;
-    // Removed the filter (x.id !== 0) to ensure Root Position is included in mastery check
     return list.every(x => (stats[x.id] && stats[x.id].ok >= limit));
 };
 
 export const BADGES = [
-    // --- SUPER-CATÉGORIE: CARRIÈRE (Gameplay, Modes, Sets) ---
-    // setID: 'core' (Général), 'academy', 'jazz', 'laboratory'
+    // --- V5.2 CATEGORIE: ARÈNE (Défis & Social) ---
+    { id: 'b_rituel', category: 'arena', icon: '📅', title: "Le Rituel", desc: "Jouer au Défi du Jour 3 jours consécutifs", check: (d) => d.arenaStats && d.arenaStats.currentStreak >= 3 },
+    { id: 'b_maitre', category: 'arena', icon: '🎲', title: "Le Maître du Jeu", desc: "Créer un défi personnalisé", check: (d) => d.arenaStats && d.arenaStats.challengesCreated >= 1 },
+    { id: 'b_champ', category: 'arena', icon: '⚔️', title: "Le Champion", desc: "Score cumulé en Arène > 1000 pts", check: (d) => d.arenaStats && d.arenaStats.totalScore >= 1000 },
     
+    // BADGES DE RANG (Basés sur le classement instantané ou session)
+    { id: 'b_emp', category: 'arena', icon: '🦅', title: "L'Empereur", desc: "Finir 1er du Daily (min. 20 joueurs)", check: (d, s) => s.challengeRank === 1 && s.challengeTotalPlayers >= 20 },
+    { id: 'b_olymp', category: 'arena', icon: '🏅', title: "L'Olympien", desc: "Top 3 sur 5 Daily différents (min. 20 joueurs)", check: (d) => d.arenaStats && d.arenaStats.podiumDates && d.arenaStats.podiumDates.length >= 5 },
+    { id: 'b_out', category: 'arena', icon: '📉', title: "L'Outsider", desc: "Top 10 du Daily (min. 20 joueurs)", check: (d, s) => s.challengeRank <= 10 && s.challengeTotalPlayers >= 20 },
+
+    // BADGES SECRETS ARÈNE (CORRIGÉS POUR VÉRIFIER LONGUEUR 20)
+    { id: 'b_aube', category: 'arena', secret: true, icon: '🌅', title: "L'Aube Nouvelle", desc: "L'avenir appartient à ceux qui se lèvent tôt (6h-9h)", check: (d, s) => { if(!s.isChallenge) return false; const h = new Date().getHours(); return h >= 6 && h < 9; }},
+    { id: 'b_crash', category: 'arena', secret: true, icon: '😵', title: "Le Crash Test", desc: "Un score parfait... dans le mauvais sens (0/20)", check: (d, s) => s.isChallenge && s.score === 0 && s.lastChallengeLength === 20 },
+    { id: 'b_speed', category: 'arena', secret: true, icon: '🏎️', title: "Speedrunner", desc: "Réflexion pure < 60s sur 20 questions", check: (d, s) => s.isChallenge && s.challengeNetTime > 0 && s.challengeNetTime < 60000 && s.lastChallengeLength === 20 },
+
+    // --- SUPER-CATÉGORIE: CARRIÈRE (Gameplay, Modes, Sets) ---
     // CORE (Général)
     { id: 'b_appr', category: 'career', setID: 'core', icon: '👶', title: "L'Apprenti", desc: "Jouer 100 accords au total", check: (d) => d.stats.totalPlayed >= 100 },
     { id: 'b_achar', category: 'career', setID: 'core', icon: '🏋️', title: "L'Acharné", desc: "Jouer 500 accords au total", check: (d) => d.stats.totalPlayed >= 500 },
@@ -288,7 +301,7 @@ export const BADGES = [
     { id: 'b_comp', category: 'career', setID: 'core', icon: '🎼', title: "Le Compositeur", desc: "Série de 10 sans faute (Inverse)", check: (d, s) => s.mode === 'inverse' && s.streak >= 10 },
     { id: 'b_pur', category: 'career', setID: 'core', icon: '🧐', title: "Le Puriste", desc: "Série de 25 sans faute avec TOUS réglages", check: (d, s) => s.fullConfigStreak >= 25 },
     
-    // ACADEMY SPECIFIC (Moved to Core for simplicity or explicit setID)
+    // ACADEMY
     { id: 'b_ency', category: 'career', setID: 'academy', icon: '📚', title: "L'Encyclopédie", desc: "Valider les 21 combinaisons uniques (Acad.)", check: (d) => d.currentSet === 'academy' && d.stats.combos && d.stats.combos.length >= 21 },
     { id: 'b_init', category: 'career', setID: 'academy', icon: '🥉', title: "L'Initié", desc: "Rang Bronze min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 20) },
     { id: 'b_conf', category: 'career', setID: 'academy', icon: '🥈', title: "Le Confirmé", desc: "Rang Argent min. sur les 6 accords académiques", check: (d) => checkRankColl(d, 'c', 50) },
@@ -302,13 +315,13 @@ export const BADGES = [
     { id: 'b_acro', category: 'career', setID: 'academy', icon: '🤸', title: "L'Acrobate", desc: "10 réussites consécutives sur Renversements", check: (d) => d.currentSet === 'academy' && d.stats.str_inv >= 10 },
     { id: 'b_grand', category: 'career', setID: 'academy', icon: '🌊', title: "Grand Large", desc: "Série de 15 sans faute en Mode Ouvert (Acad.)", check: (d, s) => d.currentSet === 'academy' && s.openStreak >= 15 },
 
-    // JAZZ SPECIFIC
+    // JAZZ
     { id: 'b_blue', category: 'career', setID: 'jazz', icon: '🎷', title: "Blue Note", desc: "Réussir 50 accords Jazz (Club)", check: (d) => { if(d.currentSet !== 'jazz' || !d.stats.v) return false; let tot = 0; for(let k in d.stats.v) tot += d.stats.v[k].ok; return tot >= 50; }},
     { id: 'b_velvet', category: 'career', setID: 'jazz', icon: '🧤', title: "Doigts de Velours", desc: "Série de 10 sur Voicing Rootless", check: (d, s) => d.currentSet === 'jazz' && s.rootlessStreak >= 10 },
     { id: 'b_alt', category: 'career', setID: 'jazz', icon: '💥', title: "Altered Beast", desc: "20 réussites sur l'accord Altéré", check: (d) => d.currentSet === 'jazz' && (d.stats.c['alt']?.ok || 0) >= 20 },
     { id: 'b_bebop', category: 'career', setID: 'jazz', icon: '🎺', title: "Bebop Flow", desc: "5 réponses rapides en mode Jazz", check: (d, s) => s.fastStreak >= 5 && d.currentSet === 'jazz' },
 
-    // LAB SPECIFIC
+    // LAB
     { id: 'b_lab', category: 'career', setID: 'laboratory', icon: '🧪', title: "Rat de Labo", desc: "Réussir 50 accords Laboratoire", check: (d) => { if(d.currentSet !== 'laboratory' || !d.stats.l) return false; let tot = 0; for(let k in d.stats.l) tot += d.stats.l[k].ok; return tot >= 50; }},
     { id: 'b_geo', category: 'career', setID: 'laboratory', icon: '📐', title: "L'Œil du Géomètre", desc: "Série de 15 sur les Structures (36/45tr)", check: (d, s) => d.currentSet === 'laboratory' && s.geoStreak >= 15 },
     { id: 'b_cryst', category: 'career', setID: 'laboratory', icon: '💠', title: "Cristallographe", desc: "Série de 10 sur Structure 3-6", check: (d, s) => d.currentSet === 'laboratory' && s.str36Streak >= 10 },
@@ -318,7 +331,6 @@ export const BADGES = [
     { id: 'b_sym', category: 'career', setID: 'laboratory', icon: '🦋', title: "Symétrie Parfaite", desc: "30 réussites sur Suspendus", check: (d) => d.currentSet === 'laboratory' && (d.stats.c['sus_sym']?.ok || 0) >= 30 },
 
     // --- SUPER-CATÉGORIE: HÉRITAGE (Lore & Progression) ---
-    // setID: 'lore'
     { 
         id: 'b_leg', category: 'lore', setID: 'lore', icon: '👑', title: "La Légende", 
         desc: "Débloquer tous les badges Généraux et Académiques", 
@@ -332,16 +344,13 @@ export const BADGES = [
         } 
     },
 
-    // EASTER EGGS (SECRETS)
-    // RENOMMAGE ANCIEN b_audio -> b_sceptic pour laisser la place au nouveau
+    // EASTER EGGS
     { id: 'b_sceptic', category: 'lore', setID: 'lore', secret: true, icon: '🤔', title: "Le Sceptique", desc: "La patience est une vertu (5 Replay)", check: (d, s) => s.replayCount > 5 },
-    
     { id: 'b_auto', category: 'lore', setID: 'lore', secret: true, icon: '🤖', title: "L'Automate", desc: "Votre régularité n'est plus humaine (Série 50)", check: (d, s) => s.streak >= 50 },
     { id: 'b_dj', category: 'lore', setID: 'lore', secret: true, icon: '🎧', title: "Le DJ", desc: "Remix en cours... (Spam Rejouer)", check: (d, s) => s.djClickTimes.length >= 5 },
     { id: 'b_ind', category: 'lore', setID: 'lore', secret: true, icon: '🤷', title: "L'Indécis", desc: "Il n'y a que les imbéciles qui ne changent pas d'avis", check: (d, s) => {
         const h = s.selectionHistory;
         if(h.length < 3) return false;
-        // Check pattern A -> B -> A
         const last = h[h.length-1];
         const prev = h[h.length-2];
         const ante = h[h.length-3];
@@ -350,8 +359,6 @@ export const BADGES = [
     { id: 'b_deja', category: 'lore', setID: 'lore', secret: true, icon: '🐈', title: "Déjà-Vu", desc: "Une faille dans la matrice ?", check: (d, s) => s.dejaVu === true },
     { id: 'b_surv', category: 'lore', setID: 'lore', secret: true, icon: '🚑', title: "Le Survivant", desc: "Ce qui ne vous tue pas vous donne de l'XP", check: (d, s) => (s.mode === 'chrono' || s.mode === 'sprint') && s.lives === 1 && s.score >= 500 },
     { id: 'b_mono', category: 'lore', setID: 'lore', secret: true, icon: '🥋', title: "Monomaniaque", desc: "Plus un esprit se limite, plus il touche à l'infini", check: (d, s) => s.monoStreak >= 20 },
-
-    // --- NOUVEAUX BADGES SECRETS ---
     { id: 'b_fast', category: 'lore', setID: 'lore', secret: true, icon: '🐆', title: "Instinct Primal", desc: "Plus rapide que la pensée (<1s)", check: (d, s) => s.lastReactionTime < 1000 },
     { id: 'b_pure', category: 'lore', setID: 'lore', secret: true, icon: '✨', title: "L'Audiophile", desc: "Série de 10 sans jamais réécouter", check: (d, s) => s.pureStreak >= 10 },
     { id: 'b_razor', category: 'lore', setID: 'lore', secret: true, icon: '💣', title: "Le Fil du Rasoir", desc: "L'efficacité sous pression maximale (<2s)", check: (d, s) => s.razorTriggered === true },
@@ -366,10 +373,10 @@ LORE_MATERIALS.forEach((m, i) => {
         id: `b_mat_${i}`,
         category: 'lore',
         setID: 'lore',
-        secret: true, // Invisible tant que non débloqué
+        secret: true,
         icon: m.icon || '💠',
-        title: `L'Éveil ${m.particle}${m.name}`, // GRAMMAIRE AUTO
-        desc: `Atteindre la Maîtrise ${m.particle}${m.name} (Niveau ${i*5 + 1})`, // GRAMMAIRE AUTO
+        title: `L'Éveil ${m.particle}${m.name}`,
+        desc: `Atteindre la Maîtrise ${m.particle}${m.name} (Niveau ${i*5 + 1})`,
         check: (d) => d.mastery >= (i * 5 + 1)
     });
 });
@@ -380,7 +387,6 @@ export const PHYSICAL_MAP = {
     'KeyQ': 0, 'KeyW': 1, 'KeyE': 2, 'KeyR': 3, 'KeyT': 4, 'KeyY': 5, 'KeyZ': 5
 };
 
-// COACH DATABASE V2 (Pedagogy & Psychology)
 export const COACH_DB = {
     start: [
         "Bienvenue. Prenez une grande respiration avant de commencer.",
