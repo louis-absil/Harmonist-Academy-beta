@@ -1,4 +1,6 @@
 
+
+
 import { Audio, Piano } from './audio.js';
 import { BADGES, CODEX_DATA, DB, LORE_MATERIALS, GHOSTS } from './data.js';
 import { ChallengeManager } from './challenges.js';
@@ -11,20 +13,16 @@ const LORE_PLACES = ['Le Club', 'Le Labo', 'Le Cosmos', "L'Institut", 'La Source
 export const UI = {
     // STATE
     lbState: { mode: 'chrono', period: 'weekly' },
-    createConfig: { length: 10 }, // FIX: Default matches HTML "active" class
+    createConfig: { length: 10 }, 
 
     // --- CHALLENGE HUB (V5.0) ---
     
     showChallengeHub() {
         this.openModal('challengeHubModal');
-        // Ouvrir par défaut l'onglet Arcade (Classements)
         this.switchChallengeTab('arcade'); 
-        
-        // On charge aussi le Daily pour qu'il soit prêt si on clique dessus
         this.loadDailyChallengeUI();
     },
     
-    // Changes the Settings button to an Exit button during challenges
     updateChallengeControls(active) {
         const btn = document.getElementById('btnSettings');
         if(!btn) return;
@@ -56,13 +54,9 @@ export const UI = {
         if(tabContent) tabContent.style.display = 'block';
         
         // Gestion des boutons d'onglets (Mapping manuel basé sur l'ordre HTML)
-        // 0: Arcade, 1: Mondial, 2: Rejoindre, 3: Créer
         const btns = document.querySelectorAll('.challenge-tab-btn');
         if(btns.length >= 4) {
-            if(tabName === 'arcade') {
-                btns[0].classList.add('active');
-                this.updateLeaderboardView(); // Recharger les données Arcade quand on clique
-            }
+            if(tabName === 'arcade') { btns[0].classList.add('active'); this.updateLeaderboardView(); }
             if(tabName === 'global') btns[1].classList.add('active');
             if(tabName === 'join') btns[2].classList.add('active');
             if(tabName === 'create') btns[3].classList.add('active');
@@ -79,32 +73,77 @@ export const UI = {
             list.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-dim);">Chargement...</div>';
             
             const scores = await Cloud.getChallengeLeaderboard(id);
+            const myUid = Cloud.getCurrentUID();
+            
             list.innerHTML = '';
+            
             if(scores.length === 0) {
                 list.innerHTML = '<div style="text-align:center; color:var(--text-dim);">Soyez le premier à jouer aujourd\'hui !</div>';
             } else {
+                let userFoundInTop = false;
+                
+                // VERIFICATION PASSIVE DES BADGES DE RANG (Empereur / Olympien)
+                // On cherche l'utilisateur via son UID unique
+                const myEntryIndex = scores.findIndex(s => s.uid === myUid);
+                
+                if (myEntryIndex !== -1) {
+                    const rank = myEntryIndex + 1;
+                    const total = scores.length;
+                    
+                    // Mise à jour de la session pour la vérification des badges
+                    window.App.session.challengeRank = rank;
+                    window.App.session.challengeTotalPlayers = total;
+                    
+                    // Logique OLYMPIEN (Podium sur 5 challenges différents)
+                    if (rank <= 3 && total >= 20) {
+                        const podiums = window.App.data.arenaStats.podiumDates;
+                        if (!podiums.includes(id)) {
+                            podiums.push(id);
+                            window.App.save();
+                        }
+                    }
+                    
+                    // Déclenchement de la vérification (Débloque Empereur, Outsider, Olympien si conditions remplies)
+                    window.App.checkBadges();
+                }
+
+                // RENDER LIST
                 scores.forEach((s, idx) => {
+                    const isMe = (s.uid === myUid);
+                    if (isMe) userFoundInTop = true;
+                    
                     let rank = idx+1;
                     let color = 'white';
                     if(idx===0) { rank='🥇'; color='var(--gold)'; }
                     else if(idx===1) { rank='🥈'; color='#e2e8f0'; }
                     else if(idx===2) { rank='🥉'; color='#b45309'; }
                     
+                    const displayScore = s.score !== undefined ? s.score : s.note; 
+
                     list.innerHTML += `
-                        <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">
+                        <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; border:1px solid ${isMe ? 'var(--primary)' : 'transparent'};">
                             <div style="width:30px; text-align:center; font-weight:700;">${rank}</div>
                             <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
-                            <div style="font-weight:900;">${s.note}/20</div>
+                            <div style="font-weight:900;">${displayScore}/${s.total || 20}</div>
                         </div>
                     `;
                 });
+
+                // Message d'encouragement si le joueur a joué aujourd'hui mais n'est pas dans le top affiché
+                const todayISO = new Date().toISOString().split('T')[0];
+                if (!userFoundInTop && window.App.data.arenaStats.lastDailyDate === todayISO) {
+                    list.innerHTML += `
+                        <div style="margin-top:10px; padding:10px; background:rgba(99, 102, 241, 0.1); border:1px dashed var(--primary); border-radius:8px; text-align:center; color:#a5b4fc; font-size:0.85rem;">
+                            <strong>Continuez vos efforts !</strong><br>Votre score est enregistré, visez le Top 50 pour apparaître ici !
+                        </div>
+                    `;
+                }
             }
         }
     },
 
     async joinDailyChallenge() {
         const id = Cloud.getDailyChallengeID();
-        // Config standard pour le Daily
         const settings = {
             activeC: DB.sets.academy.chords.map(c=>c.id), 
             activeI: DB.invs.map(i=>i.id),
@@ -129,7 +168,6 @@ export const UI = {
         
         let data = await Cloud.getChallenge(code);
         if(!data) {
-            // Fallback local si pas trouvé dans le cloud (pour tests ou seeds simples)
             data = {
                 id: code,
                 seed: code,
@@ -147,21 +185,16 @@ export const UI = {
         }
     },
 
-    // Affiche le classement d'un défi spécifique dans l'onglet Rejoindre
     async viewChallengeLeaderboard() {
         const input = document.getElementById('challengeCodeInput');
         if(!input) return;
         const code = input.value.trim().toUpperCase();
-        if(code.length < 3) {
-            window.UI.showToast("Code trop court");
-            return;
-        }
+        if(code.length < 3) { window.UI.showToast("Code trop court"); return; }
 
         const container = document.getElementById('join-lb-results');
         if(!container) return;
 
         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Recherche du classement...</div>';
-        
         const scores = await Cloud.getChallengeLeaderboard(code);
         
         if(scores.length === 0) {
@@ -175,11 +208,13 @@ export const UI = {
                 else if(idx===1) { rank='🥈'; color='#e2e8f0'; }
                 else if(idx===2) { rank='🥉'; color='#b45309'; }
                 
+                const displayScore = s.score !== undefined ? s.score : Math.round((s.note/20) * (s.total||20));
+
                 html += `
                     <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">
                         <div style="width:30px; text-align:center; font-weight:700;">${rank}</div>
                         <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
-                        <div style="font-weight:900;">${s.note}/20</div>
+                        <div style="font-weight:900;">${displayScore}/${s.total || 20}</div>
                     </div>
                 `;
             });
@@ -213,6 +248,11 @@ export const UI = {
         
         const id = await Cloud.createChallenge(data);
         if(id) {
+            // V5.2 - Increment Challenges Created
+            window.App.data.arenaStats.challengesCreated++;
+            window.App.save();
+            window.App.checkBadges();
+
             alert(`Défi créé ! Code : ${id}`);
             if(document.getElementById('challengeCodeInput')) {
                 document.getElementById('challengeCodeInput').value = id;
@@ -236,12 +276,15 @@ export const UI = {
         const modal = document.getElementById('challengeReportModal');
         if(!modal) return;
         
-        // --- VIEW 1: MISTAKES LIST ---
+        // VIEW 1: MISTAKES LIST
         const mistakesHTML = report.mistakes.map(m => {
             const targetNotesStr = JSON.stringify(m.chord.notes);
             const targetName = m.chord.type.name;
             const targetSub = m.chord.type.sub;
             
+            // ISO-BASS LOGIC: Detect target physical bass note to align user response
+            const targetBass = Math.min(...m.chord.notes);
+
             let userNotes = [];
             let userLabel = "???";
             let userSub = "";
@@ -256,7 +299,9 @@ export const UI = {
                 if (uTypeObj) {
                     userLabel = uTypeObj.name;
                     userSub = uTypeObj.sub;
-                    userNotes = window.App.getNotes(uTypeObj, uInv, m.chord.root, m.chord.open);
+                    // V5.2 ISO-BASS FIX: Use getNotesFromBass instead of getNotes with default root
+                    // This ensures the comparison chord sounds at the same pitch height as the target
+                    userNotes = window.App.getNotesFromBass(uTypeObj, uInv, targetBass);
                 }
             }
             const userNotesStr = JSON.stringify(userNotes);
@@ -284,18 +329,65 @@ export const UI = {
             `;
         }).join('');
 
-        // --- VIEW 2: STATISTICS GRID ---
+        // VIEW 2: STATISTICS GRID
         let statsHTML = "";
+        let statsInvHTML = "";
+        
         if (report.attempts) {
             const stats = {};
+            const statsInv = {};
+            
+            const isLab = window.App.data.currentSet === 'laboratory';
+            const isJazz = window.App.data.currentSet === 'jazz';
+
             report.attempts.forEach(a => {
+                // CHORDS AGG
                 const id = a.chord.type.id;
                 if(!stats[id]) stats[id] = {ok:0, tot:0, name: a.chord.type.name, sub: a.chord.type.sub};
                 stats[id].tot++;
                 if(a.win) stats[id].ok++;
+                
+                // INV AGG
+                let iName = "";
+                if(isLab) {
+                    if(a.chord.type.configs && a.chord.type.configs[a.chord.inv]) {
+                        iName = a.chord.type.configs[a.chord.inv].name;
+                    } else iName = `Config ${a.chord.inv}`;
+                } else if (isJazz) {
+                    const v = DB.voicings.find(x => x.id === a.chord.inv);
+                    iName = v ? v.name : `Voicing ${a.chord.inv}`;
+                } else {
+                    const i = DB.invs.find(x => x.id === a.chord.inv);
+                    iName = i ? i.name : `Inv ${a.chord.inv}`;
+                }
+                
+                // Composite key for Lab to avoid name collision if needed, but display name is enough
+                const iKey = isLab ? `${id}_${a.chord.inv}` : a.chord.inv; 
+                // Using display name as key for simplicity in grouping same-named invs
+                const iDisplayKey = iName;
+                
+                if(!statsInv[iDisplayKey]) statsInv[iDisplayKey] = {ok:0, tot:0, name: iName};
+                statsInv[iDisplayKey].tot++;
+                if(a.win) statsInv[iDisplayKey].ok++;
             });
             
-            statsHTML = Object.values(stats).map(s => {
+            statsHTML = `<h5 style="color:var(--text-dim); margin-bottom:5px;">QUALITÉS</h5>` + Object.values(stats).map(s => {
+                const pct = Math.round((s.ok / s.tot) * 100);
+                const col = pct >= 80 ? 'var(--success)' : (pct >= 50 ? 'var(--warning)' : 'var(--error)');
+                return `
+                    <div class="stat-item">
+                        <div class="stat-header">
+                            <span style="color:white; font-weight:700;">${s.name}</span>
+                            <span>${s.ok}/${s.tot} (${pct}%)</span>
+                        </div>
+                        <div class="stat-track">
+                            <div class="stat-fill" style="width:${pct}%; background:${col}"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            statsInvHTML = `<h5 style="color:var(--text-dim); margin:15px 0 5px 0;">VARIATIONS</h5>` + Object.values(statsInv).map(s => {
                 const pct = Math.round((s.ok / s.tot) * 100);
                 const col = pct >= 80 ? 'var(--success)' : (pct >= 50 ? 'var(--warning)' : 'var(--error)');
                 return `
@@ -312,14 +404,17 @@ export const UI = {
             }).join('');
         }
 
+        const pct = Math.round((report.score / report.total) * 100);
+
         modal.innerHTML = `
             <div class="modal" style="text-align:center;">
                 <h4 style="color:var(--text-dim); margin-bottom:10px;">Rapport de Session</h4>
                 <h2 style="margin:0; color:white; font-size:1.5rem;">${report.seed}</h2>
                 
-                <div class="report-score-circle" style="border-color:${report.note >= 10 ? 'var(--success)' : 'var(--error)'}; color:${report.note >= 10 ? 'var(--success)' : 'var(--error)'};">
-                    <span style="font-size:3.5rem; font-weight:900;">${report.note}</span>
-                    <span style="font-size:1rem; opacity:0.8;">/ 20</span>
+                <div class="report-score-circle" style="border-color:${pct >= 50 ? 'var(--success)' : 'var(--error)'}; color:${pct >= 50 ? 'var(--success)' : 'var(--error)'};">
+                    <span style="font-size:3.5rem; font-weight:900;">${report.score}</span>
+                    <span style="font-size:1rem; opacity:0.8;">/ ${report.total}</span>
+                    <div style="font-size:0.9rem; margin-top:5px; color:${pct>=50?'var(--success)':'var(--error)'}">${pct}%</div>
                 </div>
 
                 <div class="coach-bubble" style="margin-bottom:20px;">
@@ -338,6 +433,7 @@ export const UI = {
                     </div>
                     <div id="view-rep-stat" style="display:none;">
                         ${statsHTML}
+                        ${statsInvHTML}
                     </div>
                 </div>
 
@@ -357,23 +453,14 @@ export const UI = {
 
     // --- LEADERBOARD ARCADE ---
     
-    setLbMode(mode) {
-        this.lbState.mode = mode;
-        this.updateLeaderboardView();
-    },
-
-    setLbPeriod(period) {
-        this.lbState.period = period;
-        this.updateLeaderboardView();
-    },
+    setLbMode(mode) { this.lbState.mode = mode; this.updateLeaderboardView(); },
+    setLbPeriod(period) { this.lbState.period = period; this.updateLeaderboardView(); },
 
     async updateLeaderboardView() {
         const mode = this.lbState.mode;
         const period = this.lbState.period;
-        
-        // Update Buttons (Active State)
-        const container = document.getElementById('c-tab-arcade'); // New container
-        if(!container) return; // Should not happen if tab is active
+        const container = document.getElementById('c-tab-arcade');
+        if(!container) return; 
 
         container.querySelectorAll('.mode-opt').forEach(b => b.classList.remove('active'));
         const activeModeBtn = document.getElementById(`lb-mode-${mode}`);
@@ -392,25 +479,11 @@ export const UI = {
         if(list) list.innerHTML = '';
         if(loader) loader.style.display = 'block';
         try {
-            // 1. Get Real Scores
-let realScores = await Cloud.getLeaderboard(mode, period);
-
-// GARANTIE : On ne garde que les 20 meilleurs humains
-realScores = realScores.slice(0, 20); 
-
-// 2. Get Ghost Scores
-const modeGhosts = GHOSTS.filter(g => g.mode === mode);
-
-// 3. Merge (20 Humains + 3 Fantômes = 23 entrées max)
-// Les fantômes sont ajoutés APRÈS la découpe des humains, donc ils sont "indestructibles"
-let scores = [...realScores, ...modeGhosts];
-
-// 4. Sort (Pour mélanger les fantômes à leur juste place)
-scores.sort((a, b) => b.score - a.score);
-
-// 5. Slice (Optionnel, mais on s'assure de tout garder)
-// On ne coupe plus, ou on coupe large (50) pour être sûr de garder les 23.
-// Le code actuel .slice(0, 50) est correct SI on a bien limité les humains AVANT.
+            let realScores = await Cloud.getLeaderboard(mode, period);
+            realScores = realScores.slice(0, 20); 
+            const modeGhosts = GHOSTS.filter(g => g.mode === mode);
+            let scores = [...realScores, ...modeGhosts];
+            scores.sort((a, b) => b.score - a.score);
 
             if(loader) loader.style.display = 'none';
             if(scores.length === 0 && list) {
@@ -426,36 +499,23 @@ scores.sort((a, b) => b.score - a.score);
                 
                 const row = document.createElement('div');
                 row.className = s.isGhost ? 'leaderboard-row ghost' : 'leaderboard-row';
-                
-                // Styles
                 const masteryStars = "★".repeat(Math.max(0, (s.mastery || 0) % 5));
                 const masteryColor = LORE_MATERIALS[Math.floor((s.mastery || 0)/5)]?.color || 'var(--text-dim)';
                 
-                // Content Logic
                 let nameHtml = s.pseudo || s.name;
                 let subHtml = `Maîtrise ${s.mastery||0} ${masteryStars}`;
                 
                 if (s.isGhost) {
                     nameHtml = `${s.name} ✨`;
-                    // Ghost Rank Display
                     let levelLabel = "Initié";
                     if (s.mastery >= 19) levelLabel = "Divin";
                     else if (s.mastery >= 10) levelLabel = "Maître";
-                    
                     subHtml = `<span style="color:var(--text-dim)">Légende</span> • ${levelLabel}`;
                     row.style.cursor = 'help';
                     row.onclick = () => window.UI.showGhostQuote(s.name, s.quote);
                 }
 
-                row.innerHTML = `
-                    <div style="font-size:1.2rem; width:30px; text-align:center;">${rankVisual}</div>
-                    <div style="flex:1; margin-left:10px;">
-                        <div style="font-weight:700; color:${s.isGhost ? '#a5f3fc' : masteryColor};">${nameHtml}</div>
-                        <div style="font-size:0.7rem; opacity:0.6;">${subHtml}</div>
-                    </div>
-                    <div style="font-weight:900; font-size:1.1rem; color:var(--gold);">${s.score}</div>
-                `;
-                
+                row.innerHTML = `<div style="font-size:1.2rem; width:30px; text-align:center;">${rankVisual}</div><div style="flex:1; margin-left:10px;"><div style="font-weight:700; color:${s.isGhost ? '#a5f3fc' : masteryColor};">${nameHtml}</div><div style="font-size:0.7rem; opacity:0.6;">${subHtml}</div></div><div style="font-weight:900; font-size:1.1rem; color:var(--gold);">${s.score}</div>`;
                 if(list) list.appendChild(row);
             });
         } catch (e) { console.error(e); if(loader) loader.innerHTML = "Erreur de chargement..."; }
@@ -464,14 +524,7 @@ scores.sort((a, b) => b.score - a.score);
     showGhostQuote(name, quote) {
         let el = document.getElementById('badgeOverlay');
         if (!el) { el = document.createElement('div'); el.id = 'badgeOverlay'; el.className = 'modal-overlay badge-lightbox'; document.body.appendChild(el); el.onclick = () => { el.classList.remove('open'); }; }
-        
-        el.innerHTML = `<div class="modal" style="max-width:350px;">
-            <div style="font-size:3rem; margin-bottom:10px;">👻</div>
-            <h2 style="color:var(--cyan); margin:0; text-transform:uppercase; letter-spacing:1px; line-height:1.2;">${name}</h2>
-            <div style="margin-top:10px; height:2px; background:var(--panel-border); width:50%; margin-left:auto; margin-right:auto;"></div>
-            <p style="color:white; margin-top:20px; font-size:1.1rem; line-height:1.5; font-style:italic;">"${quote}"</p>
-            <button class="cmd-btn btn-listen" style="width:100%; margin-top:20px; padding:12px;" onclick="document.getElementById('badgeOverlay').classList.remove('open')">Fermer</button>
-        </div>`;
+        el.innerHTML = `<div class="modal" style="max-width:350px;"><div style="font-size:3rem; margin-bottom:10px;">👻</div><h2 style="color:var(--cyan); margin:0; text-transform:uppercase; letter-spacing:1px; line-height:1.2;">${name}</h2><div style="margin-top:10px; height:2px; background:var(--panel-border); width:50%; margin-left:auto; margin-right:auto;"></div><p style="color:white; margin-top:20px; font-size:1.1rem; line-height:1.5; font-style:italic;">"${quote}"</p><button class="cmd-btn btn-listen" style="width:100%; margin-top:20px; padding:12px;" onclick="document.getElementById('badgeOverlay').classList.remove('open')">Fermer</button></div>`;
         el.classList.add('open');
         window.UI.vibrate(10);
     },
@@ -623,10 +676,7 @@ scores.sort((a, b) => b.score - a.score);
     },
 
     getLoreState(m) {
-        if (m <= 0) return { 
-            rankLabel: 'M-00', starsHTML: '', fullName: 'Débutant', grade: 'Débutant',
-            material: null, place: "L'Académie", color: '#94a3b8', shadow: 'rgba(148, 163, 184, 0.2)' 
-        };
+        if (m <= 0) return { rankLabel: 'M-00', starsHTML: '', fullName: 'Débutant', grade: 'Débutant', material: null, place: "L'Académie", color: '#94a3b8', shadow: 'rgba(148, 163, 184, 0.2)' };
         const mIdx = m - 1; 
         const gradeIdx = mIdx % 5;
         const gradeName = LORE_GRADES[gradeIdx];
@@ -749,6 +799,24 @@ scores.sort((a, b) => b.score - a.score);
 
     renderSel() {
         document.querySelectorAll('.pad').forEach(p => p.classList.remove('selected'));
+        
+        // Studio Mode Handling
+        if(window.App.session.mode === 'studio') {
+            const s = window.App.session.studio;
+            if(s.chordId) {
+                const el = document.getElementById('c-'+s.chordId);
+                if(el) el.classList.add('selected');
+            }
+            if(s.invId !== null) {
+                const el = document.getElementById('i-'+s.invId);
+                if(el) el.classList.add('selected');
+            }
+            const valBtn = document.getElementById('valBtn');
+            if(valBtn) valBtn.disabled = false;
+            return;
+        }
+
+        // Standard Game Mode Handling
         if(window.App.session.selC) {
             const el = document.getElementById('c-'+window.App.session.selC);
             if(el) el.classList.add('selected');
@@ -987,12 +1055,48 @@ scores.sort((a, b) => b.score - a.score);
         let chordHTML = html(DB.chords, 'c'); let invHTML = "";
         if(window.App.data.currentSet === 'jazz') { invHTML = "<h4>Voicings</h4>" + DB.currentInvs.map(x => { const s = window.App.data.stats.v[x.id] || {ok:0, tot:0}; const p = s.tot?Math.round((s.ok/s.tot)*100):0; const col = p>=80?'var(--success)':p>=50?'var(--warning)':'var(--error)'; return `<div class="stat-item"><div class="stat-header"><span>${x.corr}</span><span>${p}%</span></div><div class="stat-track"><div class="stat-fill" style="width:${p}%;background:${s.tot?col:'transparent'}"></div></div></div>`; }).join(''); } else if (window.App.data.currentSet === 'laboratory') { invHTML = "<h4>Détail des Configurations</h4>"; DB.sets.laboratory.chords.forEach(c => { if(window.App.data.settings.activeC.includes(c.id)) { invHTML += `<h5 style="margin:8px 0 4px 0; color:var(--cyan); border-bottom:1px solid rgba(6,182,212,0.2); padding-bottom:2px;">${c.name}</h5>`; c.configs.forEach(conf => { const key = `${c.id}_${conf.id}`; const s = window.App.data.stats.l[key] || {ok:0, tot:0}; const p = s.tot?Math.round((s.ok/s.tot)*100):0; const col = p>=80?'var(--success)':p>=50?'var(--warning)':'var(--error)'; invHTML += `<div class="stat-item"><div class="stat-header"><span style="color:var(--text-dim);">${conf.name}</span><span>${p}%</span></div><div class="stat-track"><div class="stat-fill" style="width:${p}%;background:${s.tot?col:'transparent'}"></div></div></div>`; }); } }); } else { invHTML = "<h4>Renversements</h4>" + html(DB.currentInvs, 'i'); }
         document.getElementById('statsContent').innerHTML = "<h4>Accords</h4>"+chordHTML+"<br>"+invHTML;
-        const grid = document.getElementById('badgesGrid'); grid.innerHTML = ''; const unlockedIDs = window.App.data.badges; const totalVisible = BADGES.filter(b => !b.secret || unlockedIDs.includes(b.id)).length; const unlockedCount = unlockedIDs.length; document.getElementById('badgeCount').innerText = `${unlockedCount}/${totalVisible}`;
-        const renderBadge = (b) => { const unlocked = unlockedIDs.includes(b.id); const el = document.createElement('div'); el.className = `badge-item set-${b.setID || 'core'} ${unlocked ? 'unlocked' : ''}`; el.innerHTML = b.icon; el.onclick = () => { window.UI.openBadgeLightbox(b); }; grid.appendChild(el); };
-        const careerTitle = document.createElement('h4'); careerTitle.style.cssText = "grid-column: 1 / -1; margin: 15px 0 5px 0; color: var(--gold); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px;"; careerTitle.innerText = "🏆 Carrière"; grid.appendChild(careerTitle);
-        const careerBadges = BADGES.filter(b => b.category === 'career' && (!b.secret || unlockedIDs.includes(b.id))); const sortOrder = ['core', 'academy', 'jazz', 'laboratory']; careerBadges.sort((a,b) => sortOrder.indexOf(a.setID) - sortOrder.indexOf(b.setID)); careerBadges.forEach(b => renderBadge(b));
-        const loreTitle = document.createElement('h4'); loreTitle.style.cssText = "grid-column: 1 / -1; margin: 25px 0 5px 0; color: var(--gold); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px;"; loreTitle.innerText = "💠 Héritage"; grid.appendChild(loreTitle);
-        const loreBadges = BADGES.filter(b => b.category === 'lore' && (!b.secret || unlockedIDs.includes(b.id))); loreBadges.forEach(b => renderBadge(b));
+        
+        // --- BADGES RENDER ---
+        const grid = document.getElementById('badgesGrid'); grid.innerHTML = ''; 
+        const unlockedIDs = window.App.data.badges; 
+        const totalVisible = BADGES.filter(b => !b.secret || unlockedIDs.includes(b.id)).length; 
+        const unlockedCount = unlockedIDs.length; 
+        document.getElementById('badgeCount').innerText = `${unlockedCount}/${totalVisible}`;
+        
+        const renderBadge = (b) => { 
+            const unlocked = unlockedIDs.includes(b.id); 
+            const el = document.createElement('div'); 
+            el.className = `badge-item set-${b.setID || 'core'} ${unlocked ? 'unlocked' : ''}`; 
+            el.innerHTML = b.icon; 
+            if(b.category === 'arena') el.style.borderColor = "var(--primary)";
+            el.onclick = () => { window.UI.openBadgeLightbox(b); }; 
+            grid.appendChild(el); 
+        };
+        
+        // V5.2 - SECTION ARENE
+        const arenaTitle = document.createElement('h4'); 
+        arenaTitle.style.cssText = "grid-column: 1 / -1; margin: 0 0 5px 0; color: var(--primary); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px;"; 
+        arenaTitle.innerText = "⚔️ Arène & Défis"; 
+        grid.appendChild(arenaTitle);
+        const arenaBadges = BADGES.filter(b => b.category === 'arena' && (!b.secret || unlockedIDs.includes(b.id))); 
+        arenaBadges.forEach(b => renderBadge(b));
+
+        const careerTitle = document.createElement('h4'); 
+        careerTitle.style.cssText = "grid-column: 1 / -1; margin: 15px 0 5px 0; color: var(--gold); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px;"; 
+        careerTitle.innerText = "🏆 Carrière"; 
+        grid.appendChild(careerTitle);
+        const careerBadges = BADGES.filter(b => b.category === 'career' && (!b.secret || unlockedIDs.includes(b.id))); 
+        const sortOrder = ['core', 'academy', 'jazz', 'laboratory']; 
+        careerBadges.sort((a,b) => sortOrder.indexOf(a.setID) - sortOrder.indexOf(b.setID)); 
+        careerBadges.forEach(b => renderBadge(b));
+        
+        const loreTitle = document.createElement('h4'); 
+        loreTitle.style.cssText = "grid-column: 1 / -1; margin: 25px 0 5px 0; color: var(--gold); font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px;"; 
+        loreTitle.innerText = "💠 Héritage"; 
+        grid.appendChild(loreTitle);
+        const loreBadges = BADGES.filter(b => b.category === 'lore' && (!b.secret || unlockedIDs.includes(b.id))); 
+        loreBadges.forEach(b => renderBadge(b));
+        
         const oldDetail = document.getElementById('badgeDetail'); if(oldDetail) oldDetail.style.display = 'none';
     }
 };
