@@ -4,12 +4,13 @@ import { Audio } from './audio.js';
 
 export const ChallengeManager = {
     active: false,
-    config: null, // { id, seed, length, settings }
+    config: null, // { id, seed, length, settings, sequence? }
     state: {
         step: 0,
         score: 0,
         mistakes: [], // { chord, userResp }
         startTime: 0,
+        netTime: 0, // Temps de réflexion pur (Speedrunner badge)
         history: [],
         attempts: [] // Full log for stats
     },
@@ -55,6 +56,12 @@ export const ChallengeManager = {
 
         this.active = true;
         this.config = challengeData;
+        
+        // Si une séquence custom est fournie, on utilise le RNG mais la longueur est forcée
+        if (challengeData.sequence) {
+            this.config.length = challengeData.sequence.length;
+        }
+        
         this.initSeed(challengeData.seed);
         
         this.state = {
@@ -62,6 +69,7 @@ export const ChallengeManager = {
             score: 0,
             mistakes: [],
             startTime: Date.now(),
+            netTime: 0,
             history: [],
             attempts: []
         };
@@ -116,6 +124,11 @@ export const ChallengeManager = {
 
     handleAnswer(win, chord, userResp) {
         const App = window.App;
+        
+        // Calcul du temps de réflexion NET (sans les animations)
+        const thinkingTime = Date.now() - App.session.lastActionTime;
+        this.state.netTime += thinkingTime;
+
         if (win) {
             this.state.score++;
         } else {
@@ -125,8 +138,7 @@ export const ChallengeManager = {
             });
         }
 
-        const stepTime = Date.now() - App.session.lastActionTime;
-        this.state.history.push({ win, time: stepTime });
+        this.state.history.push({ win, time: thinkingTime });
         if(!this.state.attempts) this.state.attempts = [];
         this.state.attempts.push({ chord, userResp, win });
 
@@ -155,6 +167,33 @@ export const ChallengeManager = {
         const totalTime = endTime - this.state.startTime;
         const finalNote = Math.round((this.state.score / this.config.length) * 20);
 
+        // V5.2 - GESTION DU STREAK (Le Rituel)
+        // Vérifie si le défi du jour a été joué
+        const todayISO = new Date().toISOString().split('T')[0];
+        const lastDaily = App.data.arenaStats.lastDailyDate;
+        
+        // On met à jour les stats d'Arène
+        App.data.arenaStats.totalScore += this.state.score;
+
+        // Si c'est un nouveau jour, on gère la série
+        if (lastDaily !== todayISO) {
+            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+            if (lastDaily === yesterday) {
+                App.data.arenaStats.currentStreak++;
+            } else {
+                App.data.arenaStats.currentStreak = 1;
+            }
+            App.data.arenaStats.lastDailyDate = todayISO;
+            // Met à jour le max streak si battu
+            if (App.data.arenaStats.currentStreak > App.data.arenaStats.maxStreak) {
+                App.data.arenaStats.maxStreak = App.data.arenaStats.currentStreak;
+            }
+        }
+        
+        // Store length for Badge checking BEFORE saving/checking
+        App.session.lastChallengeLength = this.config.length;
+        App.save();
+
         const resultData = {
             seed: this.config.seed,
             note: finalNote,
@@ -165,14 +204,38 @@ export const ChallengeManager = {
             time: totalTime
         };
 
+        // Envoi au Cloud (Composite ID handled in firebase.js)
         await Cloud.submitChallengeScore(this.config.id, {
             pseudo: App.data.username,
             note: finalNote,
+            score: this.state.score, // ADD RAW SCORE
             total: this.config.length,
             time: totalTime,
             mastery: App.data.mastery
         });
         
+        // V5.2 - VERIFICATION BADGES DE RANG (Empereur / Outsider)
+        // On récupère le leaderboard frais pour savoir où on se situe
+        try {
+            const lb = await Cloud.getChallengeLeaderboard(this.config.id);
+            
+            // On cherche l'utilisateur via son UID unique
+            const myUid = Cloud.getCurrentUID();
+            const myEntryIndex = lb.findIndex(entry => entry.uid === myUid);
+            
+            if (myEntryIndex !== -1) {
+                // Stockage temporaire dans la session pour que App.checkBadges puisse lire
+                App.session.challengeRank = myEntryIndex + 1;
+                App.session.challengeTotalPlayers = lb.length;
+                App.session.challengeNetTime = this.state.netTime;
+                
+                // Déclenchement vérification badges
+                App.checkBadges();
+            }
+        } catch (e) {
+            console.error("Rank Badge Check Fail", e);
+        }
+
         window.UI.updateChallengeControls(false); // Restore UI (although Modal blocks interaction)
         window.UI.renderChallengeReport(resultData);
     },
