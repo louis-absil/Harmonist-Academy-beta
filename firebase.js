@@ -1,4 +1,5 @@
 
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -111,13 +112,22 @@ export const Cloud = {
         if (!userUid || !db) return null;
         try {
             const docId = data.seed.toUpperCase();
+            const docRef = doc(db, "challenges", docId);
+            
+            // Protection doublon : Vérifier si le document existe avant d'écrire
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                console.warn("Create Challenge Aborted: ID already taken.");
+                return null;
+            }
+
             const payload = {
                 ...data,
                 seed: docId,
                 creatorUid: userUid,
                 created_at: serverTimestamp()
             };
-            await setDoc(doc(db, "challenges", docId), payload);
+            await setDoc(docRef, payload);
             return docId;
         } catch (e) {
             console.error("Create Challenge Fail:", e);
