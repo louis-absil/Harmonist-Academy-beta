@@ -38,6 +38,10 @@ export const Cloud = {
         }
     },
 
+    getCurrentUID() {
+        return userUid;
+    },
+
     async syncUserStats(appData) {
         if (!userUid || !db) return;
         const payload = {
@@ -77,7 +81,6 @@ export const Cloud = {
         if (!db) return [];
         try {
             const ref = collection(db, `leaderboards/${mode}/scores`);
-            // Simplification : On récupère les 50 meilleurs scores et on filtre côté client pour éviter l'erreur d'index "Composite" sur le Timestamp
             const q = query(ref, orderBy("score", "desc"), limit(50));
 
             const snap = await getDocs(q);
@@ -88,7 +91,6 @@ export const Cloud = {
             snap.forEach(d => {
                 const data = d.data();
                 if(period === 'weekly') {
-                    // Check date client-side
                     const dDate = new Date(data.timestamp);
                     if(dDate >= sevenDaysAgo) results.push(data);
                 } else {
@@ -96,7 +98,6 @@ export const Cloud = {
                 }
             });
             
-            // On recoupe à 20 résultats max après filtrage
             return results.slice(0, 20);
         } catch (e) {
             console.error("Leaderboard Read Fail:", e);
@@ -109,7 +110,6 @@ export const Cloud = {
     async createChallenge(data) {
         if (!userUid || !db) return null;
         try {
-            // On utilise l'ID 'seed' comme ID du document pour forcer l'unicité
             const docId = data.seed.toUpperCase();
             const payload = {
                 ...data,
@@ -140,13 +140,36 @@ export const Cloud = {
     async submitChallengeScore(challengeId, scoreData) {
         if (!userUid || !db) return;
         try {
-            const payload = {
-                uid: userUid,
-                ...scoreData,
-                timestamp: serverTimestamp()
-            };
-            // Sous-collection: challenges/{ID}/scores
-            await addDoc(collection(db, `challenges/${challengeId.toUpperCase()}/scores`), payload);
+            // ID Composite: CHALLENGE-ID_USER-UID pour unicité par joueur
+            const docId = `${challengeId.toUpperCase()}_${userUid}`;
+            const scoreRef = doc(db, `challenges/${challengeId.toUpperCase()}/scores`, docId);
+
+            // 1. On vérifie s'il existe déjà un score pour ce joueur sur ce défi
+            const snap = await getDoc(scoreRef);
+
+            if (snap.exists()) {
+                const oldData = snap.data();
+                // Si le nouveau score est strictement meilleur (Note plus haute OU même note et temps plus court)
+                const isBetter = scoreData.note > oldData.note || (scoreData.note === oldData.note && scoreData.time < oldData.time);
+
+                if (isBetter) {
+                    // On remplace tout (Nouveau record + Nouveau pseudo éventuel)
+                    const payload = { uid: userUid, ...scoreData, timestamp: serverTimestamp() };
+                    await setDoc(scoreRef, payload);
+                    console.log("Nouveau Record Challenge enregistré !");
+                } else {
+                    // Le score n'est pas meilleur, mais on met à jour le PSEUDO si changé
+                    if (oldData.pseudo !== scoreData.pseudo) {
+                        await setDoc(scoreRef, { pseudo: scoreData.pseudo }, { merge: true });
+                        console.log("Pseudo mis à jour (Score conservé)");
+                    }
+                }
+            } else {
+                // Premier essai : on crée le doc
+                const payload = { uid: userUid, ...scoreData, timestamp: serverTimestamp() };
+                await setDoc(scoreRef, payload);
+                console.log("Premier Score Challenge enregistré !");
+            }
         } catch (e) {
             console.error("Submit Challenge Score Fail:", e);
         }
@@ -155,8 +178,6 @@ export const Cloud = {
     async getChallengeLeaderboard(challengeId) {
         if (!db) return [];
         try {
-            // FIX: Utilisation d'un tri unique sur 'note' pour éviter l'erreur d'index composite manquant.
-            // Le tri secondaire sur 'time' est effectué côté client (JavaScript) après réception.
             const q = query(
                 collection(db, `challenges/${challengeId.toUpperCase()}/scores`), 
                 orderBy("note", "desc"), 
@@ -167,7 +188,6 @@ export const Cloud = {
             const results = [];
             snap.forEach(d => results.push(d.data()));
             
-            // Tri Client : Note Descendante, puis Temps Ascendant pour les égalités
             results.sort((a, b) => {
                 if (b.note !== a.note) return b.note - a.note;
                 return a.time - b.time;
