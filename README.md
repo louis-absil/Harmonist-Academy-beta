@@ -1,8 +1,9 @@
-# 🎼 Harmonist Academy V5.0 (Challenger Update)
+
+# 🎼 Harmonist Academy V5.1 (Studio Update)
 
 > **L'application ultime d'entraînement auditif pour l'harmonie, le jazz et l'acoustique.**
 
-![Version](https://img.shields.io/badge/version-5.0.0-gold.svg)
+![Version](https://img.shields.io/badge/version-5.1.0-studio.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Tech](https://img.shields.io/badge/Made%20With-Vanilla%20JS-yellow.svg)
 
@@ -10,27 +11,43 @@ Harmonist Academy est une **Single Page Application (SPA)** gamifiée conçue po
 
 ---
 
-## ⚔️ NOUVEAU DANS LA V5 : L'ARÈNE DES DÉFIS
+## 🎹 NOUVEAU DANS LA V5.1 : LE STUDIO DE CRÉATION
 
-La mise à jour "Challenger" transforme l'expérience d'apprentissage en véritable compétition e-sportive musicale.
+Cette mise à jour introduit un outil de composition pédagogique permettant aux professeurs et aux élèves de créer leurs propres dictées musicales.
 
-### 🔥 1. Le Défi du Jour (Daily Challenge)
+### 1. Le Studio Harmonique
+Un séquenceur visuel intégré pour construire des progressions d'accords sur mesure.
+*   **Timeline Visuelle :** Ajoutez, supprimez et réorganisez vos accords sur une frise chronologique.
+*   **Contrôle Total :** Choisissez la qualité, le renversement et la note de basse précise grâce au clavier virtuel.
+*   **Piano Interactif :** Visualisez les notes en temps réel.
+
+### 2. Exportation de Défis (Custom Seeds)
+Transformez vos créations du Studio en défis jouables.
+*   **Génération de Code :** Exportez votre séquence sous forme de code unique (ex: `JAZZ-EXAM-1`).
+*   **Partage :** Donnez ce code à vos élèves ou amis. Ils joueront *exactement* la séquence que vous avez composée (Mêmes accords, mêmes basses, mêmes renversements).
+
+### 3. Ergonomie & Raccourcis
+Le mode Studio est optimisé pour une saisie rapide au clavier (Mapping AZERTY/QWERTY physique) :
+*   **Notes (Basses) :** `W` à `N` (Rangée du bas) + `,` pour le Si.
+*   **Octaves :** Flèches `Haut` / `Bas`.
+
+---
+
+## ⚔️ L'ARÈNE DES DÉFIS (V5.0)
+
+L'expérience d'apprentissage transformée en compétition e-sportive musicale.
+
+### 🔥 Le Défi du Jour (Daily Challenge)
 Chaque jour, une **séquence unique de 20 accords** est générée.
 *   **Seed Unique :** Tout le monde joue exactement la même séquence (basée sur la date).
-*   **Classement Journalier :** Comparez votre score avec la communauté sur le même examen.
-*   **Rapport Détaillé :** Analyse précise de vos erreurs et statistiques en fin de session.
+*   **Classement Journalier :** Comparez votre score avec la communauté.
+*   **Rapport Détaillé :** Analyse précise de vos erreurs (Accords ET Renversements) en fin de session.
 
-### 👻 2. Les Maîtres Fantômes (Ghost Players)
-Le Leaderboard n'est plus vide ! Mesurez-vous aux légendes de la musique qui peuplent désormais les classements avec des scores et des citations basés sur leur personnalité :
-*   **Erik Satie & Bach** dominent le mode *Chrono* (Endurance).
-*   **Mozart & Paganini** règnent sur le mode *Sprint* (Vitesse).
-*   **John Cage & Beethoven** vous attendent en mode *Inverse* (Écoute profonde).
-
-### 🤝 3. Défis Personnalisés (PvP)
-Créez vos propres examens !
-*   **Générateur de Seed :** Créez un défi (ex: "EXAMEN-JAZZ-2") basé sur vos réglages actuels.
-*   **Partage :** Envoyez le code à un ami. Il jouera exactement la même suite d'accords que vous.
-*   **Mode Examen :** Contrairement au mode Zen, les erreurs sont définitives et la correction n'apparaît qu'à la fin.
+### 👻 Les Maîtres Fantômes (Ghost Players)
+Mesurez-vous aux légendes de la musique qui peuplent les classements :
+*   **Erik Satie & Bach** (Mode Chrono).
+*   **Mozart & Paganini** (Mode Sprint).
+*   **John Cage & Beethoven** (Mode Inverse).
 
 ---
 
@@ -76,8 +93,8 @@ Le projet a été entièrement migré vers du **JavaScript Pur (ES Modules)** po
 ├── ui.js           # Gestion de l'interface & Rendu DOM
 ├── audio.js        # Moteur Audio & Piano Virtuel
 ├── data.js         # Base de données (Accords, Badges, Ghosts, Textes)
-├── challenges.js   # [NOUVEAU] Gestionnaire des Seeds, RNG & Mode Examen
-└── firebase.js     # [NOUVEAU] Connecteur Cloud (Firestore/Auth)
+├── challenges.js   # Gestionnaire des Seeds, RNG & Mode Examen
+└── firebase.js     # Connecteur Cloud (Firestore/Auth)
 ```
 
 ---
