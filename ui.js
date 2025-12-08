@@ -126,17 +126,40 @@ export const UI = {
                     else if(idx===1) { rankDisplay='🥈'; color='#e2e8f0'; }
                     else if(idx===2) { rankDisplay='🥉'; color='#b45309'; }
                     
-                    // LOGIQUE ANTI-HUMILIATION
+                    // LOGIQUE ANTI-HUMILIATION & PROGRESSION (V5.3)
                     if (!isPass) {
                         rankDisplay = '-'; // On masque le rang exact
                         scoreDisplay = `<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>`;
                         color = 'var(--text-dim)';
+                        
+                        // Si c'est moi, on checke si c'est un record personnel ou une tendance haussière
+                        if (isMe) {
+                            const status = window.App.getProgressionStatus(displayScore, totalPoints);
+                            if (status === 'best') {
+                                scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--cyan);">⭐ Record Perso</span>`;
+                                color = 'var(--cyan)';
+                            } else if (status === 'trend') {
+                                scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--success);">📈 En hausse</span>`;
+                                color = 'var(--success)';
+                            }
+                        }
+                    }
+
+                    // AFFICHAGE MAITRISE (V5.3)
+                    let masteryHtml = "";
+                    if (s.mastery && s.mastery > 0) {
+                        const lore = this.getLoreState(s.mastery);
+                        // Version compacte pour la liste
+                        masteryHtml = `<div style="font-size:0.6rem; color:${lore.color}; opacity:0.7; margin-top:2px;">Maîtrise ${s.mastery} ${lore.starsHTML}</div>`;
                     }
 
                     list.innerHTML += `
                         <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; border:1px solid ${isMe ? 'var(--primary)' : 'transparent'};">
                             <div style="width:30px; text-align:center; font-weight:700;">${rankDisplay}</div>
-                            <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
+                            <div style="flex:1;">
+                                <div style="font-weight:700; color:${color};">${s.pseudo}</div>
+                                ${masteryHtml}
+                            </div>
                             <div style="font-weight:900;">${scoreDisplay}</div>
                         </div>
                     `;
@@ -213,8 +236,10 @@ export const UI = {
         if(scores.length === 0) {
             container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-dim);">Aucun score trouvé pour <strong>${code}</strong>.</div>`;
         } else {
+            const myUid = Cloud.getCurrentUID();
             let html = `<h4 style="margin:10px 0; color:var(--text-dim); text-align:center;">Classement : ${code}</h4><div style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;">`;
             scores.forEach((s, idx) => {
+                const isMe = (s.uid === myUid);
                 let rank = idx+1;
                 let color = 'white';
                 
@@ -230,17 +255,38 @@ export const UI = {
                 else if(idx===1) { rankDisplay='🥈'; color='#e2e8f0'; }
                 else if(idx===2) { rankDisplay='🥉'; color='#b45309'; }
                 
-                // LOGIQUE ANTI-HUMILIATION
+                // LOGIQUE ANTI-HUMILIATION & PROGRESSION
                 if (!isPass) {
                     rankDisplay = '-';
                     scoreDisplay = `<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>`;
                     color = 'var(--text-dim)';
+                    
+                    if (isMe) {
+                        const status = window.App.getProgressionStatus(displayScore, totalPoints);
+                        if (status === 'best') {
+                            scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--cyan);">⭐ Record Perso</span>`;
+                            color = 'var(--cyan)';
+                        } else if (status === 'trend') {
+                            scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--success);">📈 En hausse</span>`;
+                            color = 'var(--success)';
+                        }
+                    }
+                }
+
+                // AFFICHAGE MAITRISE
+                let masteryHtml = "";
+                if (s.mastery && s.mastery > 0) {
+                    const lore = this.getLoreState(s.mastery);
+                    masteryHtml = `<div style="font-size:0.6rem; color:${lore.color}; opacity:0.7; margin-top:2px;">Maîtrise ${s.mastery} ${lore.starsHTML}</div>`;
                 }
 
                 html += `
-                    <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">
+                    <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; border:1px solid ${isMe ? 'var(--primary)' : 'transparent'};">
                         <div style="width:30px; text-align:center; font-weight:700;">${rankDisplay}</div>
-                        <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700; color:${color};">${s.pseudo}</div>
+                            ${masteryHtml}
+                        </div>
                         <div style="font-weight:900;">${scoreDisplay}</div>
                     </div>
                 `;
