@@ -1,4 +1,5 @@
 
+
 import { Cloud } from './firebase.js';
 import { Audio } from './audio.js';
 
@@ -190,6 +191,10 @@ export const ChallengeManager = {
             }
         }
         
+        // V5.3 - UPDATE BEST DAILY SCORE (LOCAL)
+        // Important: faire ça avant le save()
+        App.updateArenaStats(this.state.score, this.config.length);
+
         // Store length for Badge checking BEFORE saving/checking
         App.session.lastChallengeLength = this.config.length;
         App.save();
