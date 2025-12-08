@@ -1,4 +1,5 @@
 
+
 import { DB, BADGES, COACH_DB } from './data.js';
 import { Audio, Piano } from './audio.js';
 import { UI } from './ui.js';
@@ -24,6 +25,7 @@ export const App = {
             maxStreak: 0,
             totalScore: 0,
             challengesCreated: 0,
+            bestDailyScore: 0, // Pourcentage maximum atteint en défi (ex: 0.45 pour 9/20)
             podiumDates: [] // Stocke les dates des podiums (ex: ['DAILY-2023-10-27'])
         },
         badges: [], 
@@ -94,10 +96,12 @@ export const App = {
                     maxStreak: 0,
                     totalScore: 0,
                     challengesCreated: 0,
+                    bestDailyScore: 0,
                     podiumDates: []
                 };
-                // Safety migration if podiumDates missing
+                // Safety migration
                 if(!this.data.arenaStats.podiumDates) this.data.arenaStats.podiumDates = [];
+                if(this.data.arenaStats.bestDailyScore === undefined) this.data.arenaStats.bestDailyScore = 0;
                 
                 if(s.settings && s.settings.activeC) { this.data.settings = s.settings; }
             }
@@ -123,6 +127,45 @@ export const App = {
         this.data.username = val.trim().substring(0, 15);
         this.save();
         window.UI.showToast("Pseudo enregistré !");
+    },
+
+    // --- LOGIQUE PROGRESSION ARENE ---
+    // Appelé par ChallengeManager.finish()
+    updateArenaStats(score, total) {
+        if(total <= 0) return;
+        const ratio = score / total;
+        
+        // Mise à jour du meilleur score perso (pour l'affichage "Record Perso")
+        if (ratio > this.data.arenaStats.bestDailyScore) {
+            this.data.arenaStats.bestDailyScore = ratio;
+        }
+    },
+
+    // Appelé par UI.js pour savoir quoi afficher (En progrès / Record / En Hausse)
+    getProgressionStatus(score, total) {
+        const ratio = score / total;
+        
+        // 1. Est-ce un Record Personnel ? (Même si c'est nul, si c'est mieux qu'avant, c'est un record)
+        // On compare avec le bestDailyScore stocké. Si c'est >= (car on vient potentiellement de le mettre à jour), c'est un record.
+        // Attention : Si c'est la toute première partie (best=0), on considère ça comme un record pour encourager.
+        const currentBest = this.data.arenaStats.bestDailyScore;
+        // On ajoute une marge d'erreur pour les flottants, ou on compare strictement si on vient de le set.
+        // Si le ratio actuel est >= au record stocké (qui a pu être mis à jour il y a une milliseconde), c'est un PB.
+        if (ratio >= currentBest && currentBest > 0) return 'best';
+
+        // 2. Est-ce une tendance à la hausse ? (Moyenne des 5 derniers jours vs Aujourd'hui)
+        if (this.data.history.length >= 3) {
+            let sumPct = 0;
+            this.data.history.forEach(h => {
+                if(h.tot > 0) sumPct += (h.ok / h.tot);
+            });
+            const avgPct = sumPct / this.data.history.length;
+            
+            // Si on performe 10% mieux que sa moyenne habituelle
+            if (ratio > (avgPct * 1.1)) return 'trend';
+        }
+
+        return 'steady'; // "En progrès" par défaut
     },
 
     isLocked(id) {
