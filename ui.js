@@ -1,6 +1,5 @@
 
 
-
 import { Audio, Piano } from './audio.js';
 import { BADGES, CODEX_DATA, DB, LORE_MATERIALS, GHOSTS } from './data.js';
 import { ChallengeManager } from './challenges.js';
@@ -114,17 +113,31 @@ export const UI = {
                     
                     let rank = idx+1;
                     let color = 'white';
-                    if(idx===0) { rank='🥇'; color='var(--gold)'; }
-                    else if(idx===1) { rank='🥈'; color='#e2e8f0'; }
-                    else if(idx===2) { rank='🥉'; color='#b45309'; }
                     
+                    // Calcul de la réussite (Moyenne)
                     const displayScore = s.score !== undefined ? s.score : s.note; 
+                    const totalPoints = s.total || 20;
+                    const isPass = (displayScore / totalPoints) >= 0.5;
+
+                    let rankDisplay = rank;
+                    let scoreDisplay = `${displayScore}/${totalPoints}`;
+
+                    if(idx===0) { rankDisplay='🥇'; color='var(--gold)'; }
+                    else if(idx===1) { rankDisplay='🥈'; color='#e2e8f0'; }
+                    else if(idx===2) { rankDisplay='🥉'; color='#b45309'; }
+                    
+                    // LOGIQUE ANTI-HUMILIATION
+                    if (!isPass) {
+                        rankDisplay = '-'; // On masque le rang exact
+                        scoreDisplay = `<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>`;
+                        color = 'var(--text-dim)';
+                    }
 
                     list.innerHTML += `
                         <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; border:1px solid ${isMe ? 'var(--primary)' : 'transparent'};">
-                            <div style="width:30px; text-align:center; font-weight:700;">${rank}</div>
+                            <div style="width:30px; text-align:center; font-weight:700;">${rankDisplay}</div>
                             <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
-                            <div style="font-weight:900;">${displayScore}/${s.total || 20}</div>
+                            <div style="font-weight:900;">${scoreDisplay}</div>
                         </div>
                     `;
                 });
@@ -204,17 +217,31 @@ export const UI = {
             scores.forEach((s, idx) => {
                 let rank = idx+1;
                 let color = 'white';
-                if(idx===0) { rank='🥇'; color='var(--gold)'; }
-                else if(idx===1) { rank='🥈'; color='#e2e8f0'; }
-                else if(idx===2) { rank='🥉'; color='#b45309'; }
                 
+                // Calcul Réussite
                 const displayScore = s.score !== undefined ? s.score : Math.round((s.note/20) * (s.total||20));
+                const totalPoints = s.total || 20;
+                const isPass = (displayScore / totalPoints) >= 0.5;
+
+                let rankDisplay = rank;
+                let scoreDisplay = `${displayScore}/${totalPoints}`;
+
+                if(idx===0) { rankDisplay='🥇'; color='var(--gold)'; }
+                else if(idx===1) { rankDisplay='🥈'; color='#e2e8f0'; }
+                else if(idx===2) { rankDisplay='🥉'; color='#b45309'; }
+                
+                // LOGIQUE ANTI-HUMILIATION
+                if (!isPass) {
+                    rankDisplay = '-';
+                    scoreDisplay = `<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>`;
+                    color = 'var(--text-dim)';
+                }
 
                 html += `
                     <div style="display:flex; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">
-                        <div style="width:30px; text-align:center; font-weight:700;">${rank}</div>
+                        <div style="width:30px; text-align:center; font-weight:700;">${rankDisplay}</div>
                         <div style="flex:1; font-weight:700; color:${color};">${s.pseudo}</div>
-                        <div style="font-weight:900;">${displayScore}/${s.total || 20}</div>
+                        <div style="font-weight:900;">${scoreDisplay}</div>
                     </div>
                 `;
             });
@@ -1100,3 +1127,4 @@ export const UI = {
         const oldDetail = document.getElementById('badgeDetail'); if(oldDetail) oldDetail.style.display = 'none';
     }
 };
+
