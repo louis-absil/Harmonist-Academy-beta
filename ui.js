@@ -1,7 +1,7 @@
 
 
 import { Audio, Piano } from './audio.js';
-import { BADGES, CODEX_DATA, DB, LORE_MATERIALS, GHOSTS } from './data.js';
+import { BADGES, CODEX_DATA, DB, LORE_MATERIALS, GHOSTS, COACH_DB } from './data.js';
 import { ChallengeManager } from './challenges.js';
 import { Cloud } from './firebase.js';
 
@@ -712,12 +712,14 @@ export const UI = {
 
     // --- STANDARD HELPER METHODS ---
     getSymbol(id) {
+        // CORRECTION : On checke minmaj7 EN PREMIER pour ne pas qu'il soit attrapé par le 'maj7' plus bas
+        if(id === 'minmaj7') return '-Δ'; 
+        
         if(id.includes('maj7')) return 'Δ';
-        if(id.includes('min7')) return '-'; 
+        if(id.includes('min7')) return '-7'; 
         if(id.includes('dom7') || id === 'dom13') return '7';
         if(id === 'hdim7') return 'Ø';
         if(id === 'dim7') return 'o';
-        if(id === 'minmaj7') return '-Δ';
         if(id === 'maj69') return '6/9';
         if(id === 'min6') return '-6';
         if(id === 'alt') return 'Alt';
@@ -728,6 +730,20 @@ export const UI = {
         if(id === 'struct_45tr') return '4/5-Tr';
         if(id === 'trichord') return '3-X';
         if(id === 'sus_sym') return 'Sus';
+        // --- AJOUT POUR LES RENVERSEMENTS (inv_0, inv_1...) ---
+        if (id.startsWith('inv_')) {
+            const idx = parseInt(id.split('_')[1]);
+            // On cherche le chiffrage dans la DB
+            // Note: DB doit être accessible ici
+            const invObj = DB.invs.find(x => x.id === idx);
+            if (invObj && invObj.figure) {
+                // On formate en HTML vertical (classe figured-bass déjà dans ton CSS)
+                return `<div class="figured-bass" style="font-size:0.5em; line-height:0.9;">${invObj.figure.map(n => `<span>${n}</span>`).join('')}</div>`;
+            }
+            return idx === 0 ? 'F' : (idx === 1 ? '1' : (idx === 2 ? '2' : '3'));
+        }
+        // -----------------------------------------------------
+        
         return id;
     },
 
@@ -1108,9 +1124,31 @@ export const UI = {
     },
     
     openCodex() {
-        Audio.sfx('codex_open'); const modal = document.getElementById('modalCodex'); modal.classList.add('open');
-        modal.innerHTML = `<div class="modal codex-terminal"><div class="codex-layout"><div class="codex-sidebar"><div class="codex-logo">📖</div><button class="codex-tab active" data-tab="academy" onclick="window.UI.switchCodexTab('academy')"><div class="tab-icon">🏛️</div><div class="tab-label">Académie</div></button><button class="codex-tab" data-tab="jazz" onclick="window.UI.switchCodexTab('jazz')"><div class="tab-icon">🎷</div><div class="tab-label">Club</div></button><button class="codex-tab" data-tab="laboratory" onclick="window.UI.switchCodexTab('laboratory')"><div class="tab-icon">🧪</div><div class="tab-label">Labo</div></button><div style="flex:1"></div><button class="codex-close" onclick="window.UI.closeModals()">✕</button></div><div class="codex-content-area"><div id="codexGridContainer" class="codex-grid-container"></div><div id="codexDetailContainer" class="codex-detail-container" style="display:none;"></div></div></div></div>`;
-        modal.onclick = (e) => { if (e.target === modal) window.UI.closeModals(); }; this.switchCodexTab('academy');
+        Audio.sfx('codex_open'); 
+        const modal = document.getElementById('modalCodex'); 
+        modal.classList.add('open');
+        
+        // MODIFICATION ICI : Ajout du bouton "codex-mobile-close" dans content-area
+        modal.innerHTML = `
+            <div class="modal codex-terminal">
+                <div class="codex-layout">
+                    <div class="codex-sidebar">
+                        <div class="codex-logo">📖</div>
+                        <button class="codex-tab active" data-tab="academy" onclick="window.UI.switchCodexTab('academy')"><div class="tab-icon">🏛️</div><div class="tab-label">Académie</div></button>
+                        <button class="codex-tab" data-tab="jazz" onclick="window.UI.switchCodexTab('jazz')"><div class="tab-icon">🎷</div><div class="tab-label">Club</div></button>
+                        <button class="codex-tab" data-tab="laboratory" onclick="window.UI.switchCodexTab('laboratory')"><div class="tab-icon">🧪</div><div class="tab-label">Labo</div></button>
+                        <div style="flex:1"></div>
+                        <button class="codex-close" onclick="window.UI.closeModals()">✕</button>
+                    </div>
+                    <div class="codex-content-area">
+                        <button class="codex-mobile-close" onclick="window.UI.closeModals()">✕</button> <div id="codexGridContainer" class="codex-grid-container"></div>
+                        <div id="codexDetailContainer" class="codex-detail-container" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>`;
+            
+        modal.onclick = (e) => { if (e.target === modal) window.UI.closeModals(); }; 
+        this.switchCodexTab('academy');
     },
 
     switchCodexTab(tabName) { Audio.sfx('codex_select'); document.querySelectorAll('.codex-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.codex-tab[data-tab="${tabName}"]`).classList.add('active'); document.getElementById('codexDetailContainer').style.display = 'none'; document.getElementById('codexGridContainer').style.display = 'grid'; this.renderCodexGrid(tabName); },
@@ -1154,19 +1192,130 @@ export const UI = {
     },
 
     showCodexCard(chord, setKey) {
-        const grid = document.getElementById('codexGridContainer'); const detail = document.getElementById('codexDetailContainer'); grid.style.display = 'none'; detail.style.display = 'flex';
-        let data = CODEX_DATA[chord.id] || { flavor: "Données non disponibles.", theory: "...", coach: "...", tags: [], examples: [] };
-        if (chord.isSyntheticLab) { const parentData = CODEX_DATA[chord.parent.id] || {}; data = { flavor: parentData.flavor, coach: parentData.coach, tags: parentData.tags, examples: parentData.examples, theory: `<strong>Intervalles (1/2 tons) :</strong> [ ${chord.iv.join(' - ')} ]<br>Configuration spécifique de la ${chord.parent.name}.` }; }
-        const tagsHTML = (data.tags || []).map(t => `<span class="codex-chip">${t}</span>`).join('');
-        const examplesHTML = (data.examples && data.examples.length > 0) ? `<div class="cd-examples"><strong>🎵 Exemples Célèbres :</strong><ul>${data.examples.map(e => `<li>${e}</li>`).join('')}</ul></div>` : '';
-        let configsHTML = ''; if(setKey === 'laboratory' && chord.configs && !chord.isSyntheticLab) { configsHTML = `<div class="cd-section"><div class="cd-theory"><strong>🔬 Configurations Spécifiques :</strong><ul>`; chord.configs.forEach(c => { configsHTML += `<li><strong>${c.name} :</strong> ${c.sub}</li>`; }); configsHTML += `</ul></div></div>`; }
+        const grid = document.getElementById('codexGridContainer');
+        const detail = document.getElementById('codexDetailContainer');
+        grid.style.display = 'none';
+        detail.style.display = 'flex';
 
-        detail.innerHTML = `<div class="cd-nav-bar"><button class="cd-back-btn" onclick="window.UI.backToCodexGrid()">← Retour</button><div style="flex:1"></div><button class="cd-close-btn" onclick="window.UI.closeModals()">✕</button></div><div class="cd-scroll-content"><div class="cd-header-hero"><div class="cd-hero-icon">${chord.isSyntheticLab ? '🔬' : this.getSymbol(chord.id)}</div><div class="cd-hero-text"><h2>${chord.name}</h2><span>${chord.sub}</span></div><button class="btn-gold-play" id="cdPlayBtn" onclick="window.UI.playCodexSound()">▶</button></div><div class="cd-tags-row">${tagsHTML}</div><div class="cd-vis"><canvas id="codexPianoCanvas" width="300" height="80"></canvas></div><div class="cd-section"><div class="cd-flavor">${data.flavor}</div></div><div class="cd-section"><div class="cd-theory">${data.theory}</div>${examplesHTML}</div>${configsHTML}<div class="cd-coach-box"><div class="coach-head">🧠 Le Coach</div><div>${data.coach}</div></div><button class="btn-action-train" onclick="window.UI.startTrainingFromCodex('${chord.id}', '${setKey}')">🎯 S'entraîner sur cet accord</button></div>`;
+        // 1. Récupération des Données Statiques
+        let data = CODEX_DATA[chord.id] || { flavor: "Données non disponibles.", theory: "...", coach: "...", tags: [], examples: [] };
         
+        // Gestion Labo Synthétique (Cas particulier)
+        if (chord.isSyntheticLab) {
+            const parentData = CODEX_DATA[chord.parent.id] || {};
+            data = {
+                flavor: parentData.flavor,
+                coach: parentData.coach,
+                tags: parentData.tags,
+                examples: parentData.examples,
+                theory: `<strong>Intervalles (1/2 tons) :</strong> [ ${chord.iv.join(' - ')} ]<br>Configuration spécifique de la ${chord.parent.name}.`
+            };
+        }
+
+        // 2. LOGIQUE COACH DYNAMIQUE (Nouveau)
+        // On remplace le texte statique par un tirage au sort dans la base de données du coach
+        let dynamicCoachMsg = data.coach; // Valeur par défaut
+        
+        // On essaie de trouver des conseils spécifiques dans COACH_DB.weakness
+        // Note: COACH_DB doit être importé en haut de ui.js
+        if (typeof COACH_DB !== 'undefined' && COACH_DB.weakness && COACH_DB.weakness[chord.id]) {
+            const tips = COACH_DB.weakness[chord.id];
+            if (tips.length > 0) {
+                const randomTip = tips[Math.floor(Math.random() * tips.length)];
+                dynamicCoachMsg = `<strong>${randomTip.t} :</strong> ${randomTip.m}`;
+            }
+        }
+
+        // 3. LOGIQUE YOUTUBE (Nouveau)
+        const tagsHTML = (data.tags || []).map(t => `<span class="codex-chip">${t}</span>`).join('');
+        
+        const examplesHTML = (data.examples && data.examples.length > 0) 
+            ? `<div class="cd-examples">
+                 <strong>🎵 Exemples Célèbres :</strong>
+                 <ul>
+                   ${data.examples.map(e => {
+                       // Compatible String (Vieux format) ou Objet (Nouveau format)
+                       const label = typeof e === 'string' ? e : e.title;
+                       const link = (typeof e === 'object' && e.url && e.url.length > 0) 
+                           ? `<a href="${e.url}" target="_blank" class="yt-link" style="color:var(--gold); text-decoration:none; border-bottom:1px dotted var(--gold);">📺 ${label}</a>` 
+                           : label;
+                       return `<li style="margin-bottom:4px;">${link}</li>`;
+                   }).join('')}
+                 </ul>
+               </div>` 
+            : '';
+
+        let configsHTML = '';
+        if(setKey === 'laboratory' && chord.configs && !chord.isSyntheticLab) {
+            configsHTML = `<div class="cd-section"><div class="cd-theory"><strong>🔬 Configurations Spécifiques :</strong><ul>`;
+            chord.configs.forEach(c => { configsHTML += `<li><strong>${c.name} :</strong> ${c.sub}</li>`; });
+            configsHTML += `</ul></div></div>`;
+        }
+
+        // Rendu HTML
+        detail.innerHTML = `
+            <div class="cd-nav-bar">
+                <button class="cd-back-btn" onclick="window.UI.backToCodexGrid()">← Retour</button>
+                <div style="flex:1"></div>
+                <button class="cd-close-btn" onclick="window.UI.closeModals()">✕</button>
+            </div>
+            <div class="cd-scroll-content">
+                <div class="cd-header-hero">
+                    <div class="cd-hero-icon">${chord.isSyntheticLab ? '🔬' : this.getSymbol(chord.id)}</div>
+                    <div class="cd-hero-text">
+                        <h2>${chord.name}</h2>
+                        <span>${chord.sub}</span>
+                    </div>
+                    <button class="btn-gold-play" id="cdPlayBtn" onclick="window.UI.playCodexSound()">▶</button>
+                </div>
+                
+                <div class="cd-tags-row">${tagsHTML}</div>
+                
+                <div class="cd-vis">
+                    <canvas id="codexPianoCanvas" width="300" height="80"></canvas>
+                </div>
+                
+                <div class="cd-section">
+                    <div class="cd-flavor">${data.flavor}</div>
+                </div>
+                
+                <div class="cd-section">
+                    <div class="cd-theory">${data.theory}</div>
+                    ${examplesHTML}
+                </div>
+                
+                ${configsHTML}
+                
+                <div class="cd-coach-box">
+                    <div class="coach-head">🧠 Le Coach</div>
+                    <div>${dynamicCoachMsg}</div>
+                </div>
+                
+                <button class="btn-action-train" onclick="window.UI.startTrainingFromCodex('${chord.id}', '${setKey}')">
+                    🎯 S'entraîner sur cet accord
+                </button>
+            </div>
+        `;
+        
+        // Logique Audio (Inchangée)
         let notes = [];
-        if(setKey === 'laboratory') { if (chord.isSyntheticLab) { const root = 60; notes = chord.iv.map(i => root + i); } else if (chord.configs) { notes = window.App.getNotes(chord, 0, 60, false, 'laboratory'); } } 
-        else { if (chord.id.startsWith('inv_') || chord.id.startsWith('voc_')) { const demoChord = { id: 'demo', iv: [0,4,7,11] }; const varId = parseInt(chord.id.split('_')[1]); notes = window.App.getNotes(demoChord, varId, 60, false, setKey); } else { notes = window.App.getNotes(chord, 0, 60, false, setKey); } }
-        detail.dataset.notes = JSON.stringify(notes); setTimeout(() => { const canvas = document.getElementById('codexPianoCanvas'); if(canvas) Piano.visualize(notes, canvas); }, 100);
+        if(setKey === 'laboratory') { 
+            if (chord.isSyntheticLab) { const root = 60; notes = chord.iv.map(i => root + i); } 
+            else if (chord.configs) { notes = window.App.getNotes(chord, 0, 60, false, 'laboratory'); } 
+        } else { 
+            if (chord.id.startsWith('inv_') || chord.id.startsWith('voc_')) { 
+                const demoChord = { id: 'demo', iv: [0,4,7,11] }; 
+                const varId = parseInt(chord.id.split('_')[1]); 
+                notes = window.App.getNotes(demoChord, varId, 60, false, setKey); 
+            } else { 
+                notes = window.App.getNotes(chord, 0, 60, false, setKey); 
+            } 
+        }
+        detail.dataset.notes = JSON.stringify(notes); 
+        setTimeout(() => { 
+            const canvas = document.getElementById('codexPianoCanvas'); 
+            if(canvas) Piano.visualize(notes, canvas); 
+        }, 100);
     },
     
     playCodexSound() { const det = document.getElementById('codexDetailContainer'); const btn = document.getElementById('cdPlayBtn'); if(btn) { btn.classList.add('playing'); setTimeout(() => btn.classList.remove('playing'), 500); } if(det && det.dataset.notes) { const notes = JSON.parse(det.dataset.notes); Audio.chord(notes, true); Piano.visualize(notes, document.getElementById('codexPianoCanvas')); } },

@@ -137,26 +137,26 @@ export const DB = {
         { id: 3, name: 'Rootless', sub: 'Sans Basse', corr: 'Rootless', type: 'voc' }
     ],
     ranks: [ 
-        {t:"Tourneur de pages enthousiaste",i:"📄"}, 
-        {t:"Régisseur distrait",i:"🔦"}, 
-        {t:"Déchiffreur du dimanche",i:"👓"}, 
-        {t:"Spécialiste des cordes à vide",i:"🎻"}, 
-        {t:"Harmoniste en herbe",i:"🌱"}, 
-        {t:"Explorateur de Tonalités",i:"🧭"}, 
-        {t:"Adepte des mouvements contraires",i:"↔️"}, 
-        {t:"Amateur de résolutions heureuses",i:"😌"}, 
-        {t:"Expert du Retard",i:"⏳"}, 
-        {t:"Premier Prix de Solfège",i:"🥇"}, 
-        {t:"Chef de pupitre",i:"🎹"}, 
-        {t:"Supersoliste",i:"🌟"}, 
-        {t:"Disciple de Rameau",i:"📖"}, 
-        {t:"Architecte des Modulations",i:"🏗️"}, 
-        {t:"Chef d'orchestre inspiré",i:"🥢"}, 
-        {t:"Virtuose de l’oreille relative",i:"👂"}, 
-        {t:"Explorateur du chromatisme",i:"🌈"}, 
-        {t:"Théoricien Post-Tonal",i:"🌌"}, // GARDÉ
-        {t:"Maître des Fonctions harmoniques",i:"🔮"}, 
-        {t:"Réincarnation de Bach",i:"👑"} // GARDÉ
+    {t:"Tourneur de pages enthousiaste",i:"📄"}, 
+    {t:"Régisseur distrait",i:"🔦"}, 
+    {t:"Déchiffreur du dimanche",i:"👓"}, 
+    {t:"Spécialiste des cordes à vide",i:"🎻"}, 
+    {t:"Harmoniste du Soir",i:"🌇"}, 
+    {t:"Critique Musical Assassin",i:"📰"}, 
+    {t:"Rebelle des Mouvements Contraires",i:"🎸"}, 
+    {t:"Médiateur de Tensions Harmoniques",i:"🤝"}, 
+    {t:"Trader en Emprunts Tonaux",i:"📉"}, // AJOUTÉ ICI
+    {t:"Expert en Retards à répétitions",i:"🏃"}, 
+    {t:"Serrurier des Clés d'Ut",i:"🔑"}, 
+    {t:"Supersoliste incompris",i:"🌟"}, 
+    {t:"Avocat du Diabolus (in Musica)",i:"⚖️"}, 
+    {t:"Chef d'orchestre tyrannique",i:"🪄"}, 
+    {t:"Einstein de l’Oreille Relative",i:"⚛️"}, 
+    {t:"Debussyste Daltonien",i:"🎨"}, 
+    {t:"Tueur en série dodécaphonique",i:"🔪"}, 
+    {t:"Ministre des Fonctions harmoniques",i:"💼"}, 
+    {t:"Météorologue du Temps Fort",i:"🌩️"}, 
+    {t:"Réincarnation de Bach",i:"👑"} 
     ],
     chords: [],
     currentInvs: []
@@ -165,65 +165,84 @@ export const DB = {
 export const CODEX_DATA = {
     // --- ACADEMY CHORDS ---
     maj7: { 
-        flavor: "L'élégance intemporelle.", 
+        flavor: "La Stabilité Colorée", 
         theory: "<strong>Structure :</strong> Fondamentale + Tierce Maj + Quinte Juste + 7ème Maj.<br><strong>Fonction :</strong> Ier ou IVe degré. Inspire la stabilité, le rêve, la romance.", 
-        coach: "Intervalles : 2 tons, 1.5 ton, 2 tons. Chante l'arpège de 'Gymnopédie' de Satie.",
-        tags: ["#Stable", "#Romantique", "#IerDegré"],
-        examples: ["Gymnopédie No.1 (Satie)", "Don't Know Why (Norah Jones)", "Imagine (John Lennon)"]
+        coach: "Intervalles : 2 tons, 1.5 ton, 2 tons. Accord signature de la 1ère 'Gymnopédie' de Satie.",
+        tags: ["#Stable", "#JazzClassique", "#IerDegré"],
+        examples: [
+            { title: "Gymnopédie No.1 (Satie)", url: "https://www.youtube.com/watch?v=S-Xm7s9eGxU" },
+            { title: "Don't Know Why (Norah Jones)", url: "https://www.youtube.com/watch?v=tO4dxvguQDk" },
+            { title: "Mr Sandman (The Chordettes)", url: "https://www.youtube.com/watch?v=CX45pYvxDiA&list=RDCX45pYvxDiA&start_radio=1" }
+        ]
     },
     min7: { 
-        flavor: "La mélancolie douce.", 
+        flavor: "La Sous-Dominante Majeure", 
         theory: "<strong>Structure :</strong> Fondamentale + Tierce min + Quinte Juste + 7ème min.<br><strong>Fonction :</strong> IIe, IIIe ou VIe degré. Le pilier des cadences II-V-I.", 
-        coach: "Intervalles : 1.5 ton, 2 tons, 1.5 ton. C'est stable, pas de triton.",
+        coach: "Intervalles : 1.5 ton, 2 tons, 1.5 ton. Stable, pas de triton.",
         tags: ["#Mélancolique", "#Doux", "#Pilier"],
-        examples: ["So What (Miles Davis)", "Just the Two of Us (Grover Washington Jr.)", "Moanin' (Art Blakey)"]
+        examples: [
+            { title: "So What (Miles Davis)", url: "https://www.youtube.com/watch?v=zqNTltOGh5c" },
+            { title: "Just the Two of Us", url: "https://www.youtube.com/watch?v=Uw5OLnN7UvM&list=RDUw5OLnN7UvM&start_radio=1" },
+            { title: "Moanin' (Art Blakey)", url: "https://www.youtube.com/watch?v=Cv9NSR-2DwM&list=RDCv9NSR-2DwM&start_radio=1" }
+        ]
     },
     dom7: { 
-        flavor: "Le moteur harmonique.", 
+        flavor: "La Tension Harmonique", 
         theory: "<strong>Structure :</strong> Fondamentale + Tierce Maj + Quinte Juste + 7ème min.<br><strong>Fonction :</strong> Ve degré (Dominante). Contient un triton (3 tons) qui appelle une résolution.", 
         coach: "La tierce veut monter, la 7ème veut descendre.",
         tags: ["#Tension", "#Blues", "#Résolution"],
-        examples: ["Blues classique (I7-IV7-V7)", "I Feel Good (James Brown)", "La Marseillaise (Cadence finale)"]
+        examples: [
+            { title: "I Feel Good (James Brown)", url: "https://www.youtube.com/watch?v=U5TqIdff_DQ" },
+            { title: "Cadence Parfaite : V7 -> I", url: "" }
+        ]
     },
     hdim7: { 
-        flavor: "Le point de bascule.", 
+        flavor: "La Sous-Dominante mineure", 
         theory: "<strong>Structure :</strong> Fondamentale + Tierce min + Quinte bémol + 7ème min.<br><strong>Fonction :</strong> IIe degré en mineur. Prépare la tension de la dominante.", 
         coach: "Appelé aussi 'Demi-Diminué'. Très utilisé en Jazz mineur.",
         tags: ["#Sombre", "#Jazz", "#II-V-I Mineur"],
-        examples: ["Stella by Starlight (Début)", "Alone Together", "I Will Survive (Refrain)"]
+        examples: [
+            { title: "Stella by Starlight", url: "https://www.youtube.com/watch?v=XGx1HvLV_NQ&list=RDXGx1HvLV_NQ&start_radio=1" },
+            { title: "I Will Survive", url: "https://www.youtube.com/watch?v=6dYWe1c3OyU&list=RD6dYWe1c3OyU&start_radio=1" }
+        ]
     },
     dim7: { 
-        flavor: "La symétrie anxieuse.", 
+        flavor: "La Symétrie Tendue", 
         theory: "<strong>Structure :</strong> Empilement strict de tierces mineures.<br><strong>Fonction :</strong> Accord de passage ou Dominante sans fondamentale. Symétrique : chaque note peut être la fondamentale.", 
-        coach: "Son de film d'horreur classique.",
+        coach: "Deux Tritons enchâssés. Le suspens au cinéma",
         tags: ["#Horreur", "#Symétrie", "#Passage"],
-        examples: ["Toccata & Fugue (Bach)", "Musique de film muet (Méchants)", "Scènes de suspense"]
+        examples: [
+            { title: "Toccata & Fugue (Bach)", url: "https://youtu.be/erXG9vnN-GI?list=RDerXG9vnN-GI&t=24" },
+            { title: "Effet de Tension et de Suspens au Cinéma", url: "" }
+        ]
     },
     minmaj7: { 
-        flavor: "Le détective dans la brume.", 
+        flavor: "La Dissonance Moderne", 
         theory: "<strong>Structure :</strong> Parfait mineur + 7ème Maj.<br><strong>Fonction :</strong> Ier degré en mineur harmonique. Forte dissonance interne (7M vs 3m).", 
-        coach: "Le 'Jeu' de l'accord : triste en bas, perçant en haut.",
+        coach: "Sombre en bas, Perçant en haut.",
         tags: ["#Mystère", "#Hitchcock", "#Dissonance"],
-        examples: ["James Bond Theme", "Harlem Nocturne", "Solar (Miles Davis)"]
+        examples: [
+            { title: "James Bond Theme", url: "https://www.youtube.com/watch?v=U9FzgsF2T-s" },
+            { title: "Harlem Nocturne", url: "https://www.youtube.com/watch?v=uIkekMoEQY4&list=RDuIkekMoEQY4&start_radio=1" }
+        ]
     },
 
     // --- ACADEMY INVERSIONS (Techniques) ---
     inv_0: { flavor: "L'Ancrage.", theory: "<strong>Basse :</strong> La Tonique (1).<br>L'état le plus stable et le plus lourd. Toutes les notes reposent sur leur fondation naturelle.", coach: "C'est l'accord 'bloc' standard. Le son est compact et solide.", tags: ["#Base", "#Solide"], examples: [] },
-    inv_1: { flavor: "La Fluidité.", theory: "<strong>Basse :</strong> La Tierce (3).<br>Plus léger, il donne envie de bouger. La basse n'est pas la racine, ce qui crée un mouvement mélodique.", coach: "Écoute la basse : elle chante une mélodie, elle ne fait pas juste 'boum'.", tags: ["#Mélodie", "#Léger"], examples: [] },
-    inv_2: { flavor: "L'Instabilité.", theory: "<strong>Basse :</strong> La Quinte (5).<br>Historiquement considéré comme une dissonance (Quarte et Sixte). Il appelle une résolution vers la tonique.", coach: "On a l'impression que l'accord est 'suspendu' en l'air.", tags: ["#Suspension", "#Attente"], examples: [] },
+    inv_1: { flavor: "La Coloration.", theory: "<strong>Basse :</strong> La Tierce (3).<br>Plus léger, il donne envie de bouger. La basse n'est pas la racine, ce qui crée un mouvement mélodique.", coach: "Écoute la basse : elle chante une mélodie, elle ne fait pas juste 'boum'.", tags: ["#Mélodie", "#Léger"], examples: [] },
+    inv_2: { flavor: "L'Instabilité.", theory: "<strong>Basse :</strong> La Quinte (5).<br>Historiquement considéré comme une dissonance dans la version à 3 sons (Quarte et Sixte). Il appelle une résolution vers la tonique.", coach: "On a l'impression que l'accord est 'suspendu' en l'air.", tags: ["#Suspension", "#Attente"], examples: [] },
     inv_3: { flavor: "La Tension.", theory: "<strong>Basse :</strong> La 7ème (7).<br>L'état le plus instable. La 7ème à la basse veut impérativement descendre d'un degré.", coach: "La basse est très proche de la tonique (1 ton ou 1/2 ton), ça frotte !", tags: ["#Frottement", "#Passage"], examples: [] },
 
-    // --- JAZZ CHORDS ---
-    maj69: { flavor: "La plénitude solaire.", theory: "<strong>Structure :</strong> Triade Maj + Sixte + Neuvième.<br><strong>Fonction :</strong> Ier degré (Tonique). Remplace le Maj7 pour plus de stabilité (pas de frottement 7M/Fondamentale).", coach: "Son très ouvert, type Bossa Nova.", tags: ["#Bossa", "#Solaire", "#Stable"], examples: ["Garota de Ipanema", "Plein Soleil (Impressionnisme)"] },
-    min6: { flavor: "L'espion chic.", theory: "<strong>Structure :</strong> Triade min + Sixte Majeure.<br><strong>Fonction :</strong> Ier degré en mineur (Doriens). Caractéristique de la musique de film.", coach: "La sixte majeure frotte contre la tierce mineure (triton).", tags: ["#Espion", "#Dorian", "#Chic"], examples: ["Pink Panther Theme", "Summertime"] },
-    dom13: { flavor: "L'éclat Funk.", theory: "<strong>Structure :</strong> Dominante + 9ème + 13ème (Sixte à l'octave).<br><strong>Fonction :</strong> Ve degré enrichi. Très brillant.", coach: "Joué souvent sans la quinte. La 13ème est la note de couleur.", tags: ["#Funk", "#Brillant", "#GrosSon"], examples: ["James Brown (Accords de pêche)", "Jazz Big Band"] },
-    alt: { flavor: "Le chaos organisé.", theory: "<strong>Structure :</strong> Dominante + 5te alt (#/b) + 9ème alt (#/b).<br><strong>Fonction :</strong> Résolution maximale vers un accord mineur.", coach: "Toutes les tensions possibles sont présentes.", tags: ["#TensionMax", "#Moderne", "#Complexe"], examples: ["Jazz Moderne", "Fusion"] },
-    susb9: { flavor: "La tension hispanique.", theory: "<strong>Structure :</strong> Fondamentale + Quarte + Quinte + 7ème + 9ème bémol.<br><strong>Fonction :</strong> Dominante Phrygienne (V7susb9).", coach: "Son caractéristique du Flamenco ou du Jazz Modal 60s.", tags: ["#Flamenco", "#Modal", "#Phrygien"], examples: ["Spain (Chick Corea)", "Nardis"] },
-    '7sus4': { flavor: "Le flottement spatial.", theory: "<strong>Structure :</strong> Fondamentale + Quarte + Quinte + 7ème min.<br><strong>Fonction :</strong> V7 sans tierce. Ambiguïté modale (Mixolydien).", coach: "L'accord de 'Maiden Voyage'. Pas de résolution immédiate.", tags: ["#Spatial", "#Modal", "#Flottant"], examples: ["Maiden Voyage (Herbie Hancock)", "Pop 80s"] },
-    maj7s11: { flavor: "L'envol onirique.", theory: "<strong>Structure :</strong> Maj7 + 11ème augmentée (#11).<br><strong>Fonction :</strong> IVe degré (Lydien) ou Ier. Son très brillant et éthéré.", coach: "La #11 est un triton au-dessus de la fondamentale.", tags: ["#Lydien", "#Magique", "#Cinéma"], examples: ["E.T. Theme (Flying)", "Simpsons Theme (Début)"] },
-    maj9: { flavor: "Le velours épais.", theory: "<strong>Structure :</strong> Maj7 + 9ème majeure.<br><strong>Fonction :</strong> Extension naturelle du Ier degré.", coach: "Ajoute de la richesse sans changer la fonction.", tags: ["#Lush", "#Sophistiqué"], examples: ["Ballades Jazz", "R&B"] },
-    min9: { flavor: "La profondeur nocturne.", theory: "<strong>Structure :</strong> min7 + 9ème majeure.<br><strong>Fonction :</strong> Enrichissement standard du min7.", coach: "Très doux, sophistiqué.", tags: ["#Profond", "#Smooth", "#Nuit"], examples: ["Blue in Green", "Sade"] },
-
+    // --- JAZZ CHORDS (Extensions & Modes) ---
+    maj69: { flavor: "La Stabilité Pentatonique.", theory: "<strong>Structure :</strong> Triade Maj + 6te + 9ème.<br><strong>Fonction :</strong> Ier degré stable. Couleur pastorale sans tension de sensible.", coach: "Son pentatonique.", tags: ["#Stabilité_Tonale", "#Couleur_Modale", "#Bossa"], examples: [{title: "Girl from Ipanema", url: ""}] },
+    min6: { flavor: "La Couleur Dorienne.", theory: "<strong>Structure :</strong> Triade min + 6te Maj.<br><strong>Fonction :</strong> Ier degré (Dorien) ou IVe degré mineur. Caractérisé par le triton (3m/6M).", coach: "Triton entre 3m et 6M.", tags: ["#Dorien", "#Fonction_Tonique", "#Couleur_Cinéma"], examples: [{title: "Pink Panther", url: ""}] },
+    dom13: { flavor: "La Dominante Brillante.", theory: "<strong>Structure :</strong> Dominante + 13ème (6te).<br><strong>Fonction :</strong> V7 enrichi par la treizième majeure, apportant une clarté 'Majeure'.", coach: "Son brillant.", tags: ["#Extension_Dominante", "#Couleur_Brillante"], examples: [{title: "James Brown", url: ""}] },
+    alt: { flavor: "La Tension Chromatique.", theory: "<strong>Structure :</strong> V7 + b5/#5 + b9/#9.<br><strong>Fonction :</strong> Résolution V -> I mineur. Toutes les tensions possibles sont présentes.", coach: "Tension maximale.", tags: ["#Gamme_Altérée", "#Tension_Chromatique"], examples: [] },
+    susb9: { flavor: "La Dominante Phrygienne.", theory: "<strong>Structure :</strong> V7sus4 + b9.<br><strong>Fonction :</strong> Accord de dominante sur pédale, typique de la cadence Andalouse.", coach: "Couleur Espagnole.", tags: ["#Mode_Phrygien", "#Dominante_Sus"], examples: [{title: "Spain (Corea)", url: ""}] },
+    '7sus4': { flavor: "La Suspension Modale.", theory: "<strong>Structure :</strong> Fondamentale + 4te + 5te + 7m.<br><strong>Fonction :</strong> V7 non résolu. Couleur Mixolydienne sans tierce directrice.", coach: "Quartal.", tags: ["#Mixolydien", "#Modal", "#Suspension"], examples: [{title: "Maiden Voyage", url: ""}] },
+    maj7s11: { flavor: "L'Extension Lydienne.", theory: "<strong>Structure :</strong> Maj7 + #11 (Triton).<br><strong>Fonction :</strong> IVe degré. La #11 supprime la 'note à éviter' (quarte juste).", coach: "Lydien.", tags: ["#Mode_Lydien", "#Polytonalité"], examples: [{title: "Simpsons Theme", url: ""}] },
+    maj9: { flavor: "L'Expansion Tonique.", theory: "<strong>Structure :</strong> Maj7 + 9ème Maj.<br><strong>Fonction :</strong> Ier degré enrichi. Élargissement de l'ambitus sans changer la fonction.", coach: "Richesse harmonique.", tags: ["#Extension_Naturelle", "#Ballade"], examples: [] },
+    min9: { flavor: "L'Enrichissement Mineur.", theory: "<strong>Structure :</strong> min7 + 9ème Maj.<br><strong>Fonction :</strong> IIe ou VIe degré. Adoucit la rigueur de l'accord mineur de base.", coach: "Couleur douce.", tags: ["#Enrichissement", "#Smooth"], examples: [] },
     // --- JAZZ VOICINGS (Techniques) ---
     voc_0: { flavor: "La Densité.", theory: "<strong>Technique :</strong> Toutes les notes sont contenues dans une seule octave.<br>Utile pour le 'Comping' rythmique main gauche.", coach: "Ça sonne un peu 'boueux' dans les graves, à utiliser dans le registre médium.", tags: ["#Comping", "#Serré"], examples: [] },
     voc_1: { flavor: "L'Ouverture.", theory: "<strong>Technique :</strong> Drop 2.<br>On prend la 2ème note la plus aiguë d'un accord serré et on la baisse d'une octave.", coach: "Le standard des arrangeurs et des guitaristes. Ça laisse respirer l'harmonie.", tags: ["#Guitare", "#Arrangement", "#Clarté"], examples: ["Wes Montgomery", "Bill Evans"] },
@@ -232,28 +251,28 @@ export const CODEX_DATA = {
 
     // --- LAB STRUCTURES ---
     struct_36: { 
-        flavor: "La Géométrie Cristalline.", 
+        flavor: "Dissonance Arrondie", 
         theory: "<strong>Physique Acoustique :</strong> Alternance stricte de consonances imparfaites (Tierces et Sixtes).<br>Absence totale de quintes justes et de quartes. Crée une texture homogène sans 'centre' fort.", 
-        coach: "Écoute les intervalles : Petit (3) puis Grand (6), ou l'inverse.",
+        coach: "Différenciez les 3ces et les 6tes par leur espacement.",
         tags: ["#Consonance", "#Homogène", "#SansQuinte"],
         examples: ["Musique minimaliste", "Études de intervalles"]
     },
     struct_45tr: { 
-        flavor: "Le Mécanisme Angulaire.", 
+        flavor: "Dissonance Anguleuse", 
         theory: "<strong>Physique Acoustique :</strong> Empilement d'intervalles 'durs' (Quartes, Quintes) et du Triton (3 tons).<br>Génère une forte tension structurelle sans fonction tonale classique.", 
-        coach: "Cherche le Triton, c'est l'intervalle 'qui frotte' le plus fort.",
+        coach: "Repérez l'intervalle Juste à la sonorité dure, froide.",
         tags: ["#Dissonance", "#Moderne", "#Mécanique"],
         examples: ["Bartók (Mikrokosmos)", "Stravinsky"]
     },
     trichord: { 
-        flavor: "La Densité de la Matière.", 
+        flavor: "Agrégat et Densité", 
         theory: "<strong>Physique Acoustique :</strong> Clusters (Agrégats) de 3 notes confinées dans un espace réduit.<br>L'ambitus total ne dépasse pas la Tierce Majeure. Crée des battements rapides.", 
-        coach: "N'essaie pas d'entendre une harmonie fonctionnelle, écoute la 'couleur' du son.",
+        coach: "Repérez l'organisation du son en terme de densité.",
         tags: ["#Cluster", "#Battements", "#Texture"],
         examples: ["Ligeti (Atmosphères)", "Penderecki"]
     },
     sus_sym: { 
-        flavor: "L'Espace Infini.", 
+        flavor: "Espace suspendu", 
         theory: "<strong>Physique Acoustique :</strong> Accords construits par symétrie intervallique (2nde+2nde ou 4te+4te).<br>L'absence de tierce rend le mode (Majeur/Mineur) indéterminé.", 
         coach: "Son très ouvert, sans tierce majeure ni mineure.",
         tags: ["#Ouvert", "#Symétrique", "#Ambigu"],
@@ -498,7 +517,7 @@ export const COACH_DB = {
         ],
         // --- Ajouter ceci dans COACH_DB.weakness (data.js) ---
         inv_0: [
-            {t:"Fondamentale", m:"L'état fondamental est le plus stable. La basse est la tonique."},
+            {t:"Fondamentale", m:"L'état fondamental est le plus stable. La basse est la fondamentale."},
             {t:"Repère", m:"L'accord est constitué uniquement de tierces superposées."},
             {t:"Intervalle", m:"L'accord ne comporte pas de dissonnance de seconde."}
         ],

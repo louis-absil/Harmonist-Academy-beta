@@ -74,9 +74,18 @@ body {
 .codex-content-area { flex: 1; position: relative; overflow: hidden; background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 100%); }
 
 .codex-grid-container {
-    padding: 20px; overflow-y: auto; height: 100%;
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 15px; align-content: start;
+    padding: 20px; 
+    overflow-y: auto; 
+    height: 100%;
+    display: grid; 
+    /* 1. Taille intelligente : remplit l'espace avec des cartes de 140px minimum */
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    /* 2. Gestion de la hauteur : s'adapte au contenu pour éviter l'écrasement */
+    grid-auto-rows: max-content;
+    gap: 20px; 
+    align-content: start;
+    /* 3. Sécurité : empêche les débordements horizontaux */
+    width: 100%;
 }
 .codex-section-title {
     grid-column: 1 / -1; margin: 10px 0 5px 0;
@@ -129,18 +138,62 @@ body {
 }
 .coach-head { font-weight: 800; color: var(--success); margin-bottom: 5px; text-transform: uppercase; font-size: 0.75rem; }
 
-/* RESPONSIVE CODEX */
+/* RESPONSIVE CODEX (MOBILE) */
 @media (max-width: 600px) {
     .codex-layout { flex-direction: column-reverse; }
+    
+    /* Barre de navigation du bas */
     .codex-sidebar { 
         width: 100%; height: 60px; flex-direction: row; padding: 0 10px;
         border-right: none; border-top: 1px solid var(--panel-border);
         justify-content: space-around;
+        flex-shrink: 0; /* Empêche l'écrasement de la barre */
     }
+    
     .codex-logo, .codex-close { display: none; }
     .codex-tab { height: 100%; justify-content: center; width: auto; }
     .codex-tab.active::after { top: auto; bottom: 0; left: 10%; right: 10%; height: 3px; width: auto; }
     .cd-hero-text h2 { font-size: 1.5rem; }
+
+    /* --- CORRECTIF GRILLE MOBILE --- */
+    .codex-grid-container {
+        display: grid;
+        /* Force 2 colonnes égales, quoi qu'il arrive */
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 10px; /* Espace réduit pour gagner de la place */
+        padding: 10px;
+        padding-bottom: 80px; /* Espace pour scroller au dessus du menu */
+    }
+    
+    /* Titres de section sur toute la largeur */
+    .codex-section-title {
+        grid-column: 1 / -1; 
+        margin-top: 15px;
+    }
+
+    /* Ajustement de la taille du texte dans les cartes pour le mobile */
+    .codex-card-symbol { font-size: 1.5rem; margin-bottom: 2px; }
+    .codex-card-title { font-size: 0.65rem; }
+}
+
+/* --- AJOUT : BOUTON FERMER MOBILE --- */
+.codex-mobile-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 50; /* Au-dessus du contenu */
+    font-weight: bold;
+    backdrop-filter: blur(4px);
 }
 
 /* --- LAB THEME & GRID --- */
