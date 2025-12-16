@@ -8,6 +8,14 @@
     <link rel="stylesheet" href="./styles.css">
     <!-- Suppression des styles React/Vite inutiles -->
 <link rel="stylesheet" href="/index.css">
+<script type="importmap">
+{
+  "imports": {
+    "path": "https://esm.sh/path@^0.12.7",
+    "vite": "https://esm.sh/vite@^7.2.7"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -272,6 +280,11 @@
         <h2 style="margin:10px 0;">Terminé !</h2>
         <div style="font-size:3.5rem; font-weight:900; color:var(--gold); line-height:1;" id="endScore">0</div>
         <div style="color:var(--text-dim); margin-bottom:20px;">Record: <span id="endHighScore">0</span></div>
+        
+        <!-- NEW FEEDBACK AREAS -->
+        <div id="inverseFeedbackArea" style="display:none; gap:10px; margin-bottom:20px; justify-content:center;"></div>
+        <div id="miniLeaderboardArea" style="display:none; flex-direction:column; gap:4px; margin-bottom:20px; background:rgba(0,0,0,0.2); padding:8px; border-radius:12px; font-size:0.8rem; text-align:left; max-height:150px; overflow-y:auto;"></div>
+
         <div>
             <button class="cmd-btn btn-action next" style="width:100%; padding:15px;" onclick="window.App.replaySameMode()">Rejouer</button>
             <button class="cmd-btn btn-listen" style="width:100%; margin-top:10px; padding:15px;" onclick="window.App.setMode('zen'); window.UI.closeModals()">Menu Principal</button>

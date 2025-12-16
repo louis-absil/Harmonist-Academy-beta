@@ -327,6 +327,7 @@ export const App = {
             this.session.challengeRank = null;
             this.session.challengeTotalPlayers = 0;
             this.session.challengeNetTime = 0;
+            this.session.prevChordHash = null; // FIX BADGE DEJA VU
         }
         this.session.time = 60; this.session.lives = 3; this.session.done = false; 
         this.session.roundLocked = false; this.session.chord = null;
@@ -637,8 +638,7 @@ export const App = {
         if(!ac.length) { this.data.settings.activeC = DB.chords.map(c=>c.id); this.playNew(); return; }
         
         const type = ac[Math.floor(this.rng() * ac.length)];
-        if (this.session.lastChordType === type.id) { this.session.jackpotStreak++; } else { this.session.jackpotStreak = 1; }
-        this.session.lastChordType = type.id;
+        // FIX JACKPOT: Removed logic from here
         
         let invId = 0;
         if(this.data.currentSet === 'laboratory') {
@@ -815,7 +815,7 @@ export const App = {
                 if(!this.session.hint) { this.session.streak++; window.UI.triggerCombo(this.session.streak); }
                 if (this.data.lvl < 20) { this.data.xp += totalGain; if(this.data.xp >= this.data.next) { this.data.xp -= this.data.next; this.data.lvl++; this.data.next = Math.floor(this.data.next * 1.2); levelUp = true; window.UI.showLevelUp(); window.UI.updateModeLocks(); if(this.data.mastery === 0) { if(this.data.lvl === 3) setTimeout(()=> window.UI.showToast("🔓 Mode Inverse Débloqué !"), 2000); if(this.data.lvl === 8) setTimeout(()=> window.UI.showToast("🔓 Mode Chrono Débloqué !"), 2000); if(this.data.lvl === 12) setTimeout(()=> window.UI.showToast("🔓 Mode Sprint Débloqué !"), 2000); } } } else { this.data.xp = this.data.next; }
                 
-                if(!this.session.hint) this.session.cleanStreak++; else this.session.cleanStreak = 0; if(c.open) this.session.openStreak++; else this.session.openStreak = 0;
+                if(!this.session.hint && this.session.mode !== 'inverse') this.session.cleanStreak++; else this.session.cleanStreak = 0; if(c.open) this.session.openStreak++; else this.session.openStreak = 0;
                 const allC = this.data.settings.activeC.length === DB.chords.length; const allI = (this.data.currentSet === 'laboratory') ? true : (this.data.settings.activeI.length === DB.currentInvs.length); if(allC && allI) this.session.fullConfigStreak++; else this.session.fullConfigStreak = 0;
                 const reactionTime = (Date.now() - this.session.lastActionTime); if(reactionTime < 2000) this.session.fastStreak++; else this.session.fastStreak = 0; 
                 const reactionFromAudio = (Date.now() - this.session.audioStartTime); this.session.lastReactionTime = reactionFromAudio;
@@ -824,9 +824,21 @@ export const App = {
                 if(c.type.id === 'struct_36') this.session.str36Streak++; else this.session.str36Streak = 0; if(c.type.id === 'struct_45tr') this.session.str45Streak++; else this.session.str45Streak = 0; if(['struct_36', 'struct_45tr'].includes(c.type.id)) this.session.geoStreak++; else this.session.geoStreak = 0; if(c.type.id === 'trichord') this.session.triStreak++; else this.session.triStreak = 0;
                 if(this.data.currentSet === 'jazz' && c.inv === 3) this.session.rootlessStreak++; else this.session.rootlessStreak = 0; if(this.data.settings.activeC.length === 1) this.session.monoStreak++; else this.session.monoStreak = 0;
                 const curHash = `${c.type.id}-${c.inv}-${c.root}`; this.session.dejaVu = (this.session.prevChordHash === curHash); this.session.prevChordHash = curHash;
-                if (!this.session.hasReplayed) this.session.pureStreak++; else this.session.pureStreak = 0;
+                if (!this.session.hasReplayed && this.session.mode !== 'inverse') this.session.pureStreak++; else this.session.pureStreak = 0;
                 if (this.session.mode === 'chrono' && this.session.time <= 2) { this.session.razorTriggered = true; } else { this.session.razorTriggered = false; }
                 if (!this.session.collectedRoots) this.session.collectedRoots = new Set(); this.session.collectedRoots.add(this.session.chord.root % 12);
+
+                // NOUVEAU CODE (Strict : Type + Inversion identiques)
+                // On vérifie si le type est le même ET si l'inversion est la même
+                // Note : this.session.lastChordInv doit être initialisé (sera undefined au début, donc ça marche)
+                if (this.session.lastChordType === c.type.id && this.session.lastChordInv === c.inv) { 
+                    this.session.jackpotStreak++; 
+                    } else { 
+                    this.session.jackpotStreak = 1; 
+                }
+                // On sauvegarde les deux pour le prochain tour
+                this.session.lastChordType = c.type.id;
+                this.session.lastChordInv = c.inv;
 
                 window.UI.vibrate([50,50,50]); window.UI.confetti(); window.UI.msg(this.session.streak > 2 ? `SÉRIE x${this.session.streak} !` : "EXCELLENT !", true);
                 badgeUnlocked = this.checkBadges();
@@ -838,6 +850,7 @@ export const App = {
             if(c.type.id === 'maj7' || c.type.id === 'min7') this.data.stats.str_jazz = 0; if(c.type.id === 'minmaj7') this.data.stats.str_007 = 0; if(c.type.id === 'dim7') this.data.stats.str_dim = 0; if(!isDim && c.inv !== 0) this.data.stats.str_inv = 0;
             this.session.str36Streak = 0; this.session.str45Streak = 0; this.session.geoStreak = 0; this.session.triStreak = 0; this.session.rootlessStreak = 0; this.session.monoStreak = 0; this.session.dejaVu = false;
             this.session.pureStreak = 0; this.session.jackpotStreak = 0;
+            this.session.lastChordType = null; // Reset streak logic on loss
 
             Audio.sfx('lose'); window.UI.vibrate(300); window.UI.updateBackground(0);
             let invName = ""; if(this.data.currentSet === 'laboratory') invName = c.type.configs[c.inv].name; else if(!isDim) invName = DB.currentInvs[c.inv].name;
@@ -868,7 +881,7 @@ export const App = {
         return unlockedSomething;
     },
 
-    gameOver() {
+    async gameOver() {
         if(!this.data.stats.modesPlayed.includes(this.session.mode)) { this.data.stats.modesPlayed.push(this.session.mode); }
         const badged = this.checkBadges(); if(badged) Audio.sfx('badge');
         let isBest = false;
@@ -879,11 +892,16 @@ export const App = {
         
         // ENVOI CLOUD (Pseudo + Mastery)
         if(this.session.score > 0) {
-            Cloud.submitScore(this.session.mode, this.session.score, this.data.username, this.data.mastery);
+            // On attend la confirmation d'envoi pour que le classement soit à jour
+            await Cloud.submitScore(this.session.mode, this.session.score, this.data.username, this.data.mastery);
         }
         
         document.getElementById('endScore').innerText = this.session.score;
         document.getElementById('endHighScore').innerText = "Record: " + (this.session.mode==='chrono'?this.data.bestChrono:this.session.mode==='sprint'?this.data.bestSprint:this.data.bestInverse);
+        
+        // NOUVEAU : On prépare l'affichage (Feedback Inverse + Classement)
+        await window.UI.populateGameOver(this.session, this.session.mode);
+
         window.UI.openModal('modalGameOver', true);
     },
     
@@ -895,7 +913,76 @@ export const App = {
         let gOk = 0, gTot = 0; for(let k in d.stats.c) { gOk += d.stats.c[k].ok; gTot += d.stats.c[k].tot; } const gAcc = gTot > 0 ? (gOk / gTot) : 0;
         if(sTot < 5 && gTot < 20) { return { t: "Débutant", m: rand(COACH_DB.start) }; }
         if(gAcc > 0.70 && sTot > 10 && sAcc < 0.50) { return { t: "Santé ☕", m: rand(COACH_DB.critical) }; }
-        if (d.stats && d.stats.c) { let candidates = []; for(let cid in d.stats.c) { const st = d.stats.c[cid]; if(st && st.tot >= 5 && (st.ok / st.tot) < 0.45) { if(COACH_DB.weakness[cid]) { candidates.push(cid); } } } if(candidates.length > 0) { const chosenCid = rand(candidates); const tip = rand(COACH_DB.weakness[chosenCid]); return { t: tip.t, m: tip.m, target: chosenCid }; } }
+        // --- NOUVELLE LOGIQUE COACH (ACCORDS + RENVERSEMENTS) ---
+        let candidates = [];
+        const THRESHOLD = 0.45; // Seuil de faiblesse (< 45% de réussite)
+        const MIN_PLAYED = 5;   // Minimum d'essais pour être jugé
+
+        // 1. Analyse des Accords
+        if (d.stats && d.stats.c) {
+            for(let cid in d.stats.c) {
+                const st = d.stats.c[cid];
+                // On vérifie le score ET si on a une phrase dans la DB pour cet accord
+                if(st && st.tot >= MIN_PLAYED && (st.ok / st.tot) < THRESHOLD) {
+                    if(COACH_DB.weakness[cid]) { candidates.push(cid); }
+                }
+            }
+        }
+
+        // 2. Analyse des Renversements (Sauf Labo pour l'instant)
+        if (d.currentSet !== 'laboratory') {
+            // On choisit la bonne statistique (Jazz = Voicings 'v', Academy = Inversions 'i')
+            let invStats = (d.currentSet === 'jazz') ? d.stats.v : d.stats.i;
+            let prefix = (d.currentSet === 'jazz') ? 'voc_' : 'inv_';
+
+            if (invStats) {
+                for(let iid in invStats) {
+                    const st = invStats[iid];
+                    const dbKey = prefix + iid; // ex: "inv_0" ou "voc_2"
+                    
+                    if(st && st.tot >= MIN_PLAYED && (st.ok / st.tot) < THRESHOLD) {
+                        if(COACH_DB.weakness[dbKey]) { candidates.push(dbKey); }
+                    }
+                }
+            }
+        }
+
+        // 3. Tirage au sort équitable & Traduction du nom
+        if(candidates.length > 0) {
+            const chosenId = rand(candidates); 
+            const tip = rand(COACH_DB.weakness[chosenId]);
+            
+            // --- TRADUCTION DE L'ID EN NOM LISIBLE ---
+            let prettyName = chosenId; // Valeur par défaut (au cas où)
+
+            // Cas A : C'est un Renversement (inv_0, inv_1...)
+            if (chosenId.startsWith('inv_')) {
+                const idx = parseInt(chosenId.split('_')[1]);
+                const obj = DB.invs.find(x => x.id === idx);
+                // Format demandé : "Nom (Chiffrage)" ex: État Fondamental (7)
+                if(obj) prettyName = `${obj.name} (${obj.figure.join('')})`; 
+            }
+            // Cas B : C'est un Voicing Jazz (voc_0...)
+            else if (chosenId.startsWith('voc_')) {
+                const idx = parseInt(chosenId.split('_')[1]);
+                const obj = DB.voicings.find(x => x.id === idx);
+                if(obj) prettyName = obj.name;
+            }
+            // Cas C : C'est un Accord (maj7, min7...)
+            else {
+                // On cherche l'accord dans tous les sets connus pour retrouver son nom
+                // (On cherche d'abord dans le set courant, sinon dans les autres)
+                let obj = DB.chords.find(x => x.id === chosenId);
+                if (!obj) obj = DB.sets.academy.chords.find(x => x.id === chosenId);
+                if (!obj && DB.sets.jazz) obj = DB.sets.jazz.chords.find(x => x.id === chosenId);
+                if (!obj && DB.sets.laboratory) obj = DB.sets.laboratory.chords.find(x => x.id === chosenId);
+                
+                if(obj) prettyName = obj.name;
+            }
+
+            return { t: tip.t, m: tip.m, target: prettyName };
+        }
+        // -------------------------------------------------------
         if(s.fastStreak > 3 && sAcc < 0.60) { return { t: "Vitesse ⚠️", m: rand(COACH_DB.speed_warn) }; }
         if(gAcc < 0.60 && s.streak >= 8) { return { t: "Déclic 💡", m: rand(COACH_DB.breakthrough) }; }
         if(sTot > 40 && sAcc < 0.50) { return { t: "Persévérance 💪", m: rand(COACH_DB.effort) }; }

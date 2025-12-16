@@ -281,7 +281,7 @@ export const BADGES = [
 
     // BADGES SECRETS ARÈNE (CORRIGÉS POUR VÉRIFIER LONGUEUR 20)
     { id: 'b_aube', category: 'arena', secret: true, icon: '🌅', title: "L'Aube Nouvelle", desc: "L'avenir appartient à ceux qui se lèvent tôt (6h-9h)", check: (d, s) => { if(!s.isChallenge) return false; const h = new Date().getHours(); return h >= 6 && h < 9; }},
-    { id: 'b_crash', category: 'arena', secret: true, icon: '😵', title: "Le Crash Test", desc: "Un score parfait... dans le mauvais sens (0/20)", check: (d, s) => s.isChallenge && s.score === 0 && s.lastChallengeLength === 20 },
+    { id: 'b_crash', category: 'arena', secret: true, icon: '😵', title: "Le Crash Test", desc: "Un score parfait... dans le mauvais sens (0/20)", check: (d, s) => s.isChallenge && s.globalOk === 0 && s.globalTot >= 20 },
     { id: 'b_speed', category: 'arena', secret: true, icon: '🏎️', title: "Speedrunner", desc: "Réflexion pure < 60s sur 20 questions", check: (d, s) => s.isChallenge && s.challengeNetTime > 0 && s.challengeNetTime < 60000 && s.lastChallengeLength === 20 },
 
     // --- SUPER-CATÉGORIE: CARRIÈRE (Gameplay, Modes, Sets) ---
@@ -495,6 +495,28 @@ export const COACH_DB = {
             {t:"Astuce", m:"Repère la dissonance particulièrement forte de l'accord, surtout lorsqu'il est renversé."},
             {t:"Cinéma", m:"C'est l'accord final emblématique du thème de James Bond."},
             {t:"Image", m:"Imaginez un accord mineur classique perturbé par une note sensible très aiguë."}
+        ],
+        // --- Ajouter ceci dans COACH_DB.weakness (data.js) ---
+        inv_0: [
+            {t:"Fondamentale", m:"L'état fondamental est le plus stable. La basse est la tonique."},
+            {t:"Repère", m:"L'accord est constitué uniquement de tierces superposées."},
+            {t:"Intervalle", m:"L'accord ne comporte pas de dissonnance de seconde."}
+        ],
+        inv_1: [
+            {t:"Fluidité", m:"Le 1er renversement place la Tierce à la basse. Il est moins stable que l'état fondamental."},
+            {t:"Couleur", m:"Attention, la couleur de l'accord peut être opposée à la couleur du renversement, notamment pour m7."},
+            {t:"Dissonance", m:"La dissonance se situe en haut de l'accord."}
+        ],
+        inv_2: [
+            {t:"Suspension", m:"La Quinte est à la basse. L'accord est suspensif et instable."},
+            {t:"Confusion", m:"C'est souvent le renversement le plus difficile à identifier."},
+            {t:"Dissonance", m:"La dissonance se situe au milieu de l'accord."}
+        ],
+        inv_3: [
+            {t:"Tension", m:"La 7ème est à la basse. C'est très instable !"},
+            {t:"Frottement", m:"Il y a souvent une seconde (1 ton ou 1/2 ton) entre la basse et la tonique."},
+            {t:"Mouvement", m:"La basse (7ème) appelle une résolution descendante sur l'accord suivant."},
+            {t:"Dissonance", m:"La dissonance se situe en bas de l'accord."}
         ]
     }
 };

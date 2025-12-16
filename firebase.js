@@ -1,5 +1,4 @@
 
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -73,8 +72,27 @@ export const Cloud = {
         };
 
         try {
-            await addDoc(collection(db, `leaderboards/${mode}/scores`), payload);
-            console.log(`Score ${score} envoyé vers ${mode}`);
+            // FIX: Utilisation de l'UID comme ID de document pour éviter les doublons
+            const scoreRef = doc(db, `leaderboards/${mode}/scores`, userUid);
+            const snap = await getDoc(scoreRef);
+
+            if (snap.exists()) {
+                const oldData = snap.data();
+                // Si nouveau record, on écrase tout (Score + Pseudo + Mastery)
+                if (score > oldData.score) {
+                    await setDoc(scoreRef, payload);
+                    console.log(`Nouveau Record ${mode}: ${score}`);
+                } 
+                // Sinon, si le pseudo a changé, on met à jour juste le pseudo (sans toucher au score)
+                else if (oldData.pseudo !== payload.pseudo) {
+                    await setDoc(scoreRef, { pseudo: payload.pseudo }, { merge: true });
+                    console.log(`Pseudo mis à jour dans ${mode}`);
+                }
+            } else {
+                // Premier score dans ce mode
+                await setDoc(scoreRef, payload);
+                console.log(`Premier Score ${mode}: ${score}`);
+            }
         } catch (e) { console.error("Score Submit Fail:", e); }
     },
 
@@ -86,16 +104,27 @@ export const Cloud = {
 
             const snap = await getDocs(q);
             const results = [];
+            const seenUsers = new Set(); // Pour filtrer les doublons
             
             const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
             snap.forEach(d => {
                 const data = d.data();
+                // Clé unique : UID (si dispo) ou Pseudo
+                const userKey = data.uid || data.pseudo;
+
+                // Si on a déjà vu ce joueur (qui avait un meilleur score car trié desc), on ignore
+                if (seenUsers.has(userKey)) return;
+
                 if(period === 'weekly') {
                     const dDate = new Date(data.timestamp);
-                    if(dDate >= sevenDaysAgo) results.push(data);
+                    if(dDate >= sevenDaysAgo) {
+                        results.push(data);
+                        seenUsers.add(userKey);
+                    }
                 } else {
                     results.push(data);
+                    seenUsers.add(userKey);
                 }
             });
             

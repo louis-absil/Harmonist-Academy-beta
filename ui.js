@@ -593,6 +593,114 @@ export const UI = {
             });
         } catch (e) { console.error(e); if(loader) loader.innerHTML = "Erreur de chargement..."; }
     },
+    
+    // --- GAME OVER LOGIC (AJOUT) ---
+    async populateGameOver(sessionData, mode) {
+        const fbArea = document.getElementById('inverseFeedbackArea');
+        const lbArea = document.getElementById('miniLeaderboardArea');
+        
+        // 1. Reset Areas
+        if(fbArea) { fbArea.innerHTML = ''; fbArea.style.display = 'none'; }
+        if(lbArea) { lbArea.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-dim); font-size:0.8rem;">Chargement du classement...</div>'; lbArea.style.display = 'flex'; }
+
+        // 2. Feedback Inverse Mode
+        if (mode === 'inverse' && fbArea && sessionData.chord) {
+            fbArea.style.display = 'flex';
+            
+            // Target Button
+            const targetNotes = JSON.stringify(sessionData.chord.notes);
+            const btnTarget = `
+                <button class="cmd-btn" style="background:rgba(16, 185, 129, 0.2); border:1px solid var(--success); color:var(--success); flex:1; padding:10px;" onclick="window.AudioEngine.chord(${targetNotes})">
+                    <span style="font-size:0.8rem; font-weight:800;">✅ CIBLE</span>
+                    <span style="font-size:1.5rem;">🔊</span>
+                </button>
+            `;
+            
+            // Error Button (User Choice)
+            let btnError = "";
+            if (sessionData.quizUserChoice !== null && sessionData.quizOptions[sessionData.quizUserChoice]) {
+                const userOpt = sessionData.quizOptions[sessionData.quizUserChoice];
+                const userNotes = JSON.stringify(userOpt.notes);
+                btnError = `
+                    <button class="cmd-btn" style="background:rgba(239, 68, 68, 0.2); border:1px solid var(--error); color:var(--error); flex:1; padding:10px;" onclick="window.AudioEngine.chord(${userNotes})">
+                        <span style="font-size:0.8rem; font-weight:800;">❌ ERREUR</span>
+                        <span style="font-size:1.5rem;">🔊</span>
+                    </button>
+                `;
+            }
+            
+            fbArea.innerHTML = btnTarget + btnError;
+        }
+
+        // 3. Mini Leaderboard (Slice)
+        if (lbArea) {
+            try {
+                const scores = await Cloud.getLeaderboard(mode, 'weekly');
+                const myUid = Cloud.getCurrentUID();
+                const myPseudo = window.App.data.username; // Fallback
+
+                let myIndex = scores.findIndex(s => s.uid === myUid);
+                // Fallback username match if UID not found (rare but possible with anon auth legacy)
+                if (myIndex === -1) myIndex = scores.findIndex(s => s.pseudo === myPseudo && s.score === sessionData.score);
+                
+                lbArea.innerHTML = ''; // Clear loading text
+
+                if (scores.length === 0) {
+                    lbArea.innerHTML = '<div style="text-align:center; opacity:0.6; padding:10px;">Aucun score cette semaine.</div>';
+                    return;
+                }
+
+                // Calculate Slice Window (User +/- 2)
+                let start = 0;
+                let end = 5; // Default Top 5
+                
+                if (myIndex !== -1) {
+                    start = Math.max(0, myIndex - 2);
+                    end = Math.min(scores.length, start + 5);
+                    // Adjust if we are at the bottom of the list to show 5 items if possible
+                    if (end - start < 5 && start > 0) {
+                        start = Math.max(0, end - 5);
+                    }
+                }
+
+                const slice = scores.slice(start, end);
+                
+                slice.forEach((s, i) => {
+                    const absRank = start + i + 1;
+                    const isMe = (myIndex !== -1 && (start + i) === myIndex);
+                    
+                    let rankDisplay = `<span style="color:var(--text-dim); font-weight:700;">${absRank}</span>`;
+                    if (absRank === 1) rankDisplay = '🥇';
+                    if (absRank === 2) rankDisplay = '🥈';
+                    if (absRank === 3) rankDisplay = '🥉';
+                    
+                    const row = document.createElement('div');
+                    row.className = 'leaderboard-row'; 
+                    // Manual override for mini version to ensure it fits nicely
+                    row.style.cssText = `
+                        display:flex; align-items:center; padding:6px 10px; border-radius:8px; 
+                        background:${isMe ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}; 
+                        border:1px solid ${isMe ? 'var(--primary)' : 'transparent'};
+                        margin-bottom: 2px;
+                        font-size: 0.85rem;
+                    `;
+                    
+                    row.innerHTML = `
+                        <div style="width:25px; text-align:center; font-size:1rem; margin-right:8px;">${rankDisplay}</div>
+                        <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; color:${isMe ? 'white' : 'var(--text-dim)'};">
+                            ${s.pseudo}
+                        </div>
+                        <div style="font-weight:900; color:var(--gold);">${s.score}</div>
+                    `;
+                    lbArea.appendChild(row);
+                });
+
+            } catch(e) {
+                console.error(e);
+                lbArea.innerHTML = '<div style="color:var(--error); text-align:center;">Erreur connexion</div>';
+            }
+        }
+    },
 
     showGhostQuote(name, quote) {
         let el = document.getElementById('badgeOverlay');
