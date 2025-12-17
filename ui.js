@@ -79,9 +79,24 @@ export const UI = {
         { 
             target: "mainArea", 
             title: "Zone d'Écoute", 
-            text: "Écoutez l'accord, identifiez sa <strong>Couleur</strong> (à gauche) et son <strong>Renversement</strong> (à droite)." 
+            text: "Écoutez l'accord, identifiez sa <strong>Couleur</strong> (Panneau de Gauche/Haut) et son <strong>Renversement</strong> (Panneau de Droite/Bas)." 
         },
-
+        // CORRECTION 2 : Détail des boutons de contrôle
+        { 
+            target: "replayBtn", 
+            title: "Réécouter", 
+            text: "Cliquez ici pour réentendre l'accord.<br><em>Raccourci clavier : Espace</em>" 
+        },
+        { 
+            target: "hintBtn", 
+            title: "L'Indice", 
+            text: "Bloqué ? Le bouton loupe joue les notes une par une (arpège).<br><strong>Attention :</strong> Utiliser l'indice réduit le score du tour." 
+        },
+        { 
+            target: "valBtn", 
+            title: "Valider", 
+            text: "Une fois votre choix fait (Couleur + Renversement), confirmez ici.<br><em>Raccourci clavier : Entrée</em>" 
+        },
         // --- PARAMÈTRES ---
         { 
             target: "btnSettings", 
@@ -127,7 +142,7 @@ export const UI = {
         { 
             target: "historyChart", 
             title: "Historique", 
-            text: "Consultez votre taux de réussite sur les 7 derniers jours." 
+            text: "Consultez votre taux de réussite sur les 7 dernières sessions." 
         },
         { 
             target: "statsContent", 
@@ -167,9 +182,26 @@ export const UI = {
             onEnter: () => { window.UI.closeModals(); }
         },
         { 
+            // ASTUCE TECHNIQUE : On cible la modale, mais on injecte un ID sur les onglets pour l'étape d'après
+            target: "challengeHubModal", 
+            title: "Le Hub", 
+            text: "Bienvenue dans l'Arène.",
+            onEnter: () => { 
+                window.UI.showChallengeHub(); 
+                // Hack pour cibler la barre d'onglets qui n'a pas d'ID dans le HTML
+                const nav = document.querySelector('.lb-sub-nav');
+                if(nav) nav.id = "tuto-arena-nav"; 
+            }
+        },
+        { 
+            target: "tuto-arena-nav", // On cible l'ID qu'on vient de créer dynamiquement
+            title: "Navigation", 
+            text: "Utilisez ces onglets pour naviguer entre les Classements, le Défi du Jour et les modes Créatifs."
+        },
+        { 
             target: "c-tab-arcade", 
             title: "Classements", 
-            text: "Comparez vos scores (Chrono, Sprint) avec le monde entier.",
+            text: "Comparez vos scores (Chrono, Sprint et Inverse) avec le monde entier.",
             onEnter: () => { 
                 window.UI.showChallengeHub(); 
                 window.UI.switchChallengeTab('arcade');
@@ -203,7 +235,7 @@ export const UI = {
         { 
             target: "btnOpenStudio", 
             title: "Le Studio", 
-            text: "Composez votre propre dictée musicale accord par accord pour piéger vos amis.",
+            text: "Composez votre propre dictée musicale accord par accord pour vous mesurer à vos amis.",
         },
         { 
             target: "createControls", 
@@ -1925,4 +1957,5 @@ export const UI = {
         const oldDetail = document.getElementById('badgeDetail'); if(oldDetail) oldDetail.style.display = 'none';
     }
 };
+
 
