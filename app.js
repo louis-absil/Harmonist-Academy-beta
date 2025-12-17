@@ -315,7 +315,38 @@ export const App = {
 
     hardReset() { if(confirm("Sûr ?")) { localStorage.removeItem('harmonist_v4_final'); location.reload(); } },
     save() { localStorage.setItem('harmonist_v4_final', JSON.stringify(this.data)); Cloud.syncUserStats(this.data); },
-    closeSettings() { window.UI.closeModals(); this.resetRound(true); if(this.session.mode==='inverse') this.playNewQuiz(); else if(this.session.mode!=='studio') this.playNew(); },
+
+    // Nouvelle fonction appelée automatiquement par UI.closeModals()
+    onSettingsClosed() {
+        // 1. Sauvegarde
+        Cloud.syncUserStats(this.data); 
+
+        // 2. LOGIQUE INTELLIGENTE (Accords + Renversements)
+        const currentChord = this.session.chord;
+        
+        if (currentChord) {
+            // A. Vérifie si le TYPE d'accord (ex: 'maj7') est toujours coché
+            const isChordValid = this.data.settings.activeC.includes(currentChord.type.id);
+            
+            // B. Vérifie si le RENVERSEMENT (ex: 0, 1, 2...) est toujours coché
+            // Note : currentChord.inv est l'index du renversement (0, 1, 2, 3)
+            const isInvValid = this.data.settings.activeI.includes(currentChord.inv);
+
+            // CONDITION STRICTE : Les deux doivent être vrais
+            if (isChordValid && isInvValid) {
+                // CAS A : Tout est valide -> On garde le tour en cours
+                window.UI.renderBoard();
+                window.UI.renderSel(); 
+            } else {
+                // CAS B : Soit l'accord, soit le renversement est interdit -> Nouvelle donne
+                this.playNew();
+                window.UI.showToast("Paramètres changés : Nouvelle donne !");
+            }
+        } else {
+            // Pas de session -> on lance
+            this.playNew();
+        }
+    },
 
     resetRound(full=false) {
         if(this.timerRef) { clearInterval(this.timerRef); this.timerRef = null; }

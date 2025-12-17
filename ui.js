@@ -90,7 +90,7 @@ export const UI = {
         { 
             target: "hintBtn", 
             title: "L'Indice", 
-            text: "Bloqué ? Le bouton loupe joue les notes une par une (arpège).<br><strong>Attention :</strong> Utiliser l'indice réduit le score du tour." 
+            text: "Bloqué ? Le bouton loupe joue les notes une par une (arpège).<br><strong>Attention :</strong> Utiliser l'indice réduit le score du tour.<br><em>Raccourci clavier : H</em>" 
         },
         { 
             target: "valBtn", 
@@ -112,7 +112,7 @@ export const UI = {
         { 
             target: "settingsChords", // Cible stable (toujours visible)
             title: "Cursus & Accords", 
-            text: "Sélectionnez précisément les types d'accords que vous voulez travailler. Plus vous en activez, plus vous gagnez d'XP. En atteignant la <strong>Maîtrise 20</strong>, de nouveaux sets (Jazz, Labo) apparaîtront ici." 
+            text: "Sélectionnez précisément les types d'accords que vous voulez travailler. Plus vous en activez, plus vous gagnez d'XP. En atteignant le <strong>Niveau 20</strong>, validez la <strong>Maîtrise</strong> pour faire apparaître ici de nouveaux sets d'accords." 
         },
         { 
             target: "settingsInvs", 
@@ -1774,7 +1774,18 @@ export const UI = {
         window.UI.closeModals(); window.UI.renderSettings(); window.UI.renderBoard(); window.App.playNew();
     },
 
-    closeModals() { document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open')); },
+    closeModals() { 
+        const settingsEl = document.getElementById('settingsModal');
+        // On regarde si les paramètres sont ouverts AVANT de tout fermer
+        const wasSettingsOpen = settingsEl && settingsEl.classList.contains('open');
+
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+        
+        // Si on vient de fermer les paramètres, on déclenche la logique de mise à jour dans App
+        if (wasSettingsOpen && window.App && window.App.onSettingsClosed) {
+            window.App.onSettingsClosed();
+        }
+    },
     
     renderSettings() { 
         const d = window.App.data;
@@ -1957,5 +1968,4 @@ export const UI = {
         const oldDetail = document.getElementById('badgeDetail'); if(oldDetail) oldDetail.style.display = 'none';
     }
 };
-
 

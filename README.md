@@ -1,8 +1,9 @@
-# 🎼 Harmonist Academy V5.2 (Academy Guide)
+
+# 🎼 Harmonist Academy V5.1 (Studio Update)
 
 > **L'application ultime d'entraînement auditif pour l'harmonie, le jazz et l'acoustique.**
 
-![Version](https://img.shields.io/badge/version-5.2.0-guide.svg)
+![Version](https://img.shields.io/badge/version-5.1.0-studio.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Tech](https://img.shields.io/badge/Made%20With-Vanilla%20JS-yellow.svg)
 
@@ -10,65 +11,76 @@ Harmonist Academy est une **Single Page Application (SPA)** gamifiée conçue po
 
 ---
 
-## 🎓 NOUVEAU DANS LA V5.2 : LE GUIDE INTERACTIF
+## 🎹 NOUVEAU DANS LA V5.1 : LE STUDIO DE CRÉATION
 
-Cette mise à jour majeure se concentre sur l'expérience utilisateur (UX) et l'accueil des nouveaux élèves.
+Cette mise à jour introduit un outil de composition pédagogique permettant aux professeurs et aux élèves de créer leurs propres dictées musicales.
 
-### 1. Visite Guidée (Walkthrough)
-Un système de tutoriel immersif par "Spotlight" (mise en lumière) qui accompagne l'élève pas à pas.
-* **Navigation Interactive :** Le guide prend le contrôle de l'interface pour ouvrir physiquement les menus (Paramètres, Stats, Arène) et montrer exactement où cliquer.
-* **Pédagogie :** Explication des concepts clés (Couleur vs Renversement) et des pré-requis pour chaque mode.
-* **Accessibilité :** Détection automatique des nouveaux utilisateurs et bouton d'aide permanent dans les paramètres.
+### 1. Le Studio Harmonique
+Un séquenceur visuel intégré pour construire des progressions d'accords sur mesure.
+*   **Timeline Visuelle :** Ajoutez, supprimez et réorganisez vos accords sur une frise chronologique.
+*   **Contrôle Total :** Choisissez la qualité, le renversement et la note de basse précise grâce au clavier virtuel.
+*   **Piano Interactif :** Visualisez les notes en temps réel.
 
-### 2. Correctifs & Optimisations
-* **Arène & Défis :** Correction critique des champs de saisie (Inputs) pour rejoindre un défi.
-* **Interface :** Amélioration du scroll automatique dans les modales (Badges, Trophées) pour toujours montrer l'élément concerné.
-* **Stabilité :** Nettoyage du code, suppression des doublons et sécurisation du moteur de rendu.
+### 2. Exportation de Défis (Custom Seeds)
+Transformez vos créations du Studio en défis jouables.
+*   **Génération de Code :** Exportez votre séquence sous forme de code unique (ex: `JAZZ-EXAM-1`).
+*   **Partage :** Donnez ce code à vos élèves ou amis. Ils joueront *exactement* la séquence que vous avez composée (Mêmes accords, mêmes basses, mêmes renversements).
+
+### 3. Ergonomie & Raccourcis
+Le mode Studio est optimisé pour une saisie rapide au clavier (Mapping AZERTY/QWERTY physique) :
+*   **Notes (Basses) :** `W` à `N` (Rangée du bas) + `,` pour le Si.
+*   **Octaves :** Flèches `Haut` / `Bas`.
 
 ---
 
-## 🎹 DÉJÀ DISPONIBLE (V5.1) : LE STUDIO DE CRÉATION
+## ⚔️ L'ARÈNE DES DÉFIS (V5.0)
 
-L'outil de composition pédagogique permettant aux professeurs et aux élèves de créer leurs propres dictées musicales.
+L'expérience d'apprentissage transformée en compétition e-sportive musicale.
 
-* **Timeline Visuelle :** Ajoutez, supprimez et réorganisez vos accords sur une frise chronologique.
-* **Contrôle Total :** Choisissez la qualité, le renversement et la note de basse précise grâce au clavier virtuel.
-* **Exportation (Custom Seeds) :** Transformez vos créations en défis jouables via un code unique (ex: `JAZZ-EXAM-1`).
+### 🔥 Le Défi du Jour (Daily Challenge)
+Chaque jour, une **séquence unique de 20 accords** est générée.
+*   **Seed Unique :** Tout le monde joue exactement la même séquence (basée sur la date).
+*   **Classement Journalier :** Comparez votre score avec la communauté.
+*   **Rapport Détaillé :** Analyse précise de vos erreurs (Accords ET Renversements) en fin de session.
+
+### 👻 Les Maîtres Fantômes (Ghost Players)
+Mesurez-vous aux légendes de la musique qui peuplent les classements :
+*   **Erik Satie & Bach** (Mode Chrono).
+*   **Mozart & Paganini** (Mode Sprint).
+*   **John Cage & Beethoven** (Mode Inverse).
 
 ---
 
 ## ✨ Fonctionnalités Principales
 
-### 🧠 Cœur de Gameplay
-* **Système Dual-Check :** Identification séparée de la Qualité (Majeur, Mineur, Dom7...) et du Renversement (État Fondamental, 1er, 2ème...).
-* **Moteur Audio Web :** Piano samplé haute qualité et synthétiseur d'effets sonores.
-* **Smart Feedback :** Le "Coach Virtuel" analyse vos erreurs (ex: confusion quinte/octave) et vous donne des conseils ciblés.
-
 ### 🎮 Modes de Jeu
-1.  **Zen :** Entraînement libre sans stress pour assimiler la théorie.
-2.  **Inverse (Niv. 3) :** Le jeu donne le nom, vous devez imaginer le son (Ear Training Intérieur).
-3.  **Chrono (Niv. 8) :** Course contre la montre pour tester vos réflexes.
-4.  **Sprint (Niv. 12) :** Mort subite avec temps décroissant.
+*   **🧘 Mode Zen :** Entraînement sans stress, feedback immédiat.
+*   **⚡ Mode Chrono :** 60 secondes pour faire le meilleur score.
+*   **🏃 Mode Sprint :** Le temps diminue à chaque réponse. Réservé aux experts.
+*   **🎧 Mode Inverse :** Quiz à l'aveugle (QCM). On vous donne le nom, trouvez le son.
 
-### 🏆 Progression RPG
-* **Système d'XP :** Gagnez de l'expérience pour monter de niveau (Level 1-100).
-* **Maîtrise (Lore) :** Débloquez des matériaux (Cristal, Marbre, Or...) en fonction de votre assiduité.
-* **Badges :** +50 Trophées à collectionner (Secrets, Performance, Grind).
+### 📚 Contenu Harmonique (Sets)
+1.  **🏛️ L'Académie (Classique) :** Accords de base (Maj7, min7, Dom7, Dim7) et gestion des 4 renversements.
+2.  **🎷 Le Club (Jazz) :** Extensions (9ème, 13ème, Altérés, Sus) et Voicings (Close, Drop-2, Shell, Rootless).
+3.  **🧪 Le Laboratoire (Acoustique) :** Structures intervalliques, Trichordes (Clusters), Accords Suspendus et variations de densité (Contracté/Dilaté).
 
-### 🧪 Le Laboratoire & Le Club
-* **Club Jazz :** Voicings complexes (Drop-2, Shells, Rootless).
-* **Laboratoire :** Recherche sur les structures intervalliques (Trichordes, Clusters, Set Theory).
+### 🏆 Gamification & Lore
+*   **Système de Maîtrise :** Progressez de *Novice* à *Virtuose* à travers des matériaux nobles (Cristal, Marbre, Or, Obsidienne...).
+*   **Badges & Trophées :** +30 succès, dont des badges secrets liés au "Lore" du jeu.
+*   **Coach IA :** Analyse vos faiblesses en temps réel pour donner des conseils contextuels.
 
 ---
 
-## 🛠️ Stack Technique
+## 💻 Architecture Technique
 
-* **Frontend :** HTML5, CSS3 (Variables, Grid, Flexbox, Glassmorphism).
-* **Logique :** Vanilla JS (ES6+ Modules). Aucune étape de build complexe requise.
-* **Audio :** Web Audio API (Piano samplé + Synthèse SFX).
-* **Backend (Firebase) :**
-    * **Firestore :** Stockage des Leaderboards, des Défis et des Profils.
-    * **Auth :** Authentification anonyme transparente.
+Le projet a été entièrement migré vers du **JavaScript Pur (ES Modules)** pour une performance maximale et une maintenance simplifiée.
+
+*   **Frontend :** HTML5 / CSS3 (Grid, Flexbox, Glassmorphism).
+*   **Logique :** Vanilla JS (ES6+ Modules). Aucune étape de build complexe requise.
+*   **Audio :** Web Audio API (Piano samplé + Synthèse SFX).
+*   **Backend (Firebase) :**
+    *   **Firestore :** Stockage des Leaderboards, des Défis et des Profils.
+    *   **Auth :** Authentification anonyme transparente.
 
 ### Structure des Fichiers
 
@@ -84,29 +96,33 @@ L'outil de composition pédagogique permettant aux professeurs et aux élèves d
 ├── challenges.js   # Gestionnaire des Seeds, RNG & Mode Examen
 └── firebase.js     # Connecteur Cloud (Firestore/Auth)
 ```
+
+---
+
 ## 🚀 Installation & Démarrage
-L'application utilise des Modules ES6, elle nécessite un serveur local pour contourner les politiques CORS (Cross-Origin Resource Sharing).
 
-Méthode 1 : Avec Node.js & NPM
-Installez les dépendances :
+L'application utilise des **Modules ES6**, elle nécessite un serveur local pour contourner les politiques CORS (Cross-Origin Resource Sharing).
 
-Bash
+### Méthode 1 : Avec Node.js & NPM
 
-npm install
-Lancez le serveur de développement :
+1.  Installez les dépendances :
+    ```bash
+    npm install
+    ```
+2.  Lancez le serveur de développement :
+    ```bash
+    npm run dev
+    ```
 
-Bash
+### Méthode 2 : Python
 
-npm run dev
-Méthode 2 : Python
 Si Python est installé sur votre machine :
 
-Bash
-
+```bash
 python -m http.server 8000
-# Ouvrez http://localhost:8000
-☕ Crédits
-Conçu et développé pour les étudiants musiciens, les professeurs de théorie musicale et les passionnés de musique.
+```
+Puis ouvrez `http://localhost:8000` dans votre navigateur.
 
-**Harmonist Academy © 2025 Louis Absil** - *Fait avec ❤️ et beaucoup de café, par un musicien, pour des musiciens.*
+---
 
+**© 2025 Harmonist Academy** - *Fait par Louis Absil avec ❤️ et beaucoup de café.*

@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="./styles.css">
     <!-- Suppression des styles React/Vite inutiles -->
 <link rel="stylesheet" href="/index.css">
+<link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
 <script type="importmap">
 {
   "imports": {
@@ -185,7 +190,7 @@
                     onchange="window.App.setUsername(this.value)">
         </div>
 
-        <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Chambre (Set)</h4>
+        <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Set</h4>
         <div class="settings-grid" style="grid-template-columns:1fr 1fr;">
             <div class="setting-chip active" id="set-academy" onclick="window.App.loadSet('academy')">🏛️ Académie</div>
             <div class="setting-chip" id="set-jazz" onclick="window.App.loadSet('jazz')">🎷 Le Club</div>
@@ -477,5 +482,14 @@
 
 <script type="module" src="./main.js"></script>
 <script type="module" src="/index.tsx"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker enregistré', reg))
+                    .catch(err => console.log('Erreur SW:', err));
+            });
+        }
+    </script>
 </body>
 </html>
