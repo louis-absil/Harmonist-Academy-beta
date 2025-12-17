@@ -14,6 +14,351 @@ export const UI = {
     lbState: { mode: 'chrono', period: 'weekly' },
     createConfig: { length: 10 }, 
 
+// --- INTERACTIVE WALKTHROUGH ENGINE (V5.4) ---
+    // LEGACY
+    // wtStep: 0,
+    // wtData: [
+    //    { 
+    //        target: null, // null = Centré (Intro)
+    //        title: "Bienvenue à l'Académie", 
+    //        text: "Ceci est votre tableau de bord. Harmonist Academy va transformer votre oreille en instrument de précision. Laissez-moi vous faire visiter." 
+    //    },
+    //    { 
+    //        target: "rankIcon", // ID de l'élément à surligner
+    //        title: "Votre Identité", 
+    //        text: "Ici s'affichent votre <strong>Rang</strong> et votre <strong>Maîtrise</strong>. Gagnez de l'XP en jouant pour monter en grade et débloquer de nouveaux contenus." 
+    //    },
+    //    { 
+    //        target: "toolsBar", 
+    //        title: "Les Modes d'Entraînement", 
+    //        text: "Commencez en <strong>Zen</strong> pour apprendre. Débloquez ensuite <strong>Chrono</strong> (Niv.8), <strong>Sprint</strong> (Niv.12) et <strong>Inverse</strong> (Niv.3) pour tester vos réflexes." 
+    //    },
+    //    { 
+    //        target: "mainArea", 
+    //        title: "La Zone de Jeu", 
+    //        text: "Le cœur de l'action. Écoutez l'accord, identifiez sa <strong>Couleur</strong> (à gauche) et son <strong>Renversement</strong> (à droite). Analysez, ne devinez pas !" 
+    //    },
+    //    { 
+    //        target: "btnSettings", 
+    //        title: "Paramètres & Progression", 
+    //        text: "Accédez ici pour changer de 'Set' (Jazz, Labo), voir vos statistiques détaillées ou relancer ce guide." 
+    //    }
+    //],
+
+    // --- SCÉNARIO TUTORIEL ULTIME V8 ---
+    wtData: [
+        // 0. ACCUEIL
+        {
+            target: null,
+            title: "Bienvenue !",
+            text: "Harmonist Academy est votre compagnon pour développer l'oreille relative. Ce guide interactif va vous montrer les clés de la réussite en quelques étapes.",
+            onEnter: () => { window.UI.closeModals(); } 
+        },
+
+        // 1. AUDIO
+        { 
+            target: "playBtn", 
+            title: "Moteur Sonore", 
+            text: "Cliquez ici pour activer le son.<br><br><strong>⚠️ iPhone/iPad :</strong> Désactivez impérativement le mode silencieux (bouton latéral) pour entendre le piano.",
+        },
+        
+        // 2. IDENTITÉ
+        { 
+            target: "rankIcon", 
+            title: "Votre Progression", 
+            text: "Ici s'affichent votre <strong>Niveau</strong> et votre <strong>Maîtrise</strong>. Gagnez de l'XP pour débloquer les contenus avancés." 
+        },
+
+        // 3. MODES
+        { target: "modeZen", title: "Mode Zen", text: "L'apprentissage pur sans stress. Idéal pour débuter et s'entraîner." },
+        { target: "modeInverse", title: "Mode Inverse", text: "<strong>Niveau 3 requis.</strong><br>Le jeu donne le nom, vous trouvez le son. Développe l'oreille intérieure." },
+        { target: "modeChrono", title: "Mode Chrono", text: "<strong>Niveau 8 requis.</strong><br>Course contre la montre pour entraîner vos réflexes." },
+        { target: "modeSprint", title: "Mode Sprint", text: "<strong>Niveau 12 requis.</strong><br>L'épreuve ultime : le temps diminue à chaque question. Renforce l'intuition musicale." },
+
+        // 4. ZONE DE JEU
+        { 
+            target: "mainArea", 
+            title: "Zone d'Écoute", 
+            text: "Écoutez l'accord, identifiez sa <strong>Couleur</strong> (à gauche) et son <strong>Renversement</strong> (à droite)." 
+        },
+
+        // --- PARAMÈTRES ---
+        { 
+            target: "btnSettings", 
+            title: "Paramètres", 
+            text: "C'est ici que tout se configure. Ouvrons le menu...", 
+        },
+        { 
+            target: "usernameInput", 
+            title: "Identité", 
+            text: "Choisissez votre pseudonyme. Il apparaîtra dans les classements mondiaux.",
+            onEnter: () => { window.UI.openModal('settingsModal'); }
+        },
+        { 
+            target: "settingsChords", // Cible stable (toujours visible)
+            title: "Cursus & Accords", 
+            text: "Sélectionnez précisément les types d'accords que vous voulez travailler. Plus vous en activez, plus vous gagnez d'XP. En atteignant la <strong>Maîtrise 20</strong>, de nouveaux sets (Jazz, Labo) apparaîtront ici." 
+        },
+        { 
+            target: "settingsInvs", 
+            title: "Renversements", 
+            text: "Activez ou désactivez les renversements (État Fondamental, 1er, 2ème...). Maîtriser les renversements est une des clés vers la maîtrise de l'oreille relative." 
+        },
+        { 
+            target: "btnResetSave", 
+            title: "Réinitialiser", 
+            text: "Ce bouton efface TOUTE votre progression. À utiliser uniquement si vous voulez recommencer votre carrière à zéro.",
+            onEnter: () => { document.querySelector('#settingsModal .modal').scrollTop = 1000; }
+        },
+        
+        // --- STATS ---
+        { 
+            target: "btnStats", 
+            title: "Vos Statistiques", 
+            text: "Suivez votre progression en détail. Fermons les réglages et ouvrons les stats...",
+            onEnter: () => { window.UI.closeModals(); } 
+        },
+        { 
+            target: "coachDisplay", 
+            title: "Le Coach Virtuel", 
+            text: "Il analyse vos dernières parties pour vous donner des conseils personnalisés sur vos points faibles.",
+            onEnter: () => { window.UI.openModal('statsModal'); }
+        },
+        { 
+            target: "historyChart", 
+            title: "Historique", 
+            text: "Consultez votre taux de réussite sur les 7 derniers jours." 
+        },
+        { 
+            target: "statsContent", 
+            title: "Analyse Précise", 
+            text: "Visualisez votre pourcentage de réussite pour chaque accord et chaque renversement." 
+        },
+        { 
+            target: "badgesGrid", 
+            title: "Trophées", 
+            text: "Collectionnez les badges en accomplissant des exploits. Cliquez sur un badge pour voir comment l'obtenir.",
+            onEnter: () => { 
+                // On scrolle juste ce qu'il faut pour voir le début des badges
+                const m = document.querySelector('#statsModal .modal');
+                if(m) m.scrollTop = 400; 
+            }
+        },
+
+        // --- CODEX (NOUVEAU) ---
+        {
+            target: "btnCodex",
+            title: "Le Codex",
+            text: "Votre encyclopédie théorique interactive.",
+            onEnter: () => { window.UI.closeModals(); }
+        },
+        {
+            target: "codexGridContainer", // Cible la grille
+            title: "Fiches Théoriques",
+            text: "Cliquez sur une carte pour obtenir des éléments théoriques et écouter l'accord.",
+            onEnter: () => { window.UI.openCodex(); }
+        },
+
+        // --- ARÈNE (NOUVEAU & DÉTAILLÉ) ---
+        { 
+            target: "btnArena", 
+            title: "L'Arène", 
+            text: "Prêt à vous mesurer au monde ? Les classements et défis se trouvent ici.",
+            onEnter: () => { window.UI.closeModals(); }
+        },
+        { 
+            target: "c-tab-arcade", 
+            title: "Classements", 
+            text: "Comparez vos scores (Chrono, Sprint) avec le monde entier.",
+            onEnter: () => { 
+                window.UI.showChallengeHub(); 
+                window.UI.switchChallengeTab('arcade');
+            }
+        },
+        { 
+            target: "c-tab-global", 
+            title: "Défi du Jour", 
+            text: "Chaque jour, une série unique. Tout le monde a le même tirage. Qui aura la meilleure note ?",
+            onEnter: () => { window.UI.switchChallengeTab('global'); }
+        },
+        // Onglet REJOINDRE
+        { 
+            target: "c-tab-join", 
+            title: "Rejoindre", 
+            text: "Rejoignez un défi, ou consultez votre score avec le bouton 'Voir Scores'.",
+            onEnter: () => { window.UI.switchChallengeTab('join'); }
+        },
+        { 
+            target: "joinInput", 
+            title: "Code Défi", 
+            text: "Entrez ici le code fourni par votre professeur ou un ami pour lancer un défi spécifique.",
+        },
+        // Onglet CRÉER
+        { 
+            target: "c-tab-create", 
+            title: "Créer", 
+            text: "Devenez le professeur et créez votre propre défi.",
+            onEnter: () => { window.UI.switchChallengeTab('create'); }
+        },
+        { 
+            target: "btnOpenStudio", 
+            title: "Le Studio", 
+            text: "Composez votre propre dictée musicale accord par accord pour piéger vos amis.",
+        },
+        { 
+            target: "createControls", 
+            title: "Générateur Aléatoire", 
+            text: "Ou laissez l'IA créer un défi. Le contenu dépendra des <strong>Accords activés dans vos Paramètres</strong>.",
+        },
+
+        // FIN
+        { 
+            target: null, 
+            title: "Bonne chance !", 
+            text: "Vous pouvez relancer ce guide à tout moment depuis les <strong>Paramètres > Guide</strong>.<br>À vous de jouer !",
+            onEnter: () => { window.UI.closeModals(); }
+        }
+    ],
+
+    startWalkthrough() {
+        // Ferme les modales existantes pour nettoyer la vue
+        this.closeModals();
+        this.wtStep = 0;
+        document.getElementById('tour-spotlight').classList.add('active');
+        document.getElementById('tour-tooltip').classList.add('active');
+        this.renderWalkthroughStep();
+        
+        // Empêche le scroll pendant le tuto
+        document.body.style.overflow = 'hidden';
+    },
+
+    endWalkthrough() {
+        document.getElementById('tour-spotlight').classList.remove('active');
+        document.getElementById('tour-tooltip').classList.remove('active');
+        document.body.style.overflow = ''; // Restaure le scroll
+        localStorage.setItem('tuto_seen_v5.4', 'true');
+        
+        // Petit délai pour reset le highlight
+        setTimeout(() => {
+            const spot = document.getElementById('tour-spotlight');
+            spot.style.top = '-1000px'; 
+            spot.style.left = '-1000px';
+            spot.style.width = '0';
+            spot.style.height = '0';
+        }, 500);
+    },
+
+    nextWalkthroughStep() {
+        Audio.sfx('card_open'); // Son plus doux et musical // <--- AJOUT SONORE ICI
+        this.wtStep++;
+        if (this.wtStep >= this.wtData.length) {
+            this.endWalkthrough();
+            this.showToast("🎓 Bon entraînement !");
+        } else {
+            this.renderWalkthroughStep();
+        }
+    },
+
+    renderWalkthroughStep() {
+        const step = this.wtData[this.wtStep];
+        if(!step) return;
+
+        // 1. ACTION AUTOMATIQUE (Ouvrir un menu, changer d'onglet...)
+        if (step.onEnter) {
+            step.onEnter();
+        }
+
+        // Petit délai pour laisser le temps au DOM de s'afficher
+        setTimeout(() => {
+            const spot = document.getElementById('tour-spotlight');
+            const tool = document.getElementById('tour-tooltip');
+            
+            // Remplissage du contenu
+            document.getElementById('tour-title').innerHTML = step.title;
+            document.getElementById('tour-desc').innerHTML = step.text;
+            document.getElementById('tour-step-count').innerText = `${this.wtStep + 1}/${this.wtData.length}`;
+            
+            // --- LOGIQUE DE POSITIONNEMENT ---
+            if (!step.target) {
+                // CAS 1 : Pas de cible (Centré au milieu de l'écran)
+                spot.style.width = '0px'; spot.style.height = '0px';
+                spot.style.top = '50%'; spot.style.left = '50%';
+                
+                tool.style.top = '50%'; tool.style.left = '50%';
+                tool.style.transform = 'translate(-50%, -50%)'; // On utilise transform pour centrer parfaitement
+                
+                const arrow = document.getElementById('tour-arrow');
+                if(arrow) arrow.style.display = 'none';
+
+            } else {
+                // CAS 2 : Une cible est définie dans l'étape
+                const targetEl = document.getElementById(step.target);
+
+                // SÉCURITÉ : On vérifie si l'élément existe ET s'il est visible (hauteur > 0)
+                if (targetEl && targetEl.offsetParent !== null && targetEl.getBoundingClientRect().height > 0) { 
+                    
+                    // --- POSITIONNEMENT SUR LA CIBLE ---
+                    const rect = targetEl.getBoundingClientRect();
+                    const margin = 15;
+                    
+                    // Le projecteur (Spotlight)
+                    spot.style.width = (rect.width + 8) + 'px';
+                    spot.style.height = (rect.height + 8) + 'px';
+                    spot.style.top = (rect.top - 4) + 'px';
+                    spot.style.left = (rect.left - 4) + 'px';
+                    spot.style.borderRadius = getComputedStyle(targetEl).borderRadius;
+
+                    // La bulle d'aide (Tooltip)
+                    const toolH = tool.offsetHeight || 200;
+                    const toolW = tool.offsetWidth || 320;
+                    
+                    // Par défaut en dessous
+                    let top = rect.bottom + margin;
+                    let left = rect.left + (rect.width/2) - (toolW/2);
+                    
+                    // Si dépasse en bas de l'écran, on met au dessus
+                    if (top + toolH > window.innerHeight - 10) {
+                        top = rect.top - toolH - margin;
+                    }
+                    
+                    // Garde-fous pour ne pas sortir de l'écran
+                    if (top < 10) top = 10;
+                    if(left < 10) left = 10;
+                    if(left + toolW > window.innerWidth) left = window.innerWidth - toolW - 10;
+
+                    tool.style.top = top + 'px';
+                    tool.style.left = left + 'px';
+                    tool.style.transform = ''; // Important : on enlève le transform du mode centré
+
+                    // La flèche de la bulle
+                    const arrow = document.getElementById('tour-arrow');
+                    if(arrow) {
+                        let arrowLeft = (rect.left + rect.width/2) - left - 8;
+                        arrowLeft = Math.max(10, Math.min(toolW - 26, arrowLeft));
+                        arrow.style.left = arrowLeft + 'px';
+                        arrow.style.top = (rect.bottom + margin === top) ? '-8px' : 'auto';
+                        arrow.style.bottom = (rect.bottom + margin !== top) ? '-8px' : 'auto';
+                        arrow.style.display = 'block';
+                    }
+
+                } else {
+                    // FALLBACK : Cible introuvable ou cachée -> On centre par sécurité
+                    spot.style.width = '0'; spot.style.height = '0';
+                    tool.style.top = '50%'; tool.style.left = '50%';
+                    tool.style.transform = 'translate(-50%, -50%)';
+                    
+                    const arrow = document.getElementById('tour-arrow');
+                    if(arrow) arrow.style.display = 'none';
+                }
+            } // Fin du else (step.target existe)
+        }, 150); // Fin du setTimeout
+    },
+    
+    // Garder cette fonction pour le bouton "Guide" du menu
+    openTutorial() {
+        this.startWalkthrough();
+    },
+
     // --- AJOUT ICI ---
     badgeQueue: [],      // Liste d'attente
     isBadgeBusy: false,  // Est-ce qu'un badge est déjà affiché ?
@@ -201,9 +546,29 @@ export const UI = {
         }
     },
 
+    async joinDailyChallenge() {
+        const id = Cloud.getDailyChallengeID();
+        const settings = {
+            activeC: DB.sets.academy.chords.map(c=>c.id), 
+            activeI: DB.invs.map(i=>i.id),
+            set: 'academy'
+        };
+        const challengeData = {
+            id: id,
+            seed: id,
+            length: 20,
+            settings: settings
+        };
+        if(confirm(`Lancer le Défi du Jour ?\n\n20 Questions • Mode Académie`)) {
+            await ChallengeManager.start(challengeData);
+        }
+    },
+
     async joinChallenge() {
-        const input = document.getElementById('challengeCodeInput');
-        if(!input) return;
+        // Cible l'input avec le bon ID (joinInput)
+        const input = document.getElementById('joinInput');
+        if(!input) { console.error("Input 'joinInput' introuvable"); return; }
+        
         const code = input.value.trim().toUpperCase();
         if(code.length < 3) return;
         
@@ -227,8 +592,9 @@ export const UI = {
     },
 
     async viewChallengeLeaderboard() {
-        const input = document.getElementById('challengeCodeInput');
+        const input = document.getElementById('joinInput');
         if(!input) return;
+        
         const code = input.value.trim().toUpperCase();
         if(code.length < 3) { window.UI.showToast("Code trop court"); return; }
 
@@ -248,7 +614,6 @@ export const UI = {
                 let rank = idx+1;
                 let color = 'white';
                 
-                // Calcul Réussite
                 const displayScore = s.score !== undefined ? s.score : Math.round((s.note/20) * (s.total||20));
                 const totalPoints = s.total || 20;
                 const isPass = (displayScore / totalPoints) >= 0.5;
@@ -260,25 +625,17 @@ export const UI = {
                 else if(idx===1) { rankDisplay='🥈'; color='#e2e8f0'; }
                 else if(idx===2) { rankDisplay='🥉'; color='#b45309'; }
                 
-                // LOGIQUE ANTI-HUMILIATION & PROGRESSION
                 if (!isPass) {
                     rankDisplay = '-';
                     scoreDisplay = `<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>`;
                     color = 'var(--text-dim)';
-                    
                     if (isMe) {
                         const status = window.App.getProgressionStatus(displayScore, totalPoints);
-                        if (status === 'best') {
-                            scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--cyan);">⭐ Record Perso</span>`;
-                            color = 'var(--cyan)';
-                        } else if (status === 'trend') {
-                            scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--success);">📈 En hausse</span>`;
-                            color = 'var(--success)';
-                        }
+                        if (status === 'best') { scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--cyan);">⭐ Record Perso</span>`; color = 'var(--cyan)'; } 
+                        else if (status === 'trend') { scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--success);">📈 En hausse</span>`; color = 'var(--success)'; }
                     }
                 }
 
-                // AFFICHAGE MAITRISE
                 let masteryHtml = "";
                 if (s.mastery && s.mastery > 0) {
                     const lore = this.getLoreState(s.mastery);
@@ -1143,7 +1500,7 @@ export const UI = {
             
         }, 4000); // Durée d'affichage (4s)
     },
-        
+
     openBadgeLightbox(b) {
         let el = document.getElementById('badgeOverlay');
         if (!el) { el = document.createElement('div'); el.id = 'badgeOverlay'; el.className = 'modal-overlay badge-lightbox'; document.body.appendChild(el); el.onclick = () => { el.classList.remove('open'); }; }

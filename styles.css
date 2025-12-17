@@ -1180,3 +1180,93 @@ input:checked + .slider { background: var(--primary); } input:checked + .slider:
     background: rgba(255,255,255,0.1);
     z-index: 0;
 }
+
+/* --- TUTORIAL PAGINATION --- */
+.tuto-dot {
+    width: 10px; 
+    height: 10px; 
+    background: rgba(255,255,255,0.1); 
+    border-radius: 50%; 
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.tuto-dot.active {
+    background: var(--gold); 
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+    transform: scale(1.2);
+    border-color: var(--gold);
+}
+
+/* --- WALKTHROUGH TUTORIAL (SPOTLIGHT) --- */
+
+/* Le projecteur : une boite transparente avec une ombre immense */
+.tour-spotlight {
+    position: fixed;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85); /* L'ombre fait le noir autour */
+    z-index: 3000;
+    pointer-events: none; /* Permet de cliquer au travers si besoin */
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    opacity: 0;
+    /* Anneau doré pour bien marquer la cible */
+    border: 2px solid var(--gold);
+}
+.tour-spotlight.active { opacity: 1; }
+
+/* La bulle d'explication */
+/* --- STYLE MODERNE GLASSMORPHISM --- */
+.tour-tooltip {
+    position: fixed;
+    z-index: 3001;
+    
+    /* Effet Verre Fumé Moderne */
+    background: rgba(15, 23, 42, 0.85); /* Fond sombre à 85% d'opacité */
+    backdrop-filter: blur(12px);         /* Flou de l'arrière plan */
+    -webkit-backdrop-filter: blur(12px); /* Compatibilité Safari */
+    border: 1px solid rgba(255, 255, 255, 0.15); /* Bordure fine et discrète */
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); /* Ombre profonde */
+    
+    width: 320px; /* Largeur fixe pour éviter que ça change tout le temps */
+    max-width: 90vw; /* Sécurité mobile */
+    padding: 20px;
+    border-radius: 20px;
+    
+    opacity: 0;
+    /* Transition fluide pour le mouvement */
+    transition: opacity 0.3s ease, top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
+}
+
+/* La flèche se place désormais "sur le bord" de la boite */
+.tour-arrow { 
+    position: absolute; 
+    width: 16px; 
+    height: 16px; 
+    background: #1e293b; /* Même couleur que le fond de la bulle (attention si glassmorphism) */
+    /* Si glassmorphism utilisé : background: rgba(15, 23, 42, 0.9); */
+    transform: rotate(45deg); 
+    z-index: -1; /* Derrière le contenu */
+}
+
+.tour-tooltip.active { opacity: 1; pointer-events: auto; }
+
+.tour-tooltip h3 {
+    margin-top: 0;
+    padding-right: 20px; /* Espace de sécurité à droite */
+    font-size: 1.1rem;   /* Titre un peu plus gros */
+    color: var(--gold);
+}
+.tour-tooltip p { color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin: 0 0 20px 0; }
+
+.tour-footer { display: flex; justify-content: space-between; align-items: center; }
+#tour-step-count { font-size: 0.75rem; color: var(--text-dim); font-weight: 700; }
+
+.tour-btn { border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.8rem; transition: 0.2s; }
+.tour-btn.skip { background: transparent; color: var(--text-dim); }
+.tour-btn.skip:hover { color: white; }
+.tour-btn.next { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4); }
+.tour-btn.next:hover { transform: translateY(-2px); }
+
+/* Flèche de la bulle (Optionnel, simpliste ici) */
+.tour-arrow { position: absolute; width: 12px; height: 12px; background: #1e293b; transform: rotate(45deg); border-left: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.1); }
+

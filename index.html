@@ -73,9 +73,9 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button class="icon-btn" onclick="window.UI.openCodex()">📖</button>
-                <button class="icon-btn" onclick="window.UI.showChallengeHub()" style="color:var(--gold); border:1px solid rgba(251, 191, 36, 0.3);">⚔️</button>
-                <button class="icon-btn" onclick="window.UI.openModal('statsModal')">📊</button>
+                <button class="icon-btn" id="btnCodex" onclick="window.UI.openCodex()">📖</button>
+                <button class="icon-btn" id="btnArena" onclick="window.UI.showChallengeHub()" style="color:var(--gold); border:1px solid rgba(251, 191, 36, 0.3);">⚔️</button>
+                <button class="icon-btn" id="btnStats" onclick="window.UI.openModal('statsModal')">📊</button>
                 <button class="icon-btn" id="btnSettings" onclick="window.UI.openModal('settingsModal')">⚙️</button>
             </div>
         </div>
@@ -202,7 +202,10 @@
         <div id="settingsChords" class="settings-grid"></div>
         <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Variations</h4>
         <div id="settingsInvs" class="settings-grid"></div>
-        <button class="cmd-btn" onclick="window.App.hardReset()" style="width:100%; margin-top:20px; background:rgba(239, 68, 68, 0.2); color:var(--error); padding:10px;">⚠️ Réinitialiser</button>
+        <button class="cmd-btn btn-listen" onclick="window.UI.openTutorial()" style="width:100%; margin-top:20px; padding:12px; border:1px solid var(--gold); color:var(--gold);">
+            🎓 Guide de l'Académie
+        </button>
+        <button class="cmd-btn" id="btnResetSave" onclick="window.App.hardReset()" style="width:100%; margin-top:20px; background:rgba(239, 68, 68, 0.2); color:var(--error); padding:10px;">⚠️ Réinitialiser</button>
     </div>
 </div>
 
@@ -378,7 +381,7 @@
         <div id="c-tab-join" class="challenge-tab-content" style="display:none;">
             <div style="text-align:center; margin-bottom:20px;">
                 <p style="color:var(--text-dim); font-size:0.9rem;">Entrez le code d'un défi pour commencer.</p>
-                <input type="text" id="challengeCodeInput" placeholder="EX: LUNDI-123" 
+                <input type="text" id="joinInput" placeholder="EX: LUNDI-123" 
                        style="background:rgba(0,0,0,0.3); border:1px solid var(--panel-border); color:white; padding:15px; border-radius:12px; font-weight:800; font-size:1.2rem; text-align:center; width:100%; text-transform:uppercase; letter-spacing:2px; margin-top:10px;">
                 
                 <div style="display:flex; gap:10px; margin-top:15px;">
@@ -398,9 +401,8 @@
             </div>
         </div>
 
-        <!-- TAB CREATE (V5.1 - STUDIO LINK) -->
         <div id="c-tab-create" class="challenge-tab-content" style="display:none; text-align:center; padding-top:20px;">
-            <button class="cmd-btn btn-action" style="width:100%; padding:20px; background:linear-gradient(135deg, #ec4899, #8b5cf6);" onclick="window.App.setMode('studio'); window.UI.closeModals();">
+            <button class="cmd-btn btn-action" id="btnOpenStudio" style="width:100%; padding:20px; background:linear-gradient(135deg, #ec4899, #8b5cf6);" onclick="window.App.setMode('studio'); window.UI.closeModals();">
                 <span style="display:block; font-size:2rem; margin-bottom:10px;">🎹</span>
                 <span style="display:block; font-size:1.2rem;">OUVRIR LE STUDIO</span>
                 <span style="display:block; font-size:0.8rem; opacity:0.8; font-weight:400; margin-top:5px;">Composez votre propre dictée</span>
@@ -414,21 +416,23 @@
 
             <p style="color:var(--text-dim); font-size:0.8rem; margin-bottom:15px;">Création automatique basée sur vos réglages.</p>
             
-            <div class="create-form-group">
-                <label>Nom du Défi (Seed)</label>
-                <input type="text" id="createSeedInput" placeholder="Ex: CONTRÔLE-CM2" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--panel-border); background:rgba(0,0,0,0.3); color:white; font-weight:700; text-transform:uppercase;">
-            </div>
-
-            <div class="create-form-group" style="margin-top:15px;">
-                <label>Longueur</label>
-                <div style="display:flex; gap:10px; margin-top:5px;">
-                    <button class="mode-opt active" onclick="window.UI.setCreateLength(10)">10</button>
-                    <button class="mode-opt" onclick="window.UI.setCreateLength(20)">20</button>
-                    <button class="mode-opt" onclick="window.UI.setCreateLength(50)">50</button>
+            <div id="createControls">
+                <div class="create-form-group">
+                    <label>Nom du Défi (Seed)</label>
+                    <input type="text" id="createSeedInput" placeholder="Ex: CONTRÔLE-CM2" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--panel-border); background:rgba(0,0,0,0.3); color:white; font-weight:700; text-transform:uppercase;">
                 </div>
-            </div>
 
-            <button class="cmd-btn btn-action" style="width:100%; margin-top:30px;" onclick="window.UI.createChallengeAction()">Générer le Code</button>
+                <div class="create-form-group" style="margin-top:15px;">
+                    <label>Longueur</label>
+                    <div style="display:flex; gap:10px; margin-top:5px;">
+                        <button class="mode-opt active" onclick="window.UI.setCreateLength(10)">10</button>
+                        <button class="mode-opt" onclick="window.UI.setCreateLength(20)">20</button>
+                        <button class="mode-opt" onclick="window.UI.setCreateLength(50)">50</button>
+                    </div>
+                </div>
+
+                <button class="cmd-btn btn-action" style="width:100%; margin-top:30px;" onclick="window.UI.createChallengeAction()">Générer le Code</button>
+            </div>
         </div>
     </div>
 </div>
@@ -436,6 +440,39 @@
 <!-- RAPPORT DEFI (V5.0) -->
 <div class="modal-overlay" id="challengeReportModal">
     <!-- Injected by JS -->
+</div>
+
+<div class="modal-overlay" id="modalTutorial">
+    <div class="modal" style="max-width: 450px; text-align: center; padding: 30px 20px;">
+        <div style="font-size:3.5rem; margin-bottom:15px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));" id="tutoIcon">🏛️</div>
+        <h2 id="tutoTitle" style="color:var(--gold); margin:0 0 15px 0; text-transform:uppercase; letter-spacing:1px; font-size:1.4rem;">Bienvenue</h2>
+        <p id="tutoText" style="color:#cbd5e1; min-height: 80px; line-height:1.6; font-size:0.95rem; font-weight:400;">
+            </p>
+        
+        <div style="display:flex; justify-content:center; gap:10px; margin:25px 0;">
+            <div class="tuto-dot active" id="dot-0"></div>
+            <div class="tuto-dot" id="dot-1"></div>
+            <div class="tuto-dot" id="dot-2"></div>
+        </div>
+
+        <button class="cmd-btn btn-action" id="tutoBtn" onclick="window.UI.nextTutoStep()" style="width:100%; padding:15px; background:var(--primary); font-size:0.9rem;">SUIVANT</button>
+    </div>
+</div>
+
+<div id="tour-spotlight" class="tour-spotlight"></div>
+<div id="tour-tooltip" class="tour-tooltip">
+    <div id="tour-arrow" class="tour-arrow"></div>
+    <div class="tour-content">
+        <h3 id="tour-title">Titre</h3>
+        <p id="tour-desc">Description</p>
+        <div class="tour-footer">
+            <span id="tour-step-count">1/5</span>
+            <div style="display:flex; gap:10px;">
+                <button class="tour-btn skip" onclick="window.UI.endWalkthrough()">Passer</button>
+                <button class="tour-btn next" onclick="window.UI.nextWalkthroughStep()">Suivant</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script type="module" src="./main.js"></script>

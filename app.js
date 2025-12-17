@@ -120,6 +120,14 @@ export const App = {
         window.UI.updateHeader();
         window.UI.updateModeLocks();
         Piano.init(); 
+        // --- AJOUT : LANCEMENT AUTO DU TUTORIEL ---
+        // --- LANCEMENT AUTO DU WALKTHROUGH ---
+        // On change la clé pour forcer le redémarrage du tuto V5.4 pour tout le monde
+        if (!localStorage.getItem('tuto_seen_v5.4')) {
+            setTimeout(() => {
+                window.UI.startWalkthrough();
+            }, 1000);
+        }
     },
 
     setUsername(val) {
