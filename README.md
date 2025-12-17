@@ -11,6 +11,36 @@ Harmonist Academy est une **Single Page Application (SPA)** gamifiée conçue po
 
 ---
 
+## v5.4 - Update "Pocket Academy" (Mobile & PWA) 📱
+
+Cette mise à jour majeure transforme Harmonist Academy en une application installable (PWA) et améliore considérablement l'expérience mobile.
+
+### ✨ Nouveautés
+* **Application Mobile (PWA) :** Vous pouvez désormais installer l'app sur votre écran d'accueil (iOS/Android).
+    * *Fonctionnement hors-ligne (Offline-ready).*
+    * *Mode plein écran immersif (plus de barre de navigateur).*
+    * *Chargement instantané grâce au nouveau système de cache.*
+* **Smart Settings (Paramètres Intelligents) :** Modifier la difficulté (ajouter/retirer des accords) ne réinitialise plus systématiquement votre série de victoires (Streak). Le jeu s'adapte dynamiquement.
+
+### 🎨 Interface & UX
+* **Optimisation Mobile de l'Arène :** Refonte complète de la barre de navigation de l'Arène pour les petits écrans (Grille tactile).
+* **Scrollbars Modernes :** Suppression des barres de défilement disgracieuses. Navigation fluide et invisible sur mobile, minimaliste sur Desktop.
+* **Correctifs Tuto :** Amélioration de la stabilité du tutoriel d'accueil.
+
+---
+
+## v5.3 - Update "Orientation Day" (Interactive Tuto) 🎓
+
+Cette mise à jour s'est concentrée sur l'expérience utilisateur (UX) et l'accueil des nouveaux élèves, rendant l'interface riche de l'Académie plus accessible.
+
+### ✨ Nouveautés
+* **Tutoriel Interactif (Walkthrough Engine) :** Implémentation d'un système de visite guidée dynamique.
+    * *Spotlight System :* Un projecteur met en surbrillance les éléments actifs de l'interface (Zone d'écoute, Contrôles, Arène).
+    * *Bulle Contextuelle :* Des explications précises s'affichent à côté de chaque élément, s'adaptant intelligemment à la position de l'écran.
+* **Navigation Guidée :** Le tutoriel prend le contrôle de la navigation pour ouvrir les menus (Paramètres, Arène) et montrer à l'utilisateur où se trouvent les fonctionnalités clés sans qu'il se perde.
+
+---
+
 ## 🎹 NOUVEAU DANS LA V5.1 : LE STUDIO DE CRÉATION
 
 Cette mise à jour introduit un outil de composition pédagogique permettant aux professeurs et aux élèves de créer leurs propres dictées musicales.

@@ -18,6 +18,25 @@
     --radius: 16px;
 }
 
+/* --- NO SCROLLBARS (Version Totale) --- */
+
+/* Pour Chrome, Safari, Edge, Opera */
+::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Pour Firefox */
+* {
+    scrollbar-width: none !important;
+}
+
+/* Pour IE/Legacy */
+body {
+    -ms-overflow-style: none;
+}
+
 * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
 
 body {
@@ -1270,3 +1289,64 @@ input:checked + .slider { background: var(--primary); } input:checked + .slider:
 /* Flèche de la bulle (Optionnel, simpliste ici) */
 .tour-arrow { position: absolute; width: 12px; height: 12px; background: #1e293b; transform: rotate(45deg); border-left: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.1); }
 
+/* --- 2. CORRECTION DÉBORDEMENT MODALES --- */
+.modal-content {
+    /* Ces 3 lignes règlent le problème d'affichage */
+    max-height: 85vh;       /* Laisse une marge de sécurité en haut et en bas */
+    overflow-y: auto;       /* Active le scroll vertical uniquement si nécessaire */
+    overflow-x: hidden;     /* INTERDIT le scroll horizontal (coupe ce qui dépasse) */
+
+    /* Optimisation visuelle */
+    box-sizing: border-box;
+    padding-right: 2px;     /* Évite que le texte colle à la barre de défilement */
+}
+
+/* --- OPTIMISATION MOBILE ARÈNE (Version Finale) --- */
+@media (max-width: 600px) {
+    /* 1. Les Onglets Principaux (Classement, Défi...) */
+    .lb-sub-nav {
+        flex-wrap: wrap; 
+        height: auto;
+        justify-content: center;
+        padding: 5px 0;
+        gap: 8px; 
+        /* CRUCIAL : On pousse le contenu du dessous */
+        margin-bottom: 25px; 
+        border-bottom: none; /* Plus joli sans la ligne en mode grille */
+    }
+
+    .lb-period-btn {
+        /* FORCE 2 BOUTONS PAR LIGNE (45% chq + gap) */
+        flex: 1 0 45%; 
+        
+        text-align: center;
+        display: flex; justify-content: center; align-items: center;
+        
+        /* Texte plus petit et bouton plus compact */
+        font-size: 0.75rem;
+        padding: 8px 4px;
+        border-radius: 8px;
+        
+        /* Petit fond pour mieux voir les boutons tactiles */
+        background: rgba(255,255,255,0.03); 
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    /* Style actif pour les boutons mobiles (encadré doré) */
+    .lb-period-btn.active {
+        background: rgba(251, 191, 36, 0.1);
+        border-color: var(--gold);
+    }
+    /* On retire la barre de soulignement desktop qui fait bizarre sur 2 lignes */
+    .lb-period-btn.active::after {
+        display: none; 
+    }
+
+    /* 2. Les Filtres du dessous (Chrono, Sprint, Inverse) */
+    #c-tab-arcade .mode-opt {
+        font-size: 0.7rem; /* Un peu plus petit */
+        padding: 6px 2px;  /* Moins large pour que les 3 tiennent bien */
+        flex: 1;           /* Distribution équitable */
+        white-space: nowrap;
+    }
+}
