@@ -14,6 +14,11 @@ export const UI = {
     lbState: { mode: 'chrono', period: 'weekly' },
     createConfig: { length: 10 }, 
 
+    // --- AJOUT ICI ---
+    badgeQueue: [],      // Liste d'attente
+    isBadgeBusy: false,  // Est-ce qu'un badge est déjà affiché ?
+    // -----------------
+
     // --- CHALLENGE HUB (V5.0) ---
     
     showChallengeHub() {
@@ -937,7 +942,7 @@ export const UI = {
                 const session = window.App.session;
                 let contextId = session.selC || (session.chord ? session.chord.type.id : d.settings.activeC[0]);
                 const chordObj = DB.sets.laboratory.chords.find(c => c.id === contextId);
-                const labConfig = { leftTitle: "8ve CONTRACTÉE >|<", rightTitle: "8ve DILATÉE <|>", leftColor: "var(--warning)", rightColor: "var(--primary)" };
+                const labConfig = { leftTitle: "8ve Diminuée >|<", rightTitle: "8ve Augmentée <|>", leftColor: "var(--warning)", rightColor: "var(--primary)" };
 
                 if (contextId === 'trichord') { labConfig.leftTitle = "DISSONANCE"; labConfig.rightTitle = "COULEUR"; } 
                 else if (contextId === 'sus_sym') { labConfig.leftTitle = "TRIADES SUS"; labConfig.rightTitle = "EMPILEMENTS"; }
@@ -1100,8 +1105,45 @@ export const UI = {
     
     showToast(msg) { const t = document.getElementById('rankToast'); t.innerText = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); },
     
-    showBadge(b) { const el = document.getElementById('badgeRibbon'); const tit = document.getElementById('badgeRibbonTitle'); tit.innerText = b.title; document.querySelector('.badge-ribbon-icon').innerText = b.icon; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 4000); },
-    
+    showBadge(b) { 
+        // 1. On ajoute le badge à la file d'attente
+        this.badgeQueue.push(b);
+        // 2. On tente de traiter la file
+        this.processBadgeQueue();
+    },
+
+    processBadgeQueue() {
+        // Si déjà occupé ou file vide, on ne fait rien
+        if (this.isBadgeBusy || this.badgeQueue.length === 0) return;
+
+        // On verrouille et on prend le premier badge
+        this.isBadgeBusy = true;
+        const b = this.badgeQueue.shift();
+
+        // Affichage (Code original)
+        const el = document.getElementById('badgeRibbon'); 
+        const tit = document.getElementById('badgeRibbonTitle'); 
+        tit.innerText = b.title; 
+        document.querySelector('.badge-ribbon-icon').innerText = b.icon; 
+        
+        // Animation Entrée
+        el.classList.add('show'); 
+        
+        // Gestion de la sortie et du suivant
+        setTimeout(() => { 
+            // Animation Sortie
+            el.classList.remove('show'); 
+            
+            // On attend la fin de l'animation CSS (0.6s) avant de lancer le suivant
+            setTimeout(() => {
+                this.isBadgeBusy = false;
+                // Appel récursif pour voir s'il en reste
+                this.processBadgeQueue();
+            }, 600); 
+            
+        }, 4000); // Durée d'affichage (4s)
+    },
+        
     openBadgeLightbox(b) {
         let el = document.getElementById('badgeOverlay');
         if (!el) { el = document.createElement('div'); el.id = 'badgeOverlay'; el.className = 'modal-overlay badge-lightbox'; document.body.appendChild(el); el.onclick = () => { el.classList.remove('open'); }; }
@@ -1173,8 +1215,22 @@ export const UI = {
                     const subTitle = document.createElement('h3'); subTitle.className = 'codex-section-title'; subTitle.style.marginTop = '20px'; subTitle.style.color = 'var(--cyan)'; subTitle.innerText = `Analyse : ${parent.name}`; grid.appendChild(subTitle);
                     if (parent.configs) {
                         parent.configs.forEach(conf => {
-                            const card = document.createElement('div'); card.className = "codex-card unlocked landscape"; card.style.borderColor = "var(--cyan)"; let symbolHtml = `<span style="font-size:1.5rem">${conf.sub}</span>`;
-                            card.innerHTML = `<div class="codex-holo"></div><div class="codex-card-symbol landscape">${symbolHtml}</div><div class="codex-card-title">${conf.name}</div>`;
+                            const card = document.createElement('div'); 
+                            card.className = "codex-card unlocked landscape"; 
+                            card.style.borderColor = "var(--cyan)"; 
+                            
+                            // MAGIE ICI : On découpe "6m - 3m" ou "4J + Tr" pour l'empiler
+                            // Le regex / [-+] / coupe sur " - " ou " + "
+                            const parts = conf.sub.split(/ [-+] /);
+                            let symbolHtml = conf.sub; // Fallback
+                            
+                            if (parts.length === 2) {
+                                // On génère le HTML vertical (classe figured-bass déjà dans votre CSS)
+                                symbolHtml = `<div class="figured-bass" style="font-size:2rem; line-height:0.9;"><span>${parts[0]}</span><span>${parts[1]}</span></div>`;
+                            }
+
+                            card.innerHTML = `<div class="codex-holo"></div><div class="codex-card-symbol landscape">${symbolHtml}</div><div class="codex-card-title" style="font-size:0.7rem;">${conf.name}</div>`;
+                            
                             card.onclick = () => { const synth = { id: `lab_${parent.id}_${conf.id}`, isSyntheticLab: true, name: conf.name, sub: `${parent.tech} / ${conf.sub}`, iv: conf.iv, parent: parent }; this.showCodexCard(synth, setKey); Audio.sfx('card_open'); }; grid.appendChild(card);
                         });
                     }
@@ -1357,22 +1413,104 @@ export const UI = {
         if(d.currentSet === 'jazz' || d.currentSet === 'laboratory') document.getElementById('rowToggleOpen').style.display='none'; else document.getElementById('rowToggleOpen').style.display='flex';
         const gen = (arr, type, dest) => { document.getElementById(dest).innerHTML = arr.map(x => { const active = (type==='c'?d.settings.activeC:d.settings.activeI).includes(x.id); let locked = window.App.isLocked(x.id); let cls = `setting-chip ${active?'active':''} ${locked?'locked':''}`; const visual = this.getLabel(x, type); return `<div class="${cls}" onclick="window.App.toggleSetting('${type}', ${typeof x.id==='string'?"'"+x.id+"'":x.id})">${visual}</div>`; }).join(''); }; 
         gen(DB.chords, 'c', 'settingsChords'); 
-        if(d.currentSet === 'laboratory') { const labOpts = [ {id: 0, name: "Pos. Alpha (0)", corr: "Config 0"}, {id: 1, name: "Pos. Beta (1)", corr: "Config 1"}, {id: 2, name: "Pos. Gamma (2)", corr: "Config 2"}, {id: 3, name: "Pos. Delta (3)", corr: "Config 3"} ]; gen(labOpts, 'i', 'settingsInvs'); } else { gen(DB.currentInvs, 'i', 'settingsInvs'); }
+        if(d.currentSet === 'laboratory') { const labOpts = [ {id: 0, name: "Pos. Alpha (0)", corr: "d8↳/Chrom/Sus2"}, {id: 1, name: "Pos. Beta (1)", corr: "d8↗/Vien/Sus4"}, {id: 2, name: "Pos. Gamma (2)", corr: "a8↳/1t/4al"}, {id: 3, name: "Pos. Delta (3)", corr: "a8↗/Octat/5tal"} ]; gen(labOpts, 'i', 'settingsInvs'); } else { gen(DB.currentInvs, 'i', 'settingsInvs'); }
     },
     
     renderProfile() {
         const d = window.App.data;
-        const r = DB.ranks[Math.min(d.lvl-1, DB.ranks.length-1)];
-        document.getElementById('profileAvatar').innerText = r.i; document.getElementById('profileName').innerText = r.t; document.getElementById('profileRank').innerText = `Niveau ${d.lvl}`;
+        const ranks = DB.ranks;
+        const currentLvlIdx = Math.min(d.lvl - 1, ranks.length - 1);
+        const r = ranks[currentLvlIdx];
+        
+        // 1. HEADER INFO
+        document.getElementById('profileAvatar').innerText = r.i; 
+        document.getElementById('profileName').innerText = r.t; // Le titre actuel est en haut
+        
+        // Stats
+        document.getElementById('profileTotal').innerText = window.App.session.globalTot; 
+        const acc = window.App.session.globalTot ? Math.round((window.App.session.globalOk/window.App.session.globalTot)*100) : 0; 
+        document.getElementById('profileAcc').innerText = acc + "%";
+        
+        // XP Bar & Text
+        const pct = Math.min(100, (d.xp / d.next) * 100); 
+        document.getElementById('profileXpBar').style.width = pct + "%";
+        document.getElementById('xpCurrent').innerText = Math.floor(d.xp);
+        document.getElementById('xpNext').innerText = d.lvl >= 20 ? "MAX" : Math.floor(d.next);
+
+        // Lore & Maîtrise (Refonte)
         const lore = this.getLoreState(d.mastery);
-        const techContainer = document.getElementById('profileMasteryName'); const loreContainer = document.getElementById('profileStars');
-        techContainer.innerHTML = `<span class="mastery-tech-id">[${lore.rankLabel}]</span> <span class="mastery-tech-stars">${lore.starsHTML}</span>`; techContainer.className = 'profile-tech-row'; loreContainer.innerHTML = "";
-        const modal = document.getElementById('modalProfile'); modal.classList.add('tier-dynamic'); modal.style.setProperty('--tier-color', lore.color); modal.style.setProperty('--tier-shadow', lore.shadow);
-        let locEl = document.getElementById('profileLocation'); if(!locEl) { locEl = document.createElement('div'); locEl.id = 'profileLocation'; locEl.className = 'profile-location-badge'; document.querySelector('.profile-header').appendChild(locEl); }
-        if(lore.place) { locEl.style.display = 'inline-block'; locEl.innerHTML = `🗺️ ${lore.place}`; locEl.style.color = lore.color; locEl.style.borderColor = lore.color; } else { locEl.style.display = 'none'; }
-        let footerLore = document.getElementById('profileFooterLore'); if(!footerLore) { footerLore = document.createElement('div'); footerLore.id = 'profileFooterLore'; footerLore.className = 'profile-footer-lore'; document.querySelector('#modalProfile .modal').appendChild(footerLore); } footerLore.innerHTML = `Rang : <span style="color:var(--tier-color); font-weight:700;">${lore.fullName}</span>`;
-        const pct = Math.min(100, (d.xp / d.next) * 100); document.getElementById('profileXpBar').style.width = pct + "%"; document.getElementById('profileXpVal').innerText = Math.floor(d.xp) + " XP"; document.getElementById('profileNextVal').innerText = d.lvl >= 20 ? "MAX" : (Math.floor(d.next) + " XP"); document.getElementById('profileTotal').innerText = window.App.session.globalTot; const acc = window.App.session.globalTot ? Math.round((window.App.session.globalOk/window.App.session.globalTot)*100) : 0; document.getElementById('profileAcc').innerText = acc + "%";
-        const btn = document.getElementById('btnPrestige'); if(d.lvl >= 20) { const nextM = d.mastery + 1; const nextLore = this.getLoreState(nextM); const destName = nextLore.place ? nextLore.place : "L'Inconnu"; btn.disabled = false; btn.removeAttribute('disabled'); document.getElementById('prestigeNextName').innerText = `Vers : ${destName}`; btn.classList.remove('locked'); } else { btn.disabled = true; btn.setAttribute('disabled', 'true'); document.getElementById('prestigeNextName').innerText = "Niveau 20 Requis"; }
+        
+        // On récupère l'icône du matériau dans LORE_MATERIALS (data.js)
+        // lore.material contient le nom, on doit retrouver l'objet complet ou on l'ajoute dans getLoreState
+        // Pour faire simple, on va utiliser l'index de maitrise pour retrouver l'icone dans data.js
+        const matIdx = Math.floor((d.mastery > 0 ? d.mastery - 1 : 0) / 5);
+        // Fallback icone si hors limites
+        const matIcon = (LORE_MATERIALS[matIdx] && LORE_MATERIALS[matIdx].icon) ? LORE_MATERIALS[matIdx].icon : '🎓';
+        
+        document.getElementById('masteryIcon').innerText = matIcon;
+        document.getElementById('masteryLabel').innerText = `Maîtrise ${d.mastery}`;
+        document.getElementById('profileStars').innerHTML = lore.starsHTML;
+
+        // Couleurs Dynamiques
+        const header = document.querySelector('.profile-header-compact'); 
+        const fill = document.getElementById('profileXpBar');
+        const iconBadge = document.getElementById('masteryIcon');
+        
+        if(header) {
+            header.style.borderBottomColor = lore.color;
+            // On applique la couleur du rang à la barre XP et aux textes
+            header.style.setProperty('--tier-color', lore.color);
+            header.style.setProperty('--tier-shadow', lore.shadow);
+            
+            document.querySelector('.profile-avatar-small').style.borderColor = lore.color;
+            document.querySelector('.profile-avatar-small').style.boxShadow = `0 0 15px ${lore.shadow}`;
+            
+            fill.style.backgroundColor = lore.color;
+            fill.style.boxShadow = `0 0 10px ${lore.shadow}`;
+            
+            iconBadge.style.color = lore.color;
+            iconBadge.style.borderColor = lore.color; // Si on veut ajouter une bordure
+        }
+
+        // 2. TIMELINE GENERATION (Correction Doublon)
+        const container = document.getElementById('levelTimeline');
+        if(container) {
+            container.innerHTML = '';
+            
+            // CORRECTION ICI : On commence à currentLvlIdx - 1
+            // On affiche uniquement le PASSÉ. Le présent est dans le header.
+            for(let i = currentLvlIdx - 1; i >= 0; i--) {
+                const rank = ranks[i];
+                const node = document.createElement('div');
+                node.className = 'tl-node'; // Plus de classe 'current' car le courant est en haut
+                
+                node.innerHTML = `
+                    <div class="tl-icon">${rank.i}</div>
+                    <div class="tl-content">
+                        <div style="font-size:0.6rem; text-transform:uppercase; color:var(--text-dim); font-weight:900;">Niveau ${i+1}</div>
+                        <div style="font-weight:700; color:var(--text-dim); line-height:1.2;">${rank.t}</div>
+                    </div>
+                `;
+                container.appendChild(node);
+            }
+            
+            // Message si niveau 1 (Vide en dessous)
+            if (currentLvlIdx === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-dim); font-style:italic; font-size:0.8rem;">Le début de votre voyage...</div>`;
+            }
+        }
+
+        // 3. PRESTIGE (Inchangé)
+        const btn = document.getElementById('btnPrestige'); 
+        if(d.lvl >= 20) { 
+            const nextM = d.mastery + 1; const nextLore = this.getLoreState(nextM); 
+            const destName = nextLore.place ? nextLore.place : "L'Inconnu"; 
+            btn.disabled = false; btn.removeAttribute('disabled'); btn.classList.remove('locked');
+            document.getElementById('prestigeNextName').innerText = `Vers : ${destName}`; 
+        } else { 
+            btn.disabled = true; btn.setAttribute('disabled', 'true'); 
+            document.getElementById('prestigeNextName').innerText = "Niveau 20 Requis"; 
+        }
     },
 
     renderStats() {

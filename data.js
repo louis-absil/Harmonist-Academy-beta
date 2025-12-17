@@ -88,19 +88,19 @@ export const DB = {
                 { 
                     id: 'struct_36', name: 'Structure 3-6', tech: '3/6', sub: 'Struct. A', unlockLvl: 1,
                     configs: [
-                        { id: 0, name: 'Contractée Basse', sub: '6m - 3m', iv: [0,3,11] }, // 3m + 6m = 3 + 8 = 11
-                        { id: 1, name: 'Contractée Haute', sub: '3m - 6m', iv: [0,8,11] }, // 0-8 is m6, 8-11 is m3
-                        { id: 2, name: 'Dilatée Basse', sub: '6M - 3M', iv: [0,4,13] },    // 0-4 is M3, 4-13 is M6 (9st)
-                        { id: 3, name: 'Dilatée Haute', sub: '3M - 6M', iv: [0,9,13] }     // 0-9 is M6, 9-13 is M3
+                        { id: 0, name: '8ve dim (3m↓)', sub: '6m - 3m', iv: [0,3,11] },
+                        { id: 1, name: '8ve dim (3m↑)', sub: '3m - 6m', iv: [0,8,11] },
+                        { id: 2, name: '8ve aug (3M↓)', sub: '6M - 3M', iv: [0,4,13] },
+                        { id: 3, name: '8ve aug (3M↑)', sub: '3M - 6M', iv: [0,9,13] }
                     ]
                 },
                 { 
                     id: 'struct_45tr', name: 'Structure 4/5-Tr', tech: '4/5-Tr', sub: 'Struct. B', unlockLvl: 5,
                     configs: [
-                        { id: 0, name: 'Pos. Basse 4', sub: '4J + Tr', iv: [0,5,11] }, // 0-5 (4J), 5-11 (Tr)
-                        { id: 1, name: 'Pos. Haute 4', sub: 'Tr + 4J', iv: [0,6,11] }, // 0-6 (Tr), 6-11 (4J)
-                        { id: 2, name: 'Pos. Basse 5', sub: '5J + Tr', iv: [0,7,13] }, // 0-7 (5J), 7-13 (Tr)
-                        { id: 3, name: 'Pos. Haute 5', sub: 'Tr + 5J', iv: [0,6,13] }  // 0-6 (Tr), 6-13 (5J)
+                        { id: 0, name: '8ve dim (4J↓)', sub: '4J + Tr', iv: [0,5,11] },
+                        { id: 1, name: '8ve dim (4J↑)', sub: 'Tr + 4J', iv: [0,6,11] },
+                        { id: 2, name: '8ve aug (5J↓)', sub: '5J + Tr', iv: [0,7,13] },
+                        { id: 3, name: '8ve aug (5J↑)', sub: 'Tr + 5J', iv: [0,6,13] }
                     ]
                 },
                 { 
@@ -419,7 +419,7 @@ export const COACH_DB = {
         "Votre cerveau anticipe la couleur avant même la fin de l'accord.",
         "Vous êtes en état de flux (Flow). Ne forcez rien, laissez venir.",
         "Vos connexions neuronales se renforcent à chaque bonne réponse.",
-        "Vous ne réfléchissez plus, vous faites confiance à ton intuition.",
+        "Vous ne réfléchissez plus, vous faites confiance à votre intuition.",
         "Excellent. Gardez cette détente, c'est là que réside la justesse."
     ],
     // Fast but inaccurate

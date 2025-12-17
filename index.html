@@ -209,26 +209,62 @@
 <!-- PROFILE -->
 <div class="modal-overlay" id="modalProfile">
     <div class="modal">
-        <div style="display:flex; justify-content:flex-end;">
-            <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+        <div style="position:absolute; top:15px; right:15px; z-index:50;">
+            <span style="cursor:pointer; font-size:1.5rem; background:rgba(0,0,0,0.5); width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid rgba(255,255,255,0.1);" onclick="window.UI.closeModals()">✕</span>
         </div>
-        <div class="profile-header">
-            <div class="profile-avatar" id="profileAvatar">🎓</div>
-            <h2 class="profile-title" id="profileName">Harmoniste</h2>
-            <div class="profile-subtitle" id="profileRank">Niveau 1</div>
-            <div class="profile-subtitle" id="profileMasteryName" style="color:var(--text); margin-top:2px; font-weight:400; font-size:0.8rem;"></div>
-            <div class="mastery-stars" id="profileStars" style="justify-content:center; margin-top:5px; font-size:1.2rem;"></div>
+
+        <div class="profile-header-compact">
+            <div class="profile-top-row">
+                <div class="profile-avatar-small" id="profileAvatar">🎓</div>
+                <div class="profile-info-compact">
+                    <div style="font-weight:900; font-size:1.1rem; line-height:1.1;" id="profileName">...</div>
+                    <div class="mastery-meta-row">
+                        <div class="mastery-icon-badge" id="masteryIcon">💎</div>
+                        <div id="profileStars" style="display:flex; gap:1px; font-size:0.9rem;"></div>
+                        <span id="masteryLabel">Maîtrise 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-xp-track">
+                <div class="profile-xp-fill" id="profileXpBar"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-top:-4px; margin-bottom:10px;">
+                <span id="xpCurrent">0 XP</span>
+                <span id="xpNext">100 XP</span>
+            </div>
+
+            <div class="profile-stats-grid">
+                <div class="mini-stat-box">
+                    <div class="mini-stat-icon">📊</div>
+                    <div class="mini-stat-info">
+                        <span class="mini-stat-val" id="profileAcc">0%</span>
+                        <span class="mini-stat-label">Précision</span>
+                    </div>
+                </div>
+                <div class="mini-stat-box">
+                    <div class="mini-stat-icon">🎹</div>
+                    <div class="mini-stat-info">
+                        <span class="mini-stat-val" id="profileTotal">0</span>
+                        <span class="mini-stat-label">Joués</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline-connector-top"></div>
         </div>
-        <div class="xp-big-container"><div class="xp-big-fill" id="profileXpBar"></div></div>
-        <div class="xp-text"><span id="profileXpVal">0 XP</span><span id="profileNextVal">100 XP</span></div>
-        <div class="stat-grid-profile">
-            <div class="stat-card"><h3 id="profileTotal">0</h3><p>Accords Joués</p></div>
-            <div class="stat-card"><h3 id="profileAcc">0%</h3><p>Précision Globale</p></div>
+
+        <div id="levelTimeline" class="timeline-scroll-area">
+            </div>
+
+        <div class="profile-footer-fixed" id="prestigeSection">
+            <button class="btn-prestige" id="btnPrestige" onclick="window.App.passMastery()" disabled>
+                <span class="shiny"></span>
+                <span class="prestige-main-txt">✨ Valider la Maîtrise</span>
+                <span class="prestige-sub-txt" id="prestigeNextName">Niveau 20 Requis</span>
+            </button>
         </div>
-        <div id="prestigeSection">
-            <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:10px; line-height:1.4;">Atteins le <strong>Niveau 20</strong> pour passer un cap de maîtrise.</p>
-            <button class="btn-prestige" id="btnPrestige" onclick="window.App.passMastery()" disabled><span class="shiny"></span><span class="prestige-main-txt">✨ Valider la Maîtrise</span><span class="prestige-sub-txt" id="prestigeNextName">Vers : Le Club</span></button>
-        </div>
+
     </div>
 </div>
 
