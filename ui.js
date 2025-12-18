@@ -2056,4 +2056,3 @@ export const UI = {
         const oldDetail = document.getElementById('badgeDetail'); if(oldDetail) oldDetail.style.display = 'none';
     }
 };
-

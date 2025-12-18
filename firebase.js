@@ -19,25 +19,57 @@ const ZOMBIE_TIMEOUT = 90 * 24 * 60 * 60 * 1000;
 export const Cloud = {
     initialized: false,
 
-    init() {
+    async init(onLoginCallback) {
         if (this.initialized) return;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            provider = new GoogleAuthProvider(); // <--- LIGNE À AJOUTER
-            db = getFirestore(app);
 
-            onAuthStateChanged(auth, (user) => {
+        try {
+            // 1. Initialisation des services (Blindage)
+            if (!app) app = initializeApp(firebaseConfig);
+            if (!auth) auth = getAuth(app);
+            if (!db) db = getFirestore(app);
+
+            this.initialized = true;
+
+            // 2. Écouteur d'authentification
+            onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userUid = user.uid;
-                    console.log("🟢 Cloud Connecté:", userUid);
+                    console.log("🔥 Session active :", user.isAnonymous ? "Invité" : "Google", userUid);
+
+                    let cloudData = null;
+
+                    // 3. Si c'est un compte Google, on va chercher les données
+                    if (!user.isAnonymous) {
+                        try {
+                            const docRef = doc(db, "users", userUid);
+                            const docSnap = await getDoc(docRef);
+                            
+                            if (docSnap.exists()) {
+                                console.log("📥 Données Cloud trouvées");
+                                cloudData = docSnap.data();
+                            }
+                        } catch (e) {
+                            console.error("Erreur récupération données:", e);
+                        }
+                    }
+
+                    // 4. C'EST ICI QUE TOUT SE JOUE :
+                    // On appelle le callback fourni par main.js en lui passant l'utilisateur ET ses données
+                    if (onLoginCallback) {
+                        onLoginCallback(user, cloudData);
+                    }
+
                 } else {
-                    signInAnonymously(auth).catch((e) => console.error("Auth Fail:", e));
+                    // 5. Fallback Invité (Restauré de ton ancien code)
+                    console.log("⚪ Pas de session, création compte invité...");
+                    signInAnonymously(auth).catch((error) => {
+                        console.error("Erreur Auth Anonyme:", error);
+                    });
                 }
             });
-            this.initialized = true;
+
         } catch (e) {
-            console.error("Firebase Init Error (Check Config):", e);
+            console.error("Erreur Init Firebase:", e);
         }
     },
 
@@ -343,6 +375,18 @@ export const Cloud = {
      * Écrase la session invité actuelle.
      */
     async login() {
+        // --- CORRECTIF SÉCURITÉ ---
+        // On s'assure que 'auth' et 'provider' sont bien définis avant de lancer la popup
+        if (!auth) {
+            console.warn("⚠️ Auth non détecté dans login, tentative d'initialisation forcée...");
+            if (!app) app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+        }
+        if (!provider) {
+            provider = new GoogleAuthProvider();
+        }
+        // ---------------------------
+
         try {
             // On force la popup Google classique
             const result = await signInWithPopup(auth, provider);

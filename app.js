@@ -60,7 +60,23 @@ export const App = {
     rng() { return Math.random(); },
 
     init() {
-        Cloud.init();
+        // --- MODIFICATION HYBRIDE ---
+        // On initialise Firebase avec un callback qui recevra (user, cloudData)
+        Cloud.init((user, cloudData) => {
+            if (user) {
+                // Si on a des données du Cloud, on synchronise
+                if(cloudData) {
+                    this.syncFromCloud(cloudData);
+                }
+                
+                // Si la modale Paramètres est ouverte, on la rafraîchit pour afficher "Certifié"
+                // C'est ça qui corrige ton bug de modale qui ne se met pas à jour !
+                const settingsModal = document.getElementById('settingsModal');
+                if(settingsModal && settingsModal.classList.contains('open')) {
+                    window.UI.renderSettings();
+                }
+            }
+        });
         ChallengeManager.checkRescue(); 
 
         try {
@@ -133,6 +149,24 @@ export const App = {
         setTimeout(() => {
             this.checkIdentity();
         }, 2000);
+        
+        // --- AJOUT : SENTINELLES DE SAUVEGARDE (Smart Sync) ---
+        // 1. Mobile : Quand l'utilisateur change d'app ou va à l'écran d'accueil
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                this.forceCloudSave("Minimisation App");
+            }
+        });
+
+        // 2. Desktop : Quand l'utilisateur ferme l'onglet ou le navigateur
+        window.addEventListener('beforeunload', () => {
+            this.forceCloudSave("Fermeture Onglet");
+        });
+        
+        // 3. Mobile (Safari iOS) : Sécurité supplémentaire
+        window.addEventListener('pagehide', () => {
+            this.forceCloudSave("Page Hide");
+        });
     },
 
     async setUsername(val) {
@@ -426,7 +460,27 @@ export const App = {
     },
 
     hardReset() { if(confirm("Sûr ?")) { localStorage.removeItem('harmonist_v4_final'); location.reload(); } },
-    save() { localStorage.setItem('harmonist_v4_final', JSON.stringify(this.data)); Cloud.syncUserStats(this.data); },
+
+    // Sauvegarde Locale (Ultra rapide - Appelé à chaque point)
+    saveData() {
+        try {
+            localStorage.setItem('harmonist_v6_data', JSON.stringify(this.data));
+            // C'est tout ! On ne sauvegarde plus sur le Cloud ici.
+            // La sauvegarde Cloud se fera uniquement à la fermeture (forceCloudSave).
+        } catch(e) {
+            console.warn("Local Save Error", e);
+        }
+    },
+
+    // Sauvegarde Cloud (Appelé uniquement à la fermeture/minimisation)
+    forceCloudSave(reason = "Unknown") {
+        if (window.Cloud && window.Cloud.auth && window.Cloud.auth.currentUser) {
+            // On utilise sendBeacon si possible (plus fiable lors d'une fermeture)
+            // Mais comme on passe par Firestore SDK, on fait un appel standard
+            console.log(`☁️ Sauvegarde Cloud déclenchée (${reason})...`);
+            window.Cloud.saveUser(this.data).catch(e => console.error("Cloud Fail:", e));
+        }
+    },
 
     // Nouvelle fonction appelée automatiquement par UI.closeModals()
     onSettingsClosed() {
@@ -1140,5 +1194,45 @@ export const App = {
         if(sTot > 5 && (s.replayCount / sTot) > 2.5 && sAcc > 0.80) { return { t: "Confiance 🦁", m: rand(COACH_DB.patience) }; }
         if(s.streak >= 12) { return { t: "En Feu 🔥", m: rand(COACH_DB.streak) }; }
         return { t: "Rappel 🧠", m: rand(COACH_DB.theory) };
-    }
+    },
+
+    // Reçoit les données du Cloud au démarrage
+    syncFromCloud(cloudData) {
+        if (!cloudData) return;
+
+        console.log("☁️ Comparaison Cloud vs Local...", cloudData.xp, "vs", this.data.xp);
+
+        // LOGIQUE : Le score le plus élevé l'emporte (Fusion intelligente)
+        if (cloudData.xp > this.data.xp) {
+            console.log("✅ Cloud plus avancé : Mise à jour locale.");
+            
+            // On écrase les données locales avec celles du Cloud
+            this.data = { ...this.data, ...cloudData };
+            this.saveData(); // On met à jour le localStorage immédiatement
+            
+            // UI UPDATE : C'est ici qu'on règle ton problème d'affichage !
+            window.UI.updateXP(0);
+            window.UI.renderBadges();
+            
+            // Si la modale Paramètres est ouverte, on la rafraîchit pour virer "Invité"
+            if(document.getElementById('settingsModal').classList.contains('open')) {
+                window.UI.renderSettings();
+            }
+            
+            window.UI.showToast("☁️ Progression récupérée !");
+        } 
+        else if (this.data.xp > cloudData.xp) {
+            console.log("⚠️ Local plus avancé que le Cloud. Sauvegarde forcée.");
+            // Cas où on a joué hors ligne : on met à jour le Cloud tout de suite
+            this.forceCloudSave("Sync Démarrage (Local > Cloud)");
+        }
+        else {
+            console.log("🔄 Synchronisation parfaite (Égalité).");
+            // Même si égalité, on rafraîchit l'UI settings pour afficher "Certifié"
+            if(document.getElementById('settingsModal').classList.contains('open')) {
+                window.UI.renderSettings();
+            }
+        }
+    },
+    
 };
