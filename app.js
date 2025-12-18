@@ -517,11 +517,39 @@ export const App = {
     saveData() {
         try {
             localStorage.setItem('harmonist_v6_data', JSON.stringify(this.data));
-            // C'est tout ! On ne sauvegarde plus sur le Cloud ici.
-            // La sauvegarde Cloud se fera uniquement à la fermeture (forceCloudSave).
+            
+            // DÉCLENCHEMENT SAUVEGARDE CLOUD (Si connecté)
+            if (Cloud.auth && Cloud.auth.currentUser) {
+                this.triggerCloudSave();
+            }
         } catch(e) {
             console.warn("Local Save Error", e);
         }
+    },
+
+    // --- NOUVEAU SYSTÈME DE SAUVEGARDE (Debounce) ---
+    cloudSaveTimer: null,
+
+    triggerCloudSave(immediate = false) {
+        // Cas 1 : Sauvegarde Immédiate (Level Up, Quitter...)
+        if (immediate) {
+            if (this.cloudSaveTimer) clearTimeout(this.cloudSaveTimer);
+            console.log("☁️ Sauvegarde Cloud Forcée (Immédiate)");
+            this.data.lastSave = Date.now();
+            Cloud.saveUser(this.data);
+            return;
+        }
+
+        // Cas 2 : Sauvegarde Temporisée (Debounce 5s)
+        // Évite de spammer le serveur à chaque point gagné
+        if (this.cloudSaveTimer) return; // Une sauvegarde est déjà programmée
+
+        this.cloudSaveTimer = setTimeout(() => {
+            console.log("☁️ Sauvegarde Cloud Auto (Debounce)");
+            this.data.lastSave = Date.now();
+            Cloud.saveUser(this.data);
+            this.cloudSaveTimer = null;
+        }, 5000); 
     },
 
     // // Sauvegarde Cloud (Appelé uniquement à la fermeture/minimisation)
@@ -1088,7 +1116,7 @@ export const App = {
                 this.data.tempToday.tot++; this.data.tempToday.ok++;
                 if(this.data.tempToday.tot >= 5) { const todayStr = this.data.tempToday.date; const lastIdx = this.data.history.length - 1; if(lastIdx >= 0 && this.data.history[lastIdx].date === todayStr) { this.data.history[lastIdx] = { ...this.data.tempToday }; } else { this.data.history.push({ ...this.data.tempToday }); if(this.data.history.length > 7) this.data.history.shift(); } }
                 if(!this.session.hint) { this.session.streak++; window.UI.triggerCombo(this.session.streak); }
-                if (this.data.lvl < 20) { this.data.xp += totalGain; if(this.data.xp >= this.data.next) { this.data.xp -= this.data.next; this.data.lvl++; this.data.next = Math.floor(this.data.next * 1.2); levelUp = true; window.UI.showLevelUp(); window.UI.updateModeLocks(); if(this.data.mastery === 0) { if(this.data.lvl === 3) setTimeout(()=> window.UI.showToast("🔓 Mode Inverse Débloqué !"), 2000); if(this.data.lvl === 8) setTimeout(()=> window.UI.showToast("🔓 Mode Chrono Débloqué !"), 2000); if(this.data.lvl === 12) setTimeout(()=> window.UI.showToast("🔓 Mode Sprint Débloqué !"), 2000); } } } else { this.data.xp = this.data.next; }
+                if (this.data.lvl < 20) { this.data.xp += totalGain; if(this.data.xp >= this.data.next) { this.data.xp -= this.data.next; this.data.lvl++; this.data.next = Math.floor(this.data.next * 1.2); levelUp = true; window.UI.showLevelUp(); this.triggerCloudSave(true); window.UI.updateModeLocks(); if(this.data.mastery === 0) { if(this.data.lvl === 3) setTimeout(()=> window.UI.showToast("🔓 Mode Inverse Débloqué !"), 2000); if(this.data.lvl === 8) setTimeout(()=> window.UI.showToast("🔓 Mode Chrono Débloqué !"), 2000); if(this.data.lvl === 12) setTimeout(()=> window.UI.showToast("🔓 Mode Sprint Débloqué !"), 2000); } } } else { this.data.xp = this.data.next; }
                 
                 if(!this.session.hint && this.session.mode !== 'inverse') this.session.cleanStreak++; else this.session.cleanStreak = 0; if(c.open) this.session.openStreak++; else this.session.openStreak = 0;
                 const allC = this.data.settings.activeC.length === DB.chords.length; const allI = (this.data.currentSet === 'laboratory') ? true : (this.data.settings.activeI.length === DB.currentInvs.length); if(allC && allI) this.session.fullConfigStreak++; else this.session.fullConfigStreak = 0;

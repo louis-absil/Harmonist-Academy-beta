@@ -283,7 +283,7 @@ export const Cloud = {
                 const cloudData = snap.data();
                 console.log("☁️ Compte trouvé. Fusion des données...");
                 
-                // 3. FUSION INTELLIGENTE (Smart Merge)
+                // FUSION INTELLIGENTE (Smart Merge)
                 // On garde la meilleure valeur pour chaque statistique critique
                 finalData = {
                     ...localData, // On part du local
@@ -297,11 +297,13 @@ export const Cloud = {
                     bestSprint: Math.max(localData.bestSprint || 0, cloudData.bestSprint || 0),
                     bestInverse: Math.max(localData.bestInverse || 0, cloudData.bestInverse || 0),
                     
+                    // CORRECTION PSEUDO : Le Cloud gagne s'il a un nom défini
+                    username: cloudData.username || localData.username,
+
                     // FUSION DES BADGES (Union sans doublons)
                     badges: [...new Set([...(localData.badges || []), ...(cloudData.badges || [])])],
                     
                     // Pour les stats complexes (Accords), on garde celles du profil qui a le plus d'XP
-                    // (C'est une approximation pour éviter les corruptions de fusion profonde)
                     stats: (cloudData.xp > localData.xp) ? cloudData.stats : localData.stats
                 };
             }

@@ -101,3 +101,14 @@ document.addEventListener('keydown', e => {
 window.onload = () => {
     App.init();
 };
+
+// GESTION DE LA FERMETURE / MINIMISATION (Mobile & Desktop)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        // L'utilisateur change d'onglet ou quitte l'app
+        if (window.App && window.App.triggerCloudSave) {
+            console.log("💾 Sauvegarde déclenchée : Page Hide");
+            window.App.triggerCloudSave(true); // Force l'envoi immédiat
+        }
+    }
+});
