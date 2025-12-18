@@ -59,6 +59,11 @@ export const App = {
     // Wrapper RNG pour permettre l'injection de Seed par ChallengeManager
     rng() { return Math.random(); },
 
+    onUserLogin(user) {
+        // Logique optionnelle au login
+        console.log("User logged in:", user.uid);
+    },
+
     init() {
                 // Initialisation Cloud avec Callback de mise à jour
         Cloud.init((user, cloudData) => {
@@ -174,6 +179,12 @@ export const App = {
         window.addEventListener('pagehide', () => {
             this.forceCloudSave("Page Hide");
         });
+    },
+
+        // Dans app.js, ajoutez ceci dans l'objet App :
+    onUserLogin(user) {
+        console.log("Utilisateur connecté :", user.uid);
+        // Vous pouvez ajouter ici des analytics si besoin
     },
 
     async setUsername(val) {
@@ -481,11 +492,11 @@ export const App = {
 
     // Sauvegarde Cloud (Appelé uniquement à la fermeture/minimisation)
     forceCloudSave(reason = "Unknown") {
-        if (window.Cloud && window.Cloud.auth && window.Cloud.auth.currentUser) {
+        if (Cloud && Cloud.auth && Cloud.auth.currentUser) {
             // On utilise sendBeacon si possible (plus fiable lors d'une fermeture)
             // Mais comme on passe par Firestore SDK, on fait un appel standard
             console.log(`☁️ Sauvegarde Cloud déclenchée (${reason})...`);
-            window.Cloud.saveUser(this.data).catch(e => console.error("Cloud Fail:", e));
+            Cloud.saveUser(this.data).catch(e => console.error("Cloud Fail:", e));
         }
     },
 
