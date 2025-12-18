@@ -216,6 +216,15 @@ export const App = {
             // On re-confirme le pseudo pour passer le statut à 'verified' dans la base
             await Cloud.assignUsername(this.data.username);
             
+            // --- AJOUT CRUCIAL ICI ---
+            // 3. On force la sauvegarde de TOUTES les données locales (XP, lvl...) vers le nouveau compte Cloud
+            // Sinon le compte Cloud reste vide !
+            if (Cloud.saveUser) {
+                await Cloud.saveUser(this.data);
+                console.log("Sauvegarde initiale forcée vers le Cloud.");
+            }
+            // -------------------------
+            
             // Rafraîchir l'interface des paramètres
             window.UI.renderSettings();
         } else {

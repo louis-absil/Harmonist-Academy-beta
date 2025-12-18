@@ -352,7 +352,7 @@ export const Cloud = {
             return { success: false, error: error.message };
         }
     },
-    
+
     /**
      * Simple "Ping" pour dire qu'on est vivant (évite de devenir un Zombie)
      * À appeler silencieusement au démarrage.
