@@ -34,6 +34,7 @@ export const App = {
     },
     session: { 
         mode:'zen', time:60, lives:3, chord:null, selC:null, selI:null, done:false, 
+        zenCounter: 0,
         hint:false, score:0, streak:0, globalOk:0, globalTot:0, 
         quizOptions:[], quizCorrectIdx:0, quizUserChoice:null, 
         currentSprintTime: 10, roundLocked: false,
@@ -166,18 +167,18 @@ export const App = {
         // 1. Mobile : Quand l'utilisateur change d'app ou va à l'écran d'accueil
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
-                this.forceCloudSave("Minimisation App");
+                this.triggerSave("Minimisation App"); // CORRIGÉ (C'était forceCloudSave)
             }
         });
 
         // 2. Desktop : Quand l'utilisateur ferme l'onglet ou le navigateur
         window.addEventListener('beforeunload', () => {
-            this.forceCloudSave("Fermeture Onglet");
+            this.triggerSave("Fermeture Onglet"); // CORRIGÉ
         });
         
         // 3. Mobile (Safari iOS) : Sécurité supplémentaire
         window.addEventListener('pagehide', () => {
-            this.forceCloudSave("Page Hide");
+            this.triggerSave("Page Hide"); // CORRIGÉ
         });
     },
 
@@ -194,42 +195,55 @@ export const App = {
         window.UI.showToast("Vérification du pseudo...");
         
         // 1. Appel Cloud pour réserver
+        // Note : Actuellement Cloud.assignUsername renvoie 'true' ou 'false'
         const result = await Cloud.assignUsername(requestedName);
 
-        // 2. Traitement de la réponse
-        if (result.success) {
-            // SUCCÈS
-            this.data.username = requestedName;
-            this.saveData(); // CORRECTION CRITIQUE : c'était "this.save()" (qui n'existe pas)
+        // 2. Normalisation du résultat
+        // Cette ligne est LA clé : elle accepte soit un booléen (mon fix), soit un objet (ton ancien système)
+        const isSuccess = (result === true) || (result && result.success === true);
 
+        // 3. Traitement
+        if (isSuccess) {
+            // --- SUCCÈS ---
+            this.data.username = requestedName;
+            this.saveData(); 
+
+            // Gestion des messages spécifiques (Compatibilité future)
             if (result.status === 'ZOMBIE_CLAIMED') {
                 window.UI.showToast("♻️ Pseudo inactif récupéré !");
             } else if (result.status === 'OFFLINE_PASS') {
                 window.UI.showToast("⚠️ Hors-ligne : Pseudo temporaire");
             } else {
+                // Cas standard (le booléen true tombe ici)
                 window.UI.showToast("✅ Pseudo enregistré !");
             }
+            
             window.UI.updateHeader(); 
             
-        } else {
-            // ÉCHEC
-            console.error("Erreur setUsername:", result); // Pour le debug développeur
+            // On s'assure que l'input affiche bien la valeur validée
+            const input = document.getElementById('usernameInput');
+            if(input) input.value = requestedName;
 
+        } else {
+            // --- ÉCHEC ---
+            console.error("Erreur setUsername:", result); 
+
+            // Note : firebase.js affiche déjà le Toast d'erreur technique (ex: "Pseudo pris")
+            // Mais on peut gérer les cas spécifiques si l'objet result contient des détails
             if (result.reason === 'TAKEN_VERIFIED') {
                 window.UI.showToast("⛔ Ce pseudo appartient à un membre certifié.");
-                // Ici on reset car le nom est indisponible
-                document.getElementById('usernameInput').value = this.data.username; 
             } else if (result.reason === 'TAKEN_ACTIVE') {
                 window.UI.showToast("⛔ Ce pseudo est déjà pris.");
-                // Ici on reset car le nom est indisponible
-                document.getElementById('usernameInput').value = this.data.username;
-            } else {
-                // ERREUR TECHNIQUE (Permissions, Réseau, etc.)
-                // On affiche le vrai message d'erreur s'il est disponible
-                const errorMsg = (result.reason && result.reason.message) ? result.reason.message : "Erreur technique / Réseau";
-                window.UI.showToast("⚠️ " + errorMsg);
-                
-                // MODIFICATION : On NE RESET PAS l'input ici pour laisser l'utilisateur corriger
+            }
+            
+            // ACTION CRITIQUE : On remet l'ancien pseudo dans l'input
+            // car le changement a été refusé.
+            const input = document.getElementById('usernameInput');
+            if(input) {
+                input.value = this.data.username;
+                // Petit feedback visuel rouge sur la bordure
+                input.style.borderColor = "var(--error)";
+                setTimeout(() => input.style.borderColor = "var(--panel-border)", 1000);
             }
         }
     },
@@ -510,15 +524,15 @@ export const App = {
         }
     },
 
-    // Sauvegarde Cloud (Appelé uniquement à la fermeture/minimisation)
-    forceCloudSave(reason = "Unknown") {
-        if (Cloud && Cloud.auth && Cloud.auth.currentUser) {
-            // On utilise sendBeacon si possible (plus fiable lors d'une fermeture)
-            // Mais comme on passe par Firestore SDK, on fait un appel standard
-            console.log(`☁️ Sauvegarde Cloud déclenchée (${reason})...`);
-            Cloud.saveUser(this.data).catch(e => console.error("Cloud Fail:", e));
-        }
-    },
+    // // Sauvegarde Cloud (Appelé uniquement à la fermeture/minimisation)
+    // forceCloudSave(reason = "Unknown") {
+    //     if (Cloud && Cloud.auth && Cloud.auth.currentUser) {
+    //         // On utilise sendBeacon si possible (plus fiable lors d'une fermeture)
+    //         // Mais comme on passe par Firestore SDK, on fait un appel standard
+    //         console.log(`☁️ Sauvegarde Cloud déclenchée (${reason})...`);
+    //         Cloud.saveUser(this.data).catch(e => console.error("Cloud Fail:", e));
+    //     }
+    // },
 
     // Nouvelle fonction appelée automatiquement par UI.closeModals()
     onSettingsClosed() {
@@ -978,6 +992,24 @@ export const App = {
          }
     },
 
+    // --- SYSTEME DE SAUVEGARDE INTELLIGENT ---
+    async triggerSave(reason = "Auto") {
+        // On ne sauvegarde que si un utilisateur est connecté
+        if (!Cloud.auth.currentUser) return;
+
+        console.log(`💾 Sauvegarde déclenchée : ${reason}`);
+        
+        // On met à jour le timestamp local avant envoi
+        this.data.lastSave = Date.now(); 
+        
+        // Envoi silencieux (on ne bloque pas l'UI)
+        try {
+            await Cloud.saveUser(this.data);
+        } catch (e) {
+            console.warn("Save failed:", e);
+        }
+    },
+
     validate() {
         if(this.session.roundLocked) return; 
         if(this.sprintRef) { clearTimeout(this.sprintRef); this.sprintRef = null; }
@@ -1114,6 +1146,16 @@ export const App = {
         document.getElementById('hintBtn').disabled = false; document.getElementById('hintBtn').style.opacity = '1';
         const btn = document.getElementById('valBtn'); btn.innerText = "Suivant"; btn.classList.add('next'); btn.disabled = false;
         const play = document.getElementById('playBtn'); play.innerHTML = "<span class='icon-lg'>▶</span><span>Suivant</span>"; play.disabled = false;
+
+        // --- AJOUT V6.2 : CHECKPOINT ZEN ---
+            // Sauvegarde tous les 20 accords réussis en mode Zen
+            if (this.session.mode === 'zen') {
+                this.session.zenCounter = (this.session.zenCounter || 0) + 1;
+                if (this.session.zenCounter >= 20) {
+                    this.triggerSave("Zen Checkpoint (20)");
+                    this.session.zenCounter = 0;
+                }
+            }
     },
 
     checkBadges() {
@@ -1125,6 +1167,9 @@ export const App = {
     },
 
     async gameOver() {
+        // 1. Sauvegarde Immédiate de la session
+        this.triggerSave("Game Over");
+        
         if(!this.data.stats.modesPlayed.includes(this.session.mode)) { this.data.stats.modesPlayed.push(this.session.mode); }
         const badged = this.checkBadges(); if(badged) Audio.sfx('badge');
         let isBest = false;
@@ -1262,7 +1307,7 @@ export const App = {
         else if (this.data.xp > cloudData.xp) {
             console.log("⚠️ Local plus avancé que le Cloud. Sauvegarde forcée.");
             // Cas où on a joué hors ligne : on met à jour le Cloud tout de suite
-            this.forceCloudSave("Sync Démarrage (Local > Cloud)");
+            this.triggerSave("Sync Démarrage (Local > Cloud)"); // CORRIGÉ (C'était forceCloudSave)
         }
         else {
             console.log("🔄 Synchronisation parfaite (Égalité).");
@@ -1273,4 +1318,43 @@ export const App = {
         }
     },
     
+    // --- GESTION DU BOUTON GOOGLE (CORRIGÉ) ---
+    async handleGoogleAuth() {
+        const btn = document.getElementById('googleAuthBtn');
+        if(!btn) return;
+
+        const user = Cloud.auth.currentUser;
+
+        // CAS 1 : VRAIE DÉCONNEXION (Seulement si NON anonyme)
+        if (user && !user.isAnonymous) {
+            if(confirm("Se déconnecter du compte Google ?\n(Vos données locales seront conservées)")) {
+                await Cloud.logout();
+                window.UI.showToast("Déconnecté.");
+                window.UI.renderSettings(); 
+            }
+            return;
+        }
+
+        // CAS 2 : CONNEXION GOOGLE (Pour Anonyme ou visiteur)
+        btn.disabled = true;
+        btn.innerHTML = "Connexion en cours...";
+        
+        // On lance le login + fusion intelligente
+        const result = await Cloud.login(this.data);
+        
+        if (result.success) {
+            this.data = result.data;
+            this.saveData(); 
+            
+            window.UI.updateXP(0);
+            window.UI.renderBadges();
+            window.UI.showToast(`Bienvenue, ${result.user.displayName || 'Harmoniste'} !`);
+            window.UI.renderSettings(); 
+        } else {
+            // En cas d'erreur ou d'annulation
+            window.UI.showToast("Annulé ou Erreur");
+            window.UI.renderSettings(); // On redessine pour remettre le bouton propre
+        }
+    },
+
 };

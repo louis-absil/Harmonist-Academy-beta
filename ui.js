@@ -1817,72 +1817,56 @@ export const UI = {
     renderSettings() { 
         const d = window.App.data;
         
-        // INPUT USERNAME (V6.0 IDENTITY UI)
+        // --- MODIFICATION : IDENTITÉ & GOOGLE AUTH ---
         const nameInput = document.getElementById('usernameInput');
         if(nameInput) {
             nameInput.value = d.username || "";
             
-            // --- 1. NETTOYAGE COMPLET (On supprime tout pour reconstruire proprement) ---
-            const parent = nameInput.parentElement; 
+            // 1. Nettoyage
+            const parent = nameInput.parentElement;
+            ['identityBadge', 'btnSecureAccount', 'btnLoginExisting', 'googleAuthBtn'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.remove();
+            });
+
+            // 2. Détection de l'état Auth (CORRECTION ICI)
+            const user = Cloud.auth ? Cloud.auth.currentUser : null;
+            // On considère "Connecté" seulement si l'utilisateur n'est PAS anonyme
+            const isAuth = user && !user.isAnonymous;
+
+            // 3. Création du Bouton
+            const authBtn = document.createElement('button');
+            authBtn.id = 'googleAuthBtn';
+            authBtn.className = 'cmd-btn';
             
-            const oldBadge = document.getElementById('identityBadge');
-            if(oldBadge) oldBadge.remove();
+            const btnColor = isAuth ? "rgba(239, 68, 68, 0.2)" : "#4285F4"; 
+            const btnBorder = isAuth ? "var(--error)" : "#4285F4";
+            const btnTextColor = isAuth ? "var(--error)" : "white";
+            const btnText = isAuth ? `Déconnexion (${user.displayName || 'Google'})` : "Connexion Google (Sauvegarde Cloud)";
+            const icon = isAuth ? '🚪' : '☁️';
+
+            authBtn.style.cssText = `width:100%; margin-top:10px; margin-bottom:20px; padding:12px; background:${btnColor}; border:1px solid ${btnBorder}; color:${btnTextColor}; font-weight:700; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;`;
+            authBtn.innerHTML = `<span>${icon}</span> ${btnText}`;
             
-            const oldBtn = document.getElementById('btnSecureAccount');
-            if(oldBtn) oldBtn.remove();
+            authBtn.onclick = () => {
+                if(window.App.handleGoogleAuth) window.App.handleGoogleAuth();
+            };
 
-            const oldLog = document.getElementById('btnLoginExisting');
-            if(oldLog) oldLog.remove();
+            parent.insertAdjacentElement('afterend', authBtn);
 
-            // --- 2. CRÉATION DU BADGE ---
-            const isGuest = (Cloud.auth?.currentUser?.isAnonymous) ?? true;
-
-            const badge = document.createElement('div');
-            badge.id = 'identityBadge';
-            badge.style.cssText = "font-size:0.75rem; margin-top:5px; margin-bottom:15px; display:flex; align-items:center; gap:6px; font-weight:700;";
-            
-            if (isGuest) {
-                badge.innerHTML = `<span style="color:var(--warning);">🟠 Invité</span> <span style="font-weight:400; opacity:0.7; font-size:0.7rem;">(Temporaire)</span>`;
-            } else {
-                badge.innerHTML = `<span style="color:var(--success);">🟢 Certifié</span> <span style="font-weight:400; opacity:0.7; font-size:0.7rem;">(Protégé)</span>`;
-            }
-            
-            // Insertion du badge après l'input
-            parent.insertAdjacentElement('afterend', badge);
-
-            // --- 3. GESTION DES BOUTONS (Uniquement pour Invités) ---
-            if (isGuest) {
-                // A. Bouton SAUVEGARDER (Gros bouton doré)
-                const btnSave = document.createElement('button');
-                btnSave.id = 'btnSecureAccount';
-                btnSave.className = 'cmd-btn';
-                btnSave.style.cssText = "width:100%; font-size:0.9rem; padding:12px; margin-bottom:10px; background:rgba(251, 191, 36, 0.1); border:1px solid var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-weight:bold;";
-                btnSave.innerHTML = "<span>☁️</span> Sauvegarder ma progression";
-                btnSave.onclick = () => window.App.secureAccount();
-                
-                // On insère après le badge
-                badge.insertAdjacentElement('afterend', btnSave);
-
-                // B. Lien SE CONNECTER (Petit lien discret)
-                const btnLogin = document.createElement('button');
-                btnLogin.id = 'btnLoginExisting'; 
-                btnLogin.style.cssText = "width:100%; font-size:0.8rem; padding:5px; margin-bottom:15px; background:transparent; border:none; color:var(--text-dim); text-decoration:underline; cursor:pointer; opacity:0.8;";
-                btnLogin.innerHTML = "J'ai déjà une sauvegarde (Se connecter)";
-                btnLogin.onclick = () => window.App.signIn();
-                
-                // On insère après le bouton sauvegarder
-                btnSave.insertAdjacentElement('afterend', btnLogin);
-            }
-
-            // --- 4. INPUT LOGIC (Debounce) ---
+            // 4. Gestion Input Pseudo
             let typeTimeout;
             nameInput.oninput = (e) => {
                 const val = e.target.value;
-                badge.innerHTML = `<span style="color:var(--text-dim);">⏳ Vérification...</span>`;
+                authBtn.innerHTML = `<span style="opacity:0.7">⏳ Mise à jour...</span>`;
                 clearTimeout(typeTimeout);
-                typeTimeout = setTimeout(() => { window.App.setUsername(val); }, 1000); 
+                typeTimeout = setTimeout(() => { 
+                    window.App.setUsername(val); 
+                    authBtn.innerHTML = `<span>${icon}</span> ${btnText}`;
+                }, 1000); 
             };
         }
+        // --- FIN MODIFICATION ---
 
         const grids = document.querySelectorAll('.settings-grid');
         const setContainer = grids[0];

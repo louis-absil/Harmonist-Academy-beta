@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, linkWithPopup, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInAnonymously, signOut, onAuthStateChanged, GoogleAuthProvider, linkWithPopup, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -145,23 +145,184 @@ export const Cloud = {
         } catch (e) { }
     },
 
+    //  LEGACY
+    //     async assignUsername(username) {
+    //     if (!userUid || !db) return { success: false, reason: "NO_NET" };
+    //     if (!navigator.onLine) return { success: true, status: "OFFLINE" };
+    //     const docId = username.trim().toLowerCase();
+    //     const userRef = doc(db, "usernames", docId);
+    //     try {
+    //         const res = await runTransaction(db, async (t) => {
+    //             const userSnap = await t.get(userRef);
+                
+    //             // CAS 1 : Nouveau pseudo (Création)
+    //             if (!userSnap.exists()) { 
+    //                 t.set(userRef, { 
+    //                     originalName: username, 
+    //                     uid: userUid, 
+    //                     type: auth.currentUser.isAnonymous?'guest':'verified', 
+    //                     lastActive: Date.now(),
+    //                     updatedAt: serverTimestamp() // <--- INSERTION 1 (Création)
+    //                 }); 
+    //                 return "NEW"; 
+    //             }
+                
+    //             const d = userSnap.data();
+                
+    //             // CAS 2 : C'est déjà mon pseudo (Mise à jour)
+    //             if (d.uid === userUid) { 
+    //                 t.update(userRef, { 
+    //                     lastActive: Date.now(), 
+    //                     type: auth.currentUser.isAnonymous?'guest':'verified',
+    //                     updatedAt: serverTimestamp() // <--- INSERTION 2 (Refresh)
+    //                 }); 
+    //                 return "OWNED"; 
+    //             }
+                
+    //             if (d.type === 'verified') throw "TAKEN_VERIFIED";
+                
+    //             // CAS 3 : Vol de compte Zombie (Écrasement)
+    //             if (Date.now() - (d.lastActive||0) > ZOMBIE_TIMEOUT) { 
+    //                 t.set(userRef, { 
+    //                     originalName: username, 
+    //                     uid: userUid, 
+    //                     type: auth.currentUser.isAnonymous?'guest':'verified', 
+    //                     lastActive: Date.now(),
+    //                     updatedAt: serverTimestamp() // <--- INSERTION 3 (Zombie)
+    //                 }); 
+    //                 return "ZOMBIE"; 
+    //             }
+    //             throw "TAKEN_ACTIVE";
+    //         });
+    //         return { success: true, status: res };
+    //     } catch (e) { return { success: false, reason: e }; }
+    // },
+
     async assignUsername(username) {
-        if (!userUid || !db) return { success: false, reason: "NO_NET" };
-        if (!navigator.onLine) return { success: true, status: "OFFLINE" };
-        const docId = username.trim().toLowerCase();
-        const userRef = doc(db, "usernames", docId);
+        const currentUser = auth.currentUser;
+        if (!currentUser || !db) return false;
+        
+        const uid = currentUser.uid;
+        const cleanName = username.trim().toLowerCase();
+        if (cleanName.length < 3) return false;
+
+        const userDocRef = doc(db, 'users', uid);
+        const newNameRef = doc(db, 'usernames', cleanName);
+
         try {
-            const res = await runTransaction(db, async (t) => {
-                const userSnap = await t.get(userRef);
-                if (!userSnap.exists()) { t.set(userRef, { originalName: username, uid: userUid, type: auth.currentUser.isAnonymous?'guest':'verified', lastActive: Date.now() }); return "NEW"; }
-                const d = userSnap.data();
-                if (d.uid === userUid) { t.update(userRef, { lastActive: Date.now(), type: auth.currentUser.isAnonymous?'guest':'verified' }); return "OWNED"; }
-                if (d.type === 'verified') throw "TAKEN_VERIFIED";
-                if (Date.now() - (d.lastActive||0) > ZOMBIE_TIMEOUT) { t.set(userRef, { originalName: username, uid: userUid, type: auth.currentUser.isAnonymous?'guest':'verified', lastActive: Date.now() }); return "ZOMBIE"; }
-                throw "TAKEN_ACTIVE";
+            await runTransaction(db, async (transaction) => {
+                // A. Vérifier si le NOUVEAU pseudo est pris
+                const nameSnap = await transaction.get(newNameRef);
+                if (nameSnap.exists() && nameSnap.data().uid !== uid) {
+                    throw "Ce pseudo est déjà pris !";
+                }
+
+                // B. Récupérer l'ANCIEN pseudo depuis le profil utilisateur
+                const userSnap = await transaction.get(userDocRef);
+                let oldName = null;
+                if (userSnap.exists() && userSnap.data().username) {
+                    oldName = userSnap.data().username.toLowerCase();
+                }
+
+                // C. Si on change de nom...
+                if (oldName && oldName !== cleanName) {
+                    const oldNameRef = doc(db, 'usernames', oldName);
+                    // --- CORRECTION CRUCIALE ICI ---
+                    // 1. On lit le document de l'ancien pseudo
+                    const oldNameSnap = await transaction.get(oldNameRef);
+                    
+                    // 2. On ne tente de le supprimer QUE s'il existe vraiment
+                    // (Cela évite le crash des règles de sécurité sur un document fantôme)
+                    if (oldNameSnap.exists()) {
+                         if (oldNameSnap.data().uid === uid) {
+                             transaction.delete(oldNameRef);
+                         } else {
+                             // Cas rare : Le pseudo dans mon profil appartenait à quelqu'un d'autre ?
+                             // On ne fait rien, on le laisse tranquille.
+                         }
+                    }
+                }
+
+                // D. On réserve le nouveau nom
+                transaction.set(newNameRef, { uid: uid, updatedAt: serverTimestamp() });
+
+                // E. On met à jour le profil utilisateur
+                transaction.set(userDocRef, { 
+                    username: username, 
+                    updatedAt: serverTimestamp() 
+                }, { merge: true });
             });
-            return { success: true, status: res };
-        } catch (e) { return { success: false, reason: e }; }
+
+            console.log("✅ Pseudo sauvegardé :", username);
+            return true;
+
+        } catch (e) {
+            console.error("❌ Erreur Pseudo :", e);
+            window.UI.showToast(typeof e === 'string' ? e : "Erreur lors du changement de pseudo");
+            return false;
+        }
+    },
+
+    // --- NOUVELLE AUTHENTIFICATION (V6.2) ---
+    async login(localData) {
+        if (!auth) return { success: false, error: "Auth non initialisé" };
+        
+        try {
+            // 1. Popup Google
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+            userUid = user.uid;
+
+            // 2. Récupération des données Cloud existantes
+            const userRef = doc(db, 'users', userUid);
+            const snap = await getDoc(userRef);
+            
+            let finalData = localData;
+
+            if (snap.exists()) {
+                const cloudData = snap.data();
+                console.log("☁️ Compte trouvé. Fusion des données...");
+                
+                // 3. FUSION INTELLIGENTE (Smart Merge)
+                // On garde la meilleure valeur pour chaque statistique critique
+                finalData = {
+                    ...localData, // On part du local
+                    ...cloudData, // On écrase avec le Cloud (pour les infos basiques)
+                    
+                    // FUSION DES SCORING (Le meilleur l'emporte)
+                    xp: Math.max(localData.xp || 0, cloudData.xp || 0),
+                    lvl: Math.max(localData.lvl || 1, cloudData.lvl || 1),
+                    mastery: Math.max(localData.mastery || 0, cloudData.mastery || 0),
+                    bestChrono: Math.max(localData.bestChrono || 0, cloudData.bestChrono || 0),
+                    bestSprint: Math.max(localData.bestSprint || 0, cloudData.bestSprint || 0),
+                    bestInverse: Math.max(localData.bestInverse || 0, cloudData.bestInverse || 0),
+                    
+                    // FUSION DES BADGES (Union sans doublons)
+                    badges: [...new Set([...(localData.badges || []), ...(cloudData.badges || [])])],
+                    
+                    // Pour les stats complexes (Accords), on garde celles du profil qui a le plus d'XP
+                    // (C'est une approximation pour éviter les corruptions de fusion profonde)
+                    stats: (cloudData.xp > localData.xp) ? cloudData.stats : localData.stats
+                };
+            }
+
+            // 4. On sauvegarde immédiatement le résultat fusionné sur le Cloud
+            await setDoc(userRef, finalData, { merge: true });
+            
+            return { success: true, user: user, data: finalData };
+
+        } catch (error) {
+            console.error("Login Error:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    async logout() {
+        try {
+            await signOut(auth);
+            userUid = null;
+            return { success: true };
+        } catch (e) { return { success: false, error: e }; }
     },
 
     // --- 4. LEADERBOARDS & CHALLENGES (Inchangé de l'ancien code) ---
