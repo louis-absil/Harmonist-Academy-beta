@@ -11,6 +11,18 @@ Harmonist Academy est une **Single Page Application (SPA)** gamifiée conçue po
 
 ---
 
+## v6.0 - Update "Identity" (Sauvegarde & Profils) ☁️
+
+Cette mise à jour majeure introduit la persistance des données et la protection de votre identité de musicien.
+
+### ✨ Nouveautés
+* **Système d'Identité Unique :** Chaque pseudo est désormais unique. Premier arrivé, premier servi !
+* **Sauvegarde Cloud (Google) :** Vous pouvez désormais lier votre compte pour ne jamais perdre votre progression (XP, Badges, Scores), même en changeant de téléphone.
+* **Protection Anti-Zombie :** Les pseudos réservés par des comptes "Invités" inactifs depuis plus de 90 jours sont automatiquement libérés pour les nouveaux élèves.
+* **Gestion des Conflits :** Résolution automatique des doublons de pseudos existants lors de la migration.
+
+---
+
 ## v5.4 - Update "Pocket Academy" (Mobile & PWA) 📱
 
 Cette mise à jour majeure transforme Harmonist Academy en une application installable (PWA) et améliore considérablement l'expérience mobile.

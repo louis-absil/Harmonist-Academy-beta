@@ -1,7 +1,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, linkWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAMA9hH3hjlkjp-a4lpb3Dg9IusUB-AiMQ",
@@ -12,7 +12,9 @@ const firebaseConfig = {
   appId: "1:1095938878602:web:1ea75d46f3f5d76d921173"
 };
 
-let app, auth, db, userUid = null;
+let app, auth, db, provider, userUid = null;
+// Délai avant qu'un pseudo anonyme inactif ne soit "volable" (90 jours)
+const ZOMBIE_TIMEOUT = 90 * 24 * 60 * 60 * 1000;
 
 export const Cloud = {
     initialized: false,
@@ -22,6 +24,7 @@ export const Cloud = {
         try {
             app = initializeApp(firebaseConfig);
             auth = getAuth(app);
+            provider = new GoogleAuthProvider(); // <--- LIGNE À AJOUTER
             db = getFirestore(app);
 
             onAuthStateChanged(auth, (user) => {
@@ -243,5 +246,112 @@ export const Cloud = {
         const d = new Date();
         const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
         return `DAILY-${dateStr}`;
+    },
+
+    // Helper pour que ui.js puisse lire l'état de l'utilisateur
+    get auth() { return auth; },
+
+    // --- V6.0 IDENTITY & SECURITY METHODS ---
+
+    /**
+     * Tente de réserver un pseudo unique.
+     * Gère la péremption des comptes "Zombies" (Anonymes inactifs > 90j).
+     */
+    async assignUsername(username) {
+        if (!userUid || !db) return { success: false, reason: "NO_CONNECTION" };
+        if (!navigator.onLine) return { success: true, status: "OFFLINE_PASS" };
+
+        const cleanName = username.trim();
+        const docId = cleanName.toLowerCase(); // ID unique en minuscule
+        const userRef = doc(db, "usernames", docId);
+        const isGuest = auth.currentUser.isAnonymous;
+
+        try {
+            const result = await runTransaction(db, async (transaction) => {
+                const sfDoc = await transaction.get(userRef);
+
+                // CAS 1 : Pseudo LIBRE (Nouveau)
+                if (!sfDoc.exists()) {
+                    transaction.set(userRef, {
+                        originalName: cleanName,
+                        uid: userUid,
+                        type: isGuest ? 'guest' : 'verified',
+                        lastActive: Date.now()
+                    });
+                    return "NEW";
+                }
+
+                const data = sfDoc.data();
+
+                // CAS 2 : C'est DÉJÀ MOI (Mise à jour Heartbeat)
+                if (data.uid === userUid) {
+                    transaction.update(userRef, {
+                        lastActive: Date.now(),
+                        type: isGuest ? 'guest' : 'verified',
+                        originalName: cleanName // Met à jour la casse si besoin
+                    });
+                    return "OWNED";
+                }
+
+                // CAS 3 : Pris par quelqu'un d'autre...
+                // Si Certifié -> Intouchable
+                if (data.type === 'verified') throw "TAKEN_VERIFIED";
+
+                // Si Zombie (Anonyme inactif > 90j) -> VOL AUTORISÉ
+                const timeDiff = Date.now() - (data.lastActive || 0);
+                if (timeDiff > ZOMBIE_TIMEOUT) {
+                    transaction.set(userRef, {
+                        originalName: cleanName,
+                        uid: userUid,
+                        type: isGuest ? 'guest' : 'verified',
+                        lastActive: Date.now()
+                    });
+                    return "ZOMBIE_CLAIMED";
+                }
+
+                throw "TAKEN_ACTIVE";
+            });
+
+            console.log(`[Identity] Pseudo '${username}' : ${result}`);
+            return { success: true, status: result };
+
+        } catch (e) {
+            console.warn("[Identity] Rejet:", e);
+            return { success: false, reason: e };
+        }
+    },
+
+    /**
+     * Transforme le compte Anonyme en Compte Google
+     * et fusionne/sécurise le pseudo actuel.
+     */
+    async linkAccount() {
+        if (!auth.currentUser) return { success: false, error: "No User" };
+        try {
+            const result = await linkWithPopup(auth.currentUser, provider);
+            // Une fois lié, on met à jour le statut dans la base usernames immédiatement
+            // (Note: Cela nécessite de connaître le pseudo actuel, qu'on passera plus tard)
+            return { success: true, user: result.user };
+        } catch (error) {
+            console.error("Link Error:", error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Simple "Ping" pour dire qu'on est vivant (évite de devenir un Zombie)
+     * À appeler silencieusement au démarrage.
+     */
+    async sendHeartbeat(username) {
+        if (!userUid || !username) return;
+        const docId = username.trim().toLowerCase();
+        try {
+            // On ne fait qu'une update simple sans transaction lourde
+            await setDoc(doc(db, "usernames", docId), { 
+                lastActive: Date.now() 
+            }, { merge: true });
+        } catch (e) {
+            // On ignore les erreurs de heartbeat silencieux
+        }
     }
 };

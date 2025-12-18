@@ -128,15 +128,101 @@ export const App = {
                 window.UI.startWalkthrough();
             }, 1000);
         }
+        // --- V6.0 IDENTITY CHECK ---
+        // On attend que Firebase s'initialise (2s) pour vérifier si le pseudo local est valide
+        setTimeout(() => {
+            this.checkIdentity();
+        }, 2000);
     },
 
-    setUsername(val) {
+    async setUsername(val) {
         if(!val || val.length < 2) return;
-        this.data.username = val.trim().substring(0, 15);
-        this.save();
-        window.UI.showToast("Pseudo enregistré !");
+        const requestedName = val.trim().substring(0, 15);
+        
+        // 1. Appel Cloud pour réserver
+        window.UI.showToast("Vérification du pseudo...");
+        const result = await Cloud.assignUsername(requestedName);
+
+        // 2. Traitement de la réponse
+        if (result.success) {
+            // SUCCÈS : Le nom est à nous (Nouveau, Déjà à nous, ou Zombie volé)
+            this.data.username = requestedName;
+            this.save();
+
+            if (result.status === 'ZOMBIE_CLAIMED') {
+                window.UI.showToast("♻️ Pseudo inactif récupéré !");
+            } else if (result.status === 'OFFLINE_PASS') {
+                window.UI.showToast("⚠️ Hors-ligne : Pseudo temporaire");
+            } else {
+                window.UI.showToast("✅ Pseudo enregistré !");
+            }
+            // Met à jour l'affichage
+            window.UI.updateHeader(); 
+            
+        } else {
+            // ÉCHEC : Le nom est pris
+            if (result.reason === 'TAKEN_VERIFIED') {
+                window.UI.showToast("⛔ Ce pseudo appartient à un membre certifié.");
+            } else if (result.reason === 'TAKEN_ACTIVE') {
+                window.UI.showToast("⛔ Ce pseudo est déjà pris.");
+            } else {
+                window.UI.showToast("Erreur de connexion.");
+            }
+            // On remet l'ancien nom dans l'input (Important !)
+            document.getElementById('usernameInput').value = this.data.username;
+        }
     },
 
+// --- V6.0 MÉTHODES D'IDENTITÉ ---
+
+    // Appelé au démarrage pour vérifier les conflits "Legacy"
+    async checkIdentity() {
+        const currentName = this.data.username;
+        if (currentName === "Élève Anonyme") return; // On s'en fiche du par défaut
+
+        // On tente de réserver notre PROPRE nom actuel
+        const result = await Cloud.assignUsername(currentName);
+
+        // Si le serveur dit "Non, c'est pris par quelqu'un d'autre (actif)"
+        // C'est que nous sommes dans un conflit Legacy (un imposteur local)
+        if (!result.success && (result.reason === 'TAKEN_ACTIVE' || result.reason === 'TAKEN_VERIFIED')) {
+            const newName = `${currentName}#${Math.floor(Math.random() * 9999)}`;
+            console.warn(`Conflit de pseudo détecté. Renommage : ${newName}`);
+            
+            this.data.username = newName;
+            this.save();
+            window.UI.updateHeader();
+            
+            // Notification explicative
+            setTimeout(() => {
+                alert(`Mise à jour V6.0 Identity :\n\nLe pseudo "${currentName}" est déjà réservé par un autre élève.\n\nVotre pseudo a été ajusté en "${newName}".\nVous pourrez le changer dans les paramètres.`);
+            }, 1000);
+        } 
+        else if (result.success) {
+            console.log("Identité vérifiée :", result.status);
+        }
+    },
+
+    // Appelé par le bouton "Sauvegarder ma progression"
+    async secureAccount() {
+        if (!confirm("Voulez-vous lier ce profil à votre compte Google pour ne jamais perdre votre progression ?")) return;
+
+        const result = await Cloud.linkAccount();
+        
+        if (result.success) {
+            window.UI.showToast("🎉 Compte sécurisé avec succès !");
+            window.UI.showToast(`Bienvenue, ${result.user.displayName || 'Membre Certifié'}`);
+            
+            // On re-confirme le pseudo pour passer le statut à 'verified' dans la base
+            await Cloud.assignUsername(this.data.username);
+            
+            // Rafraîchir l'interface des paramètres
+            window.UI.renderSettings();
+        } else {
+            alert("Erreur lors de la liaison : " + result.error);
+        }
+    },
+    
     // --- LOGIQUE PROGRESSION ARENE ---
     // Appelé par ChallengeManager.finish()
     updateArenaStats(score, total) {
