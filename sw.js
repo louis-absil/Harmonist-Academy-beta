@@ -1,4 +1,4 @@
-const CACHE_NAME = 'harmonist-v6.1';
+const CACHE_NAME = 'harmonist-v6.2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const ASSETS_TO_CACHE = [
 
 // 1. Installation : On met tout en cache
 self.addEventListener('install', (e) => {
+  self.skipWaiting(); // (Force l'installation immédiate)
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Mise en cache globale');
@@ -47,4 +48,5 @@ self.addEventListener('activate', (e) => {
       }));
     })
   );
+  return self.clients.claim(); // (Prend le contrôle de la page active)
 });
