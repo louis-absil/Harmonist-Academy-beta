@@ -68,7 +68,7 @@ export const App = {
                 // Initialisation Cloud avec Callback de mise à jour
         Cloud.init((user, cloudData) => {
             // 1. On injecte l'utilisateur dans l'App
-            App.onUserLogin(user); 
+            // App.onUserLogin(user); 
 
             if (cloudData) {
                 // 2. Si on a des données, on les charge
@@ -191,15 +191,16 @@ export const App = {
         if(!val || val.length < 2) return;
         const requestedName = val.trim().substring(0, 15);
         
-        // 1. Appel Cloud pour réserver
         window.UI.showToast("Vérification du pseudo...");
+        
+        // 1. Appel Cloud pour réserver
         const result = await Cloud.assignUsername(requestedName);
 
         // 2. Traitement de la réponse
         if (result.success) {
-            // SUCCÈS : Le nom est à nous (Nouveau, Déjà à nous, ou Zombie volé)
+            // SUCCÈS
             this.data.username = requestedName;
-            this.save();
+            this.saveData(); // CORRECTION CRITIQUE : c'était "this.save()" (qui n'existe pas)
 
             if (result.status === 'ZOMBIE_CLAIMED') {
                 window.UI.showToast("♻️ Pseudo inactif récupéré !");
@@ -208,20 +209,28 @@ export const App = {
             } else {
                 window.UI.showToast("✅ Pseudo enregistré !");
             }
-            // Met à jour l'affichage
             window.UI.updateHeader(); 
             
         } else {
-            // ÉCHEC : Le nom est pris
+            // ÉCHEC
+            console.error("Erreur setUsername:", result); // Pour le debug développeur
+
             if (result.reason === 'TAKEN_VERIFIED') {
                 window.UI.showToast("⛔ Ce pseudo appartient à un membre certifié.");
+                // Ici on reset car le nom est indisponible
+                document.getElementById('usernameInput').value = this.data.username; 
             } else if (result.reason === 'TAKEN_ACTIVE') {
                 window.UI.showToast("⛔ Ce pseudo est déjà pris.");
+                // Ici on reset car le nom est indisponible
+                document.getElementById('usernameInput').value = this.data.username;
             } else {
-                window.UI.showToast("Erreur de connexion.");
+                // ERREUR TECHNIQUE (Permissions, Réseau, etc.)
+                // On affiche le vrai message d'erreur s'il est disponible
+                const errorMsg = (result.reason && result.reason.message) ? result.reason.message : "Erreur technique / Réseau";
+                window.UI.showToast("⚠️ " + errorMsg);
+                
+                // MODIFICATION : On NE RESET PAS l'input ici pour laisser l'utilisateur corriger
             }
-            // On remet l'ancien nom dans l'input (Important !)
-            document.getElementById('usernameInput').value = this.data.username;
         }
     },
 
@@ -242,7 +251,7 @@ export const App = {
             console.warn(`Conflit de pseudo détecté. Renommage : ${newName}`);
             
             this.data.username = newName;
-            this.save();
+            this.saveData();
             window.UI.updateHeader();
             
             // Notification explicative
@@ -371,7 +380,7 @@ export const App = {
         if(this.data.settings.activeC.length === 0) { const available = DB.chords.find(c => !this.isLocked(c.id)); if(available) this.data.settings.activeC = [available.id]; }
 
         if(!silent) {
-            this.save(); window.UI.renderBoard(); window.UI.renderSettings(); this.resetRound(true); this.playNew(); window.UI.showToast(`Ambiance : ${DB.sets[setName].name}`);
+            this.saveData(); window.UI.renderBoard(); window.UI.renderSettings(); this.resetRound(true); this.playNew(); window.UI.showToast(`Ambiance : ${DB.sets[setName].name}`);
         }
     },
 
@@ -392,7 +401,7 @@ export const App = {
             this.data.mastery++; this.data.lvl = 1; this.data.xp = 0; this.data.next = 100;
             this.data.settings.activeC = this.data.settings.activeC.filter(id => !this.isLocked(id));
             if(this.data.settings.activeC.length === 0) { const available = DB.chords.find(c => !this.isLocked(c.id)); if(available) this.data.settings.activeC = [available.id]; }
-            this.save(); window.UI.closeModals(); window.UI.renderBoard(); window.UI.updateHeader(); Audio.sfx('prestige'); window.UI.confetti(); setTimeout(() => window.UI.confetti(), 500); setTimeout(() => window.UI.confetti(), 1000); window.UI.showToast(`✨ Maîtrise ${this.data.mastery} atteinte !`); window.UI.showToast(`Nouveau contenu disponible dans les paramètres !`); window.UI.updateModeLocks(); setTimeout(() => { this.playNew(); }, 4000);
+            this.saveData(); window.UI.closeModals(); window.UI.renderBoard(); window.UI.updateHeader(); Audio.sfx('prestige'); window.UI.confetti(); setTimeout(() => window.UI.confetti(), 500); setTimeout(() => window.UI.confetti(), 1000); window.UI.showToast(`✨ Maîtrise ${this.data.mastery} atteinte !`); window.UI.showToast(`Nouveau contenu disponible dans les paramètres !`); window.UI.updateModeLocks(); setTimeout(() => { this.playNew(); }, 4000);
         }
     },
 
@@ -473,8 +482,19 @@ export const App = {
         if(type === 'c' && this.isLocked(id)) { const chord = DB.chords.find(c => c.id === id); window.UI.showToast(`🔒 Débloqué au Niveau ${chord.unlockLvl}`); window.UI.vibrate([50,50]); return; }
         const list = type === 'c' ? this.data.settings.activeC : this.data.settings.activeI;
         const idx = list.indexOf(id);
-        if (idx > -1) { if(list.length > 1) list.splice(idx, 1); } else { if(this.data.currentSet === 'jazz' && list.length >= 6) { window.UI.showToast("⚠️ Max 6 accords actifs"); return; } list.push(id); }
-        this.save(); window.UI.renderBoard(); window.UI.renderSettings(); window.UI.updateHeader(); 
+        if (idx > -1) { 
+            // Sécurité : Empêcher de désactiver le dernier élément
+            if (list.length > 1) {
+                list.splice(idx, 1); 
+            } else {
+                window.UI.showToast("⚠️ Il faut garder au moins 1 choix !");
+                return;
+            }
+        } else { 
+            if(this.data.currentSet === 'jazz' && list.length >= 6) { window.UI.showToast("⚠️ Max 6 accords actifs"); return; } 
+            list.push(id); 
+        }
+        this.saveData(); window.UI.renderBoard(); window.UI.renderSettings(); window.UI.updateHeader(); 
     },
 
     hardReset() { if(confirm("Sûr ?")) { localStorage.removeItem('harmonist_v4_final'); location.reload(); } },
@@ -719,7 +739,7 @@ export const App = {
         if(id) {
             // V5.2 - Increment Challenges Created
             this.data.arenaStats.challengesCreated++;
-            this.save();
+            this.saveData();
             this.checkBadges();
 
             alert(`Défi créé avec succès !\nCode : ${id}`);
@@ -1090,7 +1110,7 @@ export const App = {
                 if(this.session.lives <= 0) return this.gameOver(); 
             }
         }
-        window.UI.updateHeader(); window.UI.updateChrono(); this.save();
+        window.UI.updateHeader(); window.UI.updateChrono(); this.saveData();
         document.getElementById('hintBtn').disabled = false; document.getElementById('hintBtn').style.opacity = '1';
         const btn = document.getElementById('valBtn'); btn.innerText = "Suivant"; btn.classList.add('next'); btn.disabled = false;
         const play = document.getElementById('playBtn'); play.innerHTML = "<span class='icon-lg'>▶</span><span>Suivant</span>"; play.disabled = false;
@@ -1099,7 +1119,7 @@ export const App = {
     checkBadges() {
         let unlockedSomething = false;
         BADGES.forEach(b => {
-            if(!this.data.badges.includes(b.id)) { if(b.check(this.data, this.session)) { this.data.badges.push(b.id); window.UI.showBadge(b); unlockedSomething = true; this.save(); } }
+            if(!this.data.badges.includes(b.id)) { if(b.check(this.data, this.session)) { this.data.badges.push(b.id); window.UI.showBadge(b); unlockedSomething = true; this.saveData(); } }
         });
         return unlockedSomething;
     },
@@ -1111,7 +1131,7 @@ export const App = {
         if(this.session.mode === 'chrono' && this.session.score > this.data.bestChrono) { this.data.bestChrono = this.session.score; isBest=true; }
         if(this.session.mode === 'sprint' && this.session.score > this.data.bestSprint) { this.data.bestSprint = this.session.score; isBest=true; }
         if(this.session.mode === 'inverse' && this.session.score > this.data.bestInverse) { this.data.bestInverse = this.session.score; isBest=true; }
-        this.save(); 
+        this.saveData(); 
         
         // ENVOI CLOUD (Pseudo + Mastery)
         if(this.session.score > 0) {
@@ -1254,4 +1274,3 @@ export const App = {
     },
     
 };
-
