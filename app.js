@@ -60,21 +60,28 @@ export const App = {
     rng() { return Math.random(); },
 
     init() {
-        // --- MODIFICATION HYBRIDE ---
-        // On initialise Firebase avec un callback qui recevra (user, cloudData)
+                // Initialisation Cloud avec Callback de mise à jour
         Cloud.init((user, cloudData) => {
-            if (user) {
-                // Si on a des données du Cloud, on synchronise
-                if(cloudData) {
-                    this.syncFromCloud(cloudData);
+            // 1. On injecte l'utilisateur dans l'App
+            App.onUserLogin(user); 
+
+            if (cloudData) {
+                // 2. Si on a des données, on les charge
+                App.syncFromCloud(cloudData);
+
+                // 3. CORRECTIF AFFICHAGE XP "ENORME" :
+                // On force la mise à jour de la barre d'XP immédiatement pour qu'elle
+                // se cale sur le bon niveau sans animation délirante.
+                if (window.UI) {
+                    window.UI.updateXP(0); 
+                    window.UI.renderBadges();
                 }
-                
-                // Si la modale Paramètres est ouverte, on la rafraîchit pour afficher "Certifié"
-                // C'est ça qui corrige ton bug de modale qui ne se met pas à jour !
-                const settingsModal = document.getElementById('settingsModal');
-                if(settingsModal && settingsModal.classList.contains('open')) {
-                    window.UI.renderSettings();
-                }
+            }
+
+            // 4. CORRECTIF MODALE :
+            // Si la modale paramètres est ouverte, on la redessine pour afficher "Certifié"
+            if (window.UI && document.getElementById('settingsModal')?.classList.contains('open')) {
+                window.UI.renderSettings();
             }
         });
         ChallengeManager.checkRescue(); 
@@ -1236,3 +1243,4 @@ export const App = {
     },
     
 };
+
