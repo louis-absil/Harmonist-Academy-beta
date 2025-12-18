@@ -339,6 +339,21 @@ export const Cloud = {
     },
 
     /**
+     * Connexion directe (Pour récupérer un compte existant)
+     * Écrase la session invité actuelle.
+     */
+    async login() {
+        try {
+            // On force la popup Google classique
+            const result = await signInWithPopup(auth, provider);
+            return { success: true, user: result.user };
+        } catch (error) {
+            console.error("Login Error:", error);
+            return { success: false, error: error.message };
+        }
+    },
+    
+    /**
      * Simple "Ping" pour dire qu'on est vivant (évite de devenir un Zombie)
      * À appeler silencieusement au démarrage.
      */

@@ -209,8 +209,11 @@ export const UI = {
             title: "Classements", 
             text: "Comparez vos scores (Chrono, Sprint et Inverse) avec le monde entier.",
             onEnter: () => { 
-                window.UI.showChallengeHub(); 
-                window.UI.switchChallengeTab('arcade');
+                // CORRECTION : showChallengeHub charge déjà l'onglet 'arcade' par défaut.
+                // On retire l'appel manuel à switchChallengeTab pour éviter le double chargement.
+                if(!document.getElementById('challengeHubModal').classList.contains('open')) {
+                    window.UI.showChallengeHub();
+                }
             }
         },
         { 
@@ -1819,20 +1822,24 @@ export const UI = {
         if(nameInput) {
             nameInput.value = d.username || "";
             
-            // 1. NETTOYAGE ROBUSTE (Par ID)
+            // --- 1. NETTOYAGE COMPLET (On supprime tout pour reconstruire proprement) ---
+            const parent = nameInput.parentElement; 
+            
             const oldBadge = document.getElementById('identityBadge');
             if(oldBadge) oldBadge.remove();
+            
             const oldBtn = document.getElementById('btnSecureAccount');
             if(oldBtn) oldBtn.remove();
 
+            const oldLog = document.getElementById('btnLoginExisting');
+            if(oldLog) oldLog.remove();
+
+            // --- 2. CRÉATION DU BADGE ---
             const isGuest = (Cloud.auth?.currentUser?.isAnonymous) ?? true;
 
-            // 2. CRÉATION BADGE
             const badge = document.createElement('div');
-            badge.id = 'identityBadge'; // ID crucial pour le nettoyage
-            badge.className = 'identity-badge';
-            // Ajustement CSS : margin-top négatif pour remonter visuellement vers l'input
-            badge.style.cssText = "font-size:0.75rem; margin-top:-5px; margin-bottom:15px; display:flex; align-items:center; gap:6px; font-weight:700; padding-left:5px;";
+            badge.id = 'identityBadge';
+            badge.style.cssText = "font-size:0.75rem; margin-top:5px; margin-bottom:15px; display:flex; align-items:center; gap:6px; font-weight:700;";
             
             if (isGuest) {
                 badge.innerHTML = `<span style="color:var(--warning);">🟠 Invité</span> <span style="font-weight:400; opacity:0.7; font-size:0.7rem;">(Temporaire)</span>`;
@@ -1840,35 +1847,41 @@ export const UI = {
                 badge.innerHTML = `<span style="color:var(--success);">🟢 Certifié</span> <span style="font-weight:400; opacity:0.7; font-size:0.7rem;">(Protégé)</span>`;
             }
             
-            // 3. INSERTION CORRIGÉE (HORS DU FLEX)
-            // On cible le PARENT de l'input (la div flex) et on insère APRÈS lui
-            nameInput.parentElement.insertAdjacentElement('afterend', badge);
+            // Insertion du badge après l'input
+            parent.insertAdjacentElement('afterend', badge);
 
-            // Debounce Input
+            // --- 3. GESTION DES BOUTONS (Uniquement pour Invités) ---
+            if (isGuest) {
+                // A. Bouton SAUVEGARDER (Gros bouton doré)
+                const btnSave = document.createElement('button');
+                btnSave.id = 'btnSecureAccount';
+                btnSave.className = 'cmd-btn';
+                btnSave.style.cssText = "width:100%; font-size:0.9rem; padding:12px; margin-bottom:10px; background:rgba(251, 191, 36, 0.1); border:1px solid var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-weight:bold;";
+                btnSave.innerHTML = "<span>☁️</span> Sauvegarder ma progression";
+                btnSave.onclick = () => window.App.secureAccount();
+                
+                // On insère après le badge
+                badge.insertAdjacentElement('afterend', btnSave);
+
+                // B. Lien SE CONNECTER (Petit lien discret)
+                const btnLogin = document.createElement('button');
+                btnLogin.id = 'btnLoginExisting'; 
+                btnLogin.style.cssText = "width:100%; font-size:0.8rem; padding:5px; margin-bottom:15px; background:transparent; border:none; color:var(--text-dim); text-decoration:underline; cursor:pointer; opacity:0.8;";
+                btnLogin.innerHTML = "J'ai déjà une sauvegarde (Se connecter)";
+                btnLogin.onclick = () => window.App.signIn();
+                
+                // On insère après le bouton sauvegarder
+                btnSave.insertAdjacentElement('afterend', btnLogin);
+            }
+
+            // --- 4. INPUT LOGIC (Debounce) ---
             let typeTimeout;
             nameInput.oninput = (e) => {
                 const val = e.target.value;
                 badge.innerHTML = `<span style="color:var(--text-dim);">⏳ Vérification...</span>`;
                 clearTimeout(typeTimeout);
-                typeTimeout = setTimeout(() => {
-                    window.App.setUsername(val);
-                }, 1000); 
+                typeTimeout = setTimeout(() => { window.App.setUsername(val); }, 1000); 
             };
-
-            // 4. BOUTON SAUVEGARDE
-            if (isGuest) {
-                const btnSave = document.createElement('button');
-                btnSave.id = 'btnSecureAccount';
-                btnSave.className = 'cmd-btn';
-                // Style amélioré pour bien se séparer
-                btnSave.style.cssText = "width:100%; font-size:0.9rem; padding:12px; margin-bottom:20px; background:rgba(251, 191, 36, 0.1); border:1px solid var(--gold); color:var(--gold); display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer; font-weight:700;";
-                btnSave.innerHTML = "<span>☁️</span> Sauvegarder ma progression";
-                
-                btnSave.onclick = () => window.App.secureAccount();
-                
-                // On insère sous le badge
-                badge.insertAdjacentElement('afterend', btnSave);
-            }
         }
 
         const grids = document.querySelectorAll('.settings-grid');

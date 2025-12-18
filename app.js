@@ -222,7 +222,24 @@ export const App = {
             alert("Erreur lors de la liaison : " + result.error);
         }
     },
-    
+
+    // Appelé par le bouton "Déjà un compte ?"
+    async signIn() {
+        const confirmMsg = "ATTENTION :\n\nVous allez vous connecter à un compte existant.\nLa progression actuelle (Invité) sera remplacée par celle de votre sauvegarde Cloud.\n\nContinuer ?";
+        
+        if (!confirm(confirmMsg)) return;
+
+        const result = await Cloud.login();
+        
+        if (result.success) {
+            window.UI.showToast(`Bon retour, ${result.user.displayName.split(' ')[0]} !`);
+            // On recharge la page pour être sûr de charger proprement toutes les données du compte
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            alert("Erreur de connexion : " + result.error);
+        }
+    },
+
     // --- LOGIQUE PROGRESSION ARENE ---
     // Appelé par ChallengeManager.finish()
     updateArenaStats(score, total) {
