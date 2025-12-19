@@ -11,7 +11,7 @@ Harmonist Academy est une **Single Page Application (SPA)** gamifiée conçue po
 
 ---
 
-# 🎹 Harmonist Academy V7.0 : Connected Identity
+## 🎹 Harmonist Academy V7.0 : Connected Identity
 
 **Mise à jour majeure - Décembre 2025**
 
