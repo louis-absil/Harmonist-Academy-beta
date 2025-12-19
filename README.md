@@ -3,11 +3,41 @@
 
 > **L'application ultime d'entraînement auditif pour l'harmonie, le jazz et l'acoustique.**
 
-![Version](https://img.shields.io/badge/version-5.1.0-studio.svg)
+![Version](https://img.shields.io/badge/version-7.0-studio.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Tech](https://img.shields.io/badge/Made%20With-Vanilla%20JS-yellow.svg)
 
 Harmonist Academy est une **Single Page Application (SPA)** gamifiée conçue pour aider les musiciens à reconnaître les accords, les renversements, les voicings jazz et les structures harmoniques complexes à l'oreille.
+
+---
+
+# 🎹 Harmonist Academy V7.0 : Connected Identity
+
+**Mise à jour majeure - Décembre 2025**
+
+Cette version marque un tournant dans l'architecture de l'application, introduisant une synchronisation Cloud robuste et une gestion intelligente des identités pour garantir que plus aucun élève ne perde sa progression.
+
+### ✨ Nouveautés Principales
+
+* **☁️ Synchronisation Cloud Hybride :**
+    * Transition fluide du mode "Invité" (Local) vers le mode "Membre Certifié" (Google).
+    * Fusion intelligente des scores : on garde toujours le meilleur de vos deux profils (Local vs Cloud).
+    * **Smart Save :** Sauvegarde automatique déclenchée lors de la minimisation de l'app ou du changement d'onglet.
+
+* **🆔 Gestion Dynamique des Identités (Anti-Zombie) :**
+    * Nouveau système de "Bail" (Leasing) pour les pseudos.
+    * Mécanisme de libération automatique du pseudo invité lors de la connexion Google pour éviter les doublons et nettoyer la base de données.
+    * Attribution garantie : Si la connexion échoue, le pseudo est immédiatement récupéré.
+
+* **🎓 Tutoriel Interactif V8 :**
+    * Mise à jour complète du guide de bienvenue.
+    * Détection automatique de l'état de connexion pour adapter les conseils (Invité vs Connecté).
+
+### 🛠️ Correctifs & Optimisations
+
+* **Stabilité UI :** Correction des crashs d'affichage lors de la connexion (`updateXP` / `renderBadges`).
+* **Firebase Transaction :** Réécriture de la logique de Login pour respecter strictement l'ordre Lecture/Écriture de Firestore.
+* **Performance :** Optimisation des appels réseaux et suppression des écritures inutiles pour les utilisateurs non connectés.
 
 ---
 

@@ -75,11 +75,10 @@ export const App = {
                 // 2. Si on a des données, on les charge
                 App.syncFromCloud(cloudData);
 
-                // 3. CORRECTIF AFFICHAGE XP "ENORME" :
-                // On force la mise à jour de la barre d'XP immédiatement pour qu'elle
-                // se cale sur le bon niveau sans animation délirante.
+                // 3. CORRECTIF AFFICHAGE XP :
+                // On utilise updateHeader qui gère l'XP, le Niveau et le Pseudo
                 if (window.UI) {
-                    window.UI.updateXP(0); 
+                    window.UI.updateHeader(); 
                     window.UI.renderBadges();
                 }
             }
@@ -192,11 +191,13 @@ export const App = {
         if(!val || val.length < 2) return;
         const requestedName = val.trim().substring(0, 15);
         
+        // --- MODIFICATION ICI : Capture de l'ancien nom ---
+        const oldName = this.data.username; 
+        
         window.UI.showToast("Vérification du pseudo...");
         
-        // 1. Appel Cloud pour réserver
-        // Note : Actuellement Cloud.assignUsername renvoie 'true' ou 'false'
-        const result = await Cloud.assignUsername(requestedName);
+        // On passe l'ancien nom à Firebase pour qu'il puisse le supprimer
+        const result = await Cloud.assignUsername(requestedName, oldName);
 
         // 2. Normalisation du résultat
         // Cette ligne est LA clé : elle accepte soit un booléen (mon fix), soit un objet (ton ancien système)
@@ -530,22 +531,39 @@ export const App = {
     // --- NOUVEAU SYSTÈME DE SAUVEGARDE (Debounce) ---
     cloudSaveTimer: null,
 
+    // DANS app.js
+
     triggerCloudSave(immediate = false) {
-        // Cas 1 : Sauvegarde Immédiate (Level Up, Quitter...)
+        const user = Cloud.auth.currentUser;
+
+        // --- ANTI-POLLUTION (FILTRE CRITIQUE) ---
+        // Si Invité (Anonyme) ou pas connecté :
+        // 1. On sécurise les données en LOCAL (au cas où)
+        // 2. On COUPE l'accès au Cloud (return) pour ne pas polluer la base 'users'
+        if (!user || user.isAnonymous) {
+            console.log("💾 Sauvegarde Locale (Invité)");
+            try {
+                localStorage.setItem('harmonist_v6_data', JSON.stringify(this.data));
+            } catch (e) { console.warn("Erreur quota localStorage", e); }
+            return; 
+        }
+
+        // --- SYNCHRO CLOUD (Membres Uniquement) ---
+        
+        // Cas 1 : Sauvegarde Immédiate (Fermeture, Level Up...)
         if (immediate) {
             if (this.cloudSaveTimer) clearTimeout(this.cloudSaveTimer);
-            console.log("☁️ Sauvegarde Cloud Forcée (Immédiate)");
+            // On met à jour le timestamp
             this.data.lastSave = Date.now();
-            Cloud.saveUser(this.data);
+            // On envoie
+            Cloud.saveUser(this.data); 
             return;
         }
 
         // Cas 2 : Sauvegarde Temporisée (Debounce 5s)
-        // Évite de spammer le serveur à chaque point gagné
-        if (this.cloudSaveTimer) return; // Une sauvegarde est déjà programmée
+        if (this.cloudSaveTimer) return;
 
         this.cloudSaveTimer = setTimeout(() => {
-            console.log("☁️ Sauvegarde Cloud Auto (Debounce)");
             this.data.lastSave = Date.now();
             Cloud.saveUser(this.data);
             this.cloudSaveTimer = null;
@@ -1321,8 +1339,8 @@ export const App = {
             this.data = { ...this.data, ...cloudData };
             this.saveData(); // On met à jour le localStorage immédiatement
             
-            // UI UPDATE : C'est ici qu'on règle ton problème d'affichage !
-            window.UI.updateXP(0);
+            // UI UPDATE : On utilise updateHeader pour tout rafraîchir d'un coup
+            window.UI.updateHeader();
             window.UI.renderBadges();
             
             // Si la modale Paramètres est ouverte, on la rafraîchit pour virer "Invité"
@@ -1346,42 +1364,68 @@ export const App = {
         }
     },
     
-    // --- GESTION DU BOUTON GOOGLE (CORRIGÉ) ---
+    // --- GESTION DU BOUTON GOOGLE (CORRIGÉ & VALIDÉ) ---
     async handleGoogleAuth() {
         const btn = document.getElementById('googleAuthBtn');
         if(!btn) return;
 
         const user = Cloud.auth.currentUser;
 
-        // CAS 1 : VRAIE DÉCONNEXION (Seulement si NON anonyme)
+        // --- CAS 1 : DÉCONNEXION (Si déjà connecté et pas anonyme) ---
         if (user && !user.isAnonymous) {
-            if(confirm("Se déconnecter du compte Google ?\n(Vos données locales seront conservées)")) {
+            if(confirm("Se déconnecter du compte Google ?")) {
                 await Cloud.logout();
-                window.UI.showToast("Déconnecté.");
-                window.UI.renderSettings(); 
+                localStorage.removeItem('harmonist_v6_data');
+                window.location.reload(); 
             }
             return;
         }
 
-        // CAS 2 : CONNEXION GOOGLE (Pour Anonyme ou visiteur)
-        btn.disabled = true;
-        btn.innerHTML = "Connexion en cours...";
+        // --- CAS 2 : CONNEXION (Migration) ---
         
-        // On lance le login + fusion intelligente
-        const result = await Cloud.login(this.data);
+        const oldUid = user ? user.uid : null;
+        const currentName = this.data.username; // On garde le nom en mémoire
+
+        btn.disabled = true;
+        btn.innerHTML = "Connexion...";
+        
+        // A. LE "SUICIDE" DU PSEUDO
+        // On le libère volontairement AVANT la connexion pour que le futur compte Google puisse le prendre.
+        // On ne le fait que si ce n'est pas le pseudo par défaut.
+        let released = false;
+        if (currentName && currentName !== "Élève Anonyme") {
+            // On tente de le supprimer. Si ça marche, released = true.
+            released = await Cloud.releaseUsername(currentName);
+        }
+
+        // B. LA CONNEXION
+        const result = await Cloud.login(this.data, oldUid);
         
         if (result.success) {
+            // SUCCÈS : Le pseudo a été repris par la fonction login (qui le réserve pour le compte Google)
             this.data = result.data;
             this.saveData(); 
             
-            window.UI.updateXP(0);
+            window.UI.updateHeader();
             window.UI.renderBadges();
-            window.UI.showToast(`Bienvenue, ${result.user.displayName || 'Harmoniste'} !`);
             window.UI.renderSettings(); 
+            
+            this.session.done = true; 
+            if(this.data.lvl > 1) window.UI.updateModeLocks();
+
+            window.UI.showToast(`Bienvenue, ${result.user.displayName || 'Harmoniste'} !`);
+            
         } else {
-            // En cas d'erreur ou d'annulation
-            window.UI.showToast("Annulé ou Erreur");
-            window.UI.renderSettings(); // On redessine pour remettre le bouton propre
+            // ÉCHEC / ANNULATION : FILET DE SÉCURITÉ
+            // Si l'utilisateur a annulé la popup Google, il est toujours connecté en Anonyme.
+            // Mais on a supprimé son pseudo à l'étape A ! Il faut le récupérer tout de suite.
+            if (released) {
+                console.log("⚠️ Connexion annulée, récupération immédiate du pseudo...");
+                await Cloud.assignUsername(currentName);
+            }
+
+            window.UI.showToast("Connexion annulée");
+            window.UI.renderSettings(); 
         }
     },
 

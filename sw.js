@@ -1,4 +1,4 @@
-const CACHE_NAME = 'harmonist-v6.2';
+const CACHE_NAME = 'harmonist-v7-connected';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

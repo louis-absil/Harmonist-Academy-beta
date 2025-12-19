@@ -109,12 +109,13 @@ export const UI = {
             text: "Choisissez un pseudo unique. S'il est libre, il sera réservé pour vous. <br><em>(Les pseudos inactifs sont recyclés après 90 jours).</em>",
             action: "openSettings" // Ouvre la modale settings
         },
+        // --- REMPLACEMENT DE L'ÉTAPE SAUVEGARDE ---
         { 
-            target: "btnSecureAccount", // CIBLE LE NOUVEAU BOUTON
-            title: "Sauvegarde Cloud", 
-            text: "En tant qu'invité, vos données sont fragiles. Cliquez ici pour lier un compte Google et protéger votre progression à vie.",
-            forceScroll: true // Nouvelle option qu'on va gérer
+            target: "googleAuthBtn", // ON CIBLE LE NOUVEAU BOUTON
+            title: "Sécuriser le Compte", 
+            text: "<strong>Très Important :</strong><br>Actuellement, vos données sont stockées uniquement sur cet appareil.<br>Connectez-vous avec Google pour <strong>sauvegarder votre progression dans le Cloud</strong> et éviter de tout perdre en cas de nettoyage du navigateur.",
         },
+        // -------------------------------------------
         { 
             target: "settingsChords", // Cible stable (toujours visible)
             title: "Cursus & Accords", 
@@ -332,13 +333,17 @@ export const UI = {
             const tool = document.getElementById('tour-tooltip');
             let targetEl = step.target ? document.getElementById(step.target) : null;
 
-            // --- 3. AUTO-SKIP INTELLIGENT ---
-            // Si on cible le bouton de sauvegarde mais qu'il n'est pas là (car utilisateur déjà connecté),
-            // on passe immédiatement à l'étape suivante.
-            if (step.target === 'btnSecureAccount' && !targetEl) {
-                console.log("[Tuto] Bouton sauvegarde absent (Déjà connecté ?), étape suivante.");
-                this.nextWalkthroughStep();
-                return;
+            // --- 3. AUTO-SKIP INTELLIGENT (Mis à jour) ---
+            // Si l'étape concerne le bouton Google, on vérifie si l'utilisateur est déjà connecté.
+            if (step.target === 'googleAuthBtn') {
+                const user = Cloud.auth ? Cloud.auth.currentUser : null;
+                // Si l'utilisateur est déjà un membre certifié (NON anonyme), c'est inutile de lui dire de se connecter.
+                // On passe donc à l'étape suivante.
+                if (user && !user.isAnonymous) {
+                    console.log("[Tuto] Utilisateur déjà connecté Google, étape suivante.");
+                    this.nextWalkthroughStep();
+                    return;
+                }
             }
 
             // Remplissage du contenu
@@ -2002,6 +2007,23 @@ export const UI = {
         const totalVisible = BADGES.filter(b => !b.secret || unlockedIDs.includes(b.id)).length; 
         const unlockedCount = unlockedIDs.length; 
         document.getElementById('badgeCount').innerText = `${unlockedCount}/${totalVisible}`;
+        
+        // APPEL DE LA NOUVELLE FONCTION
+        this.renderBadges();
+    },
+
+    // --- NOUVELLE FONCTION AJOUTÉE ---
+    renderBadges() {
+        const grid = document.getElementById('badgesGrid'); 
+        if(!grid) return; // Sécurité si la modale n'est pas dans le DOM
+        grid.innerHTML = ''; 
+        
+        const unlockedIDs = window.App.data.badges; 
+        const totalVisible = BADGES.filter(b => !b.secret || unlockedIDs.includes(b.id)).length; 
+        const unlockedCount = unlockedIDs.length; 
+        
+        const countEl = document.getElementById('badgeCount');
+        if(countEl) countEl.innerText = `${unlockedCount}/${totalVisible}`;
         
         const renderBadge = (b) => { 
             const unlocked = unlockedIDs.includes(b.id); 

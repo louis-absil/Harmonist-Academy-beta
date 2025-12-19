@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously, signOut, onAuthStateChanged, GoogleAuthProvider, linkWithPopup, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAMA9hH3hjlkjp-a4lpb3Dg9IusUB-AiMQ",
@@ -12,20 +12,16 @@ const firebaseConfig = {
 };
 
 let app, auth, db, provider, userUid = null;
-let isSyncDone = false; // 🔒 VERROU DE SÉCURITÉ (Nouveau)
-
-// Délai avant qu'un pseudo anonyme inactif ne soit "volable" (90 jours)
-const ZOMBIE_TIMEOUT = 90 * 24 * 60 * 60 * 1000;
+let isSyncDone = false; 
 
 export const Cloud = {
     initialized: false,
 
-    // --- 1. INITIALISATION (Version Hybride Corrigée) ---
+    // --- 1. INITIALISATION ---
     async init(onLoginCallback) {
         if (this.initialized) return;
 
         try {
-            // Initialisation robuste des services
             if (!app) app = initializeApp(firebaseConfig);
             if (!auth) auth = getAuth(app);
             if (!db) db = getFirestore(app);
@@ -34,60 +30,48 @@ export const Cloud = {
             this.initialized = true;
 
             onAuthStateChanged(auth, async (user) => {
-                isSyncDone = false; // 🔒 On verrouille immédiatement au changement de compte
+                isSyncDone = false; 
 
                 if (user) {
                     userUid = user.uid;
                     console.log("🔥 Session :", user.isAnonymous ? "Anonyme" : "Google", userUid);
 
                     let cloudData = null;
-
-                    // Si compte Google, on récupère les données
                     if (!user.isAnonymous) {
                         try {
                             const docRef = doc(db, "users", userUid);
                             const docSnap = await getDoc(docRef);
-                            
-                            if (docSnap.exists()) {
-                                cloudData = docSnap.data();
-                                console.log("📥 Données Cloud reçues");
-                            }
-                        } catch (e) {
-                            console.error("Erreur lecture Cloud:", e);
-                        }
+                            if (docSnap.exists()) cloudData = docSnap.data();
+                        } catch (e) { console.error("Erreur Cloud:", e); }
                     }
 
-                    // ⚡ C'EST ICI LA CLÉ : On prévient l'App (Mise à jour UI + Synchro)
                     if (onLoginCallback) onLoginCallback(user, cloudData);
 
-                    isSyncDone = true; // 🔓 Données chargées, on autorise la sauvegarde
-                    console.log("✅ Synchro terminée, sauvegardes activées.");
+                    isSyncDone = true; 
+                    console.log("✅ Synchro terminée.");
 
                 } else {
-                    // Fallback Invité
-                    console.log("⚪ Création session invité...");
-                    signInAnonymously(auth).then(() => {
-                        isSyncDone = true; // 🔓 Mode invité prêt (rien à télécharger)
-                    }).catch(console.error);
+                    signInAnonymously(auth).then(() => { isSyncDone = true; }).catch(console.error);
                 }
             });
 
-        } catch (e) {
-            console.error("Firebase Init Error:", e);
-        }
+        } catch (e) { console.error("Firebase Init Error:", e); }
     },
 
     getCurrentUID() { return userUid; },
     get auth() { return auth; },
 
-    // --- 2. SAUVEGARDE SÉCURISÉE ---
-    
-    // Alias pour compatibilité avec l'ancien code qui appelle peut-être syncUserStats
+    // --- 2. SAUVEGARDE ---
     async syncUserStats(appData) { return this.saveUser(appData); },
 
     async saveUser(appData) {
-        // 🛑 ON BLOQUE SI LA SYNCHRO N'EST PAS FINIE
-        if (!userUid || !db || !isSyncDone) {
+        if (!userUid || !db) return;
+        
+        // ANTI-POLLUTION : Pas de sauvegarde Cloud pour les Anonymes
+        if (!auth.currentUser || auth.currentUser.isAnonymous) return;
+
+        // VERROU SYNCHRO
+        if (!isSyncDone) {
             console.warn("⏳ Sauvegarde bloquée : En attente de synchro Cloud...");
             return;
         }
@@ -101,12 +85,12 @@ export const Cloud = {
             bestChrono: appData.bestChrono,
             bestSprint: appData.bestSprint,
             bestInverse: appData.bestInverse,
-            // On sauvegarde aussi les stats complètes
             stats: appData.stats, 
             settings: appData.settings,
             currentSet: appData.currentSet,
             arenaStats: appData.arenaStats,
-            lastSync: new Date().toISOString()
+            lastSync: new Date().toISOString(),
+            updatedAt: serverTimestamp()
         };
 
         try {
@@ -114,20 +98,17 @@ export const Cloud = {
         } catch (e) { console.error("Save Fail:", e); }
     },
 
-    // --- 3. GESTION COMPTE (Login / Link / Heartbeat) ---
+    // --- 3. GESTION COMPTE (Login / Logout / Link) ---
 
-    async login() {
-        // Sécurité ajoutée : Re-init si auth est perdu
-        if (!auth) { 
-            console.warn("⚠️ Auth perdu, re-init...");
-            app = initializeApp(firebaseConfig); auth = getAuth(app); provider = new GoogleAuthProvider(); 
-        }
-        try { 
-            const result = await signInWithPopup(auth, provider);
-            return { success: true, user: result.user }; 
-        } catch (e) { 
-            console.error("Login Error:", e);
-            return { success: false, error: e.message }; 
+    async logout() {
+        if (!auth) return;
+        try {
+            await signOut(auth);
+            userUid = null;
+            isSyncDone = false;
+            console.log("👋 Déconnexion réussie");
+        } catch (e) {
+            console.error("Logout Error:", e);
         }
     },
 
@@ -137,180 +118,110 @@ export const Cloud = {
         catch (e) { return { success: false, error: e.message }; }
     },
 
-    async sendHeartbeat(username) {
-        if (!userUid || !username) return;
+    // LIBÉRATION DU PSEUDO (Pour la transition Anonyme -> Google)
+    async releaseUsername(username) {
+        if (!username || !db) return;
         const docId = username.trim().toLowerCase();
-        try {
-            await setDoc(doc(db, "usernames", docId), { lastActive: Date.now() }, { merge: true });
-        } catch (e) { }
-    },
-
-    //  LEGACY
-    //     async assignUsername(username) {
-    //     if (!userUid || !db) return { success: false, reason: "NO_NET" };
-    //     if (!navigator.onLine) return { success: true, status: "OFFLINE" };
-    //     const docId = username.trim().toLowerCase();
-    //     const userRef = doc(db, "usernames", docId);
-    //     try {
-    //         const res = await runTransaction(db, async (t) => {
-    //             const userSnap = await t.get(userRef);
-                
-    //             // CAS 1 : Nouveau pseudo (Création)
-    //             if (!userSnap.exists()) { 
-    //                 t.set(userRef, { 
-    //                     originalName: username, 
-    //                     uid: userUid, 
-    //                     type: auth.currentUser.isAnonymous?'guest':'verified', 
-    //                     lastActive: Date.now(),
-    //                     updatedAt: serverTimestamp() // <--- INSERTION 1 (Création)
-    //                 }); 
-    //                 return "NEW"; 
-    //             }
-                
-    //             const d = userSnap.data();
-                
-    //             // CAS 2 : C'est déjà mon pseudo (Mise à jour)
-    //             if (d.uid === userUid) { 
-    //                 t.update(userRef, { 
-    //                     lastActive: Date.now(), 
-    //                     type: auth.currentUser.isAnonymous?'guest':'verified',
-    //                     updatedAt: serverTimestamp() // <--- INSERTION 2 (Refresh)
-    //                 }); 
-    //                 return "OWNED"; 
-    //             }
-                
-    //             if (d.type === 'verified') throw "TAKEN_VERIFIED";
-                
-    //             // CAS 3 : Vol de compte Zombie (Écrasement)
-    //             if (Date.now() - (d.lastActive||0) > ZOMBIE_TIMEOUT) { 
-    //                 t.set(userRef, { 
-    //                     originalName: username, 
-    //                     uid: userUid, 
-    //                     type: auth.currentUser.isAnonymous?'guest':'verified', 
-    //                     lastActive: Date.now(),
-    //                     updatedAt: serverTimestamp() // <--- INSERTION 3 (Zombie)
-    //                 }); 
-    //                 return "ZOMBIE"; 
-    //             }
-    //             throw "TAKEN_ACTIVE";
-    //         });
-    //         return { success: true, status: res };
-    //     } catch (e) { return { success: false, reason: e }; }
-    // },
-
-    async assignUsername(username) {
-        const currentUser = auth.currentUser;
-        if (!currentUser || !db) return false;
         
-        const uid = currentUser.uid;
-        const cleanName = username.trim().toLowerCase();
-        if (cleanName.length < 3) return false;
-
-        const userDocRef = doc(db, 'users', uid);
-        const newNameRef = doc(db, 'usernames', cleanName);
-
         try {
-            await runTransaction(db, async (transaction) => {
-                // A. Vérifier si le NOUVEAU pseudo est pris
-                const nameSnap = await transaction.get(newNameRef);
-                if (nameSnap.exists() && nameSnap.data().uid !== uid) {
-                    throw "Ce pseudo est déjà pris !";
-                }
-
-                // B. Récupérer l'ANCIEN pseudo depuis le profil utilisateur
-                const userSnap = await transaction.get(userDocRef);
-                let oldName = null;
-                if (userSnap.exists() && userSnap.data().username) {
-                    oldName = userSnap.data().username.toLowerCase();
-                }
-
-                // C. Si on change de nom...
-                if (oldName && oldName !== cleanName) {
-                    const oldNameRef = doc(db, 'usernames', oldName);
-                    // --- CORRECTION CRUCIALE ICI ---
-                    // 1. On lit le document de l'ancien pseudo
-                    const oldNameSnap = await transaction.get(oldNameRef);
-                    
-                    // 2. On ne tente de le supprimer QUE s'il existe vraiment
-                    // (Cela évite le crash des règles de sécurité sur un document fantôme)
-                    if (oldNameSnap.exists()) {
-                         if (oldNameSnap.data().uid === uid) {
-                             transaction.delete(oldNameRef);
-                         } else {
-                             // Cas rare : Le pseudo dans mon profil appartenait à quelqu'un d'autre ?
-                             // On ne fait rien, on le laisse tranquille.
-                         }
-                    }
-                }
-
-                // D. On réserve le nouveau nom
-                transaction.set(newNameRef, { uid: uid, updatedAt: serverTimestamp() });
-
-                // E. On met à jour le profil utilisateur
-                transaction.set(userDocRef, { 
-                    username: username, 
-                    updatedAt: serverTimestamp() 
-                }, { merge: true });
-            });
-
-            console.log("✅ Pseudo sauvegardé :", username);
+            // On supprime le document 'usernames/pseudo'
+            // Cela fonctionne car on est encore connecté avec le compte qui le possède
+            await deleteDoc(doc(db, "usernames", docId));
+            console.log("🔓 Pseudo libéré avec succès :", username);
             return true;
-
         } catch (e) {
-            console.error("❌ Erreur Pseudo :", e);
-            window.UI.showToast(typeof e === 'string' ? e : "Erreur lors du changement de pseudo");
+            console.warn("Impossible de libérer le pseudo (déjà libre ou permission refusée) :", e);
             return false;
         }
     },
 
-    // --- NOUVELLE AUTHENTIFICATION (V6.2) ---
-    async login(localData) {
-        if (!auth) return { success: false, error: "Auth non initialisé" };
-        
+    // LE VRAI LOGIN (Unique et complet)
+    async login(localData, oldUid = null) {
+        if (!auth) return { success: false, error: "Auth non init" };
+        localData = localData || {};
+
         try {
-            // 1. Popup Google
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
-            userUid = user.uid;
+            const userRef = doc(db, 'users', user.uid);
 
-            // 2. Récupération des données Cloud existantes
-            const userRef = doc(db, 'users', userUid);
-            const snap = await getDoc(userRef);
-            
-            let finalData = localData;
+            const serverSnap = await getDoc(userRef);
+            let cloudData = serverSnap.exists() ? serverSnap.data() : {};
 
-            if (snap.exists()) {
-                const cloudData = snap.data();
-                console.log("☁️ Compte trouvé. Fusion des données...");
+            // FUSION
+            const finalData = {
+                ...localData,
+                ...cloudData,
+                xp: Math.max(localData.xp || 0, cloudData.xp || 0),
+                lvl: Math.max(localData.lvl || 1, cloudData.lvl || 1),
+                mastery: Math.max(localData.mastery || 0, cloudData.mastery || 0),
+                badges: [...new Set([...(localData.badges || []), ...(cloudData.badges || [])])],
+                username: cloudData.username || localData.username
+            };
+
+            // GESTION PSEUDOS (Correctif Transaction Read/Write)
+            const oldUsername = localData.username;
+            const newUsername = finalData.username;
+
+            await runTransaction(db, async (transaction) => {
+                // --- PHASE 1 : TOUTES LES LECTURES D'ABORD ---
+                let oldSnap = null;
+                let oldNameRef = null;
                 
-                // FUSION INTELLIGENTE (Smart Merge)
-                // On garde la meilleure valeur pour chaque statistique critique
-                finalData = {
-                    ...localData, // On part du local
-                    ...cloudData, // On écrase avec le Cloud (pour les infos basiques)
-                    
-                    // FUSION DES SCORING (Le meilleur l'emporte)
-                    xp: Math.max(localData.xp || 0, cloudData.xp || 0),
-                    lvl: Math.max(localData.lvl || 1, cloudData.lvl || 1),
-                    mastery: Math.max(localData.mastery || 0, cloudData.mastery || 0),
-                    bestChrono: Math.max(localData.bestChrono || 0, cloudData.bestChrono || 0),
-                    bestSprint: Math.max(localData.bestSprint || 0, cloudData.bestSprint || 0),
-                    bestInverse: Math.max(localData.bestInverse || 0, cloudData.bestInverse || 0),
-                    
-                    // CORRECTION PSEUDO : Le Cloud gagne s'il a un nom défini
-                    username: cloudData.username || localData.username,
+                // Lecture 1 : Ancien pseudo (si pertinent)
+                if (oldUsername && oldUsername !== "Élève Anonyme" && oldUsername !== newUsername) {
+                    oldNameRef = doc(db, 'usernames', oldUsername.trim().toLowerCase());
+                    oldSnap = await transaction.get(oldNameRef);
+                }
 
-                    // FUSION DES BADGES (Union sans doublons)
-                    badges: [...new Set([...(localData.badges || []), ...(cloudData.badges || [])])],
-                    
-                    // Pour les stats complexes (Accords), on garde celles du profil qui a le plus d'XP
-                    stats: (cloudData.xp > localData.xp) ? cloudData.stats : localData.stats
-                };
-            }
+                // Lecture 2 : Nouveau pseudo (si pertinent)
+                let newSnap = null;
+                let newNameRef = null;
+                if (newUsername && newUsername !== "Élève Anonyme") {
+                    newNameRef = doc(db, 'usernames', newUsername.trim().toLowerCase());
+                    newSnap = await transaction.get(newNameRef);
+                }
 
-            // 4. On sauvegarde immédiatement le résultat fusionné sur le Cloud
+                // --- PHASE 2 : LOGIQUE & ÉCRITURES ---
+                
+                // A. Suppression de l'ancien (Nettoyage Zombie)
+                if (oldSnap && oldSnap.exists()) {
+                    const info = oldSnap.data();
+                    // On supprime SEULEMENT si ça appartenait à mon ancien UID invité
+                    if (oldUid && info.uid === oldUid) {
+                        transaction.delete(oldNameRef); 
+                    }
+                }
+
+                // B. Réservation du nouveau
+                if (newNameRef) {
+                    let canTake = false;
+                    if (!newSnap || !newSnap.exists()) canTake = true;
+                    else {
+                        const info = newSnap.data();
+                        // C'est à moi (via oldUid ou currentUid) ou c'est périmé
+                        if ((oldUid && info.uid === oldUid) || info.uid === user.uid) canTake = true;
+                        else if (info.expiresAt && info.expiresAt.toDate() < new Date()) canTake = true;
+                    }
+
+                    if (canTake) {
+                        transaction.set(newNameRef, { 
+                            uid: user.uid, 
+                            original: newUsername, 
+                            expiresAt: null, // À vie pour le compte Google
+                            updatedAt: serverTimestamp() 
+                        });
+                    } else {
+                         // Fallback si pris : on force le nom Google dans l'objet final (pas dans la DB usernames)
+                         if (finalData.username === localData.username) {
+                             finalData.username = user.displayName || "Harmoniste";
+                         }
+                    }
+                }
+            });
+
+            // Sauvegarde finale du profil utilisateur
             await setDoc(userRef, finalData, { merge: true });
-            
             return { success: true, user: user, data: finalData };
 
         } catch (error) {
@@ -319,16 +230,59 @@ export const Cloud = {
         }
     },
 
-    async logout() {
+    async assignUsername(newUsername, oldUsername = null) {
+        const currentUser = auth.currentUser;
+        if (!currentUser || !db) return false;
+        
+        const uid = currentUser.uid;
+        const cleanNew = newUsername.trim().toLowerCase();
+        const displayNew = newUsername.trim();
+
+        if (oldUsername && cleanNew === oldUsername.trim().toLowerCase()) return true;
+        if (cleanNew.length < 3) return false;
+
+        const newNameRef = doc(db, 'usernames', cleanNew);
+        const userRef = doc(db, 'users', uid);
+        const expirationDate = currentUser.isAnonymous 
+            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) 
+            : null;
+
         try {
-            await signOut(auth);
-            userUid = null;
-            return { success: true };
-        } catch (e) { return { success: false, error: e }; }
+            await runTransaction(db, async (transaction) => {
+                const nameSnap = await transaction.get(newNameRef);
+                if (nameSnap.exists()) {
+                    const data = nameSnap.data();
+                    if (data.uid !== uid && (!data.expiresAt || data.expiresAt.toDate() > new Date())) {
+                        throw "Ce pseudo est déjà pris.";
+                    }
+                }
+
+                if (oldUsername && oldUsername !== "Élève Anonyme") {
+                    const cleanOld = oldUsername.trim().toLowerCase();
+                    const oldNameRef = doc(db, 'usernames', cleanOld);
+                    const oldSnap = await transaction.get(oldNameRef);
+                    if (oldSnap.exists() && oldSnap.data().uid === uid) {
+                        transaction.delete(oldNameRef);
+                    }
+                }
+
+                transaction.set(newNameRef, { 
+                    uid: uid, original: displayNew, expiresAt: expirationDate, updatedAt: serverTimestamp()
+                });
+
+                if (!currentUser.isAnonymous) {
+                    transaction.set(userRef, { username: displayNew }, { merge: true });
+                }
+            });
+            return true;
+        } catch (e) {
+            console.error("Erreur Pseudo:", e);
+            window.UI.showToast(typeof e === 'string' ? e : "Erreur technique");
+            return false;
+        }
     },
 
-    // --- 4. LEADERBOARDS & CHALLENGES (Inchangé de l'ancien code) ---
-
+    // --- 4. LEADERBOARDS & CHALLENGES (Identique ancien code) ---
     async submitScore(mode, score, username, mastery) {
         if (!userUid || !db || score <= 0) return;
         const payload = { uid: userUid, pseudo: username || "Anonyme", score: score, mastery: mastery, timestamp: new Date().toISOString() };
