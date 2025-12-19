@@ -1,5 +1,5 @@
 
-# 🎼 Harmonist Academy V5.1 (Studio Update)
+# 🎼 Harmonist Academy V7.0 : Connected Identity
 
 > **L'application ultime d'entraînement auditif pour l'harmonie, le jazz et l'acoustique.**
 
