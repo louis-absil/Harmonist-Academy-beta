@@ -92,7 +92,7 @@ export const App = {
         ChallengeManager.checkRescue(); 
 
         try {
-            const s = JSON.parse(localStorage.getItem('harmonist_v4_final') || '{}');
+            const s = JSON.parse(localStorage.getItem('harmonist_v6_data') || '{}');
             if(s.xp !== undefined) { 
                 this.data.username = s.username || "Élève Anonyme";
                 this.data.xp = s.xp || 0;
@@ -1357,7 +1357,18 @@ export const App = {
         }
         else {
             console.log("🔄 Synchronisation parfaite (Égalité).");
-            // Même si égalité, on rafraîchit l'UI settings pour afficher "Certifié"
+            
+            // --- AJOUT SÉCURITÉ IDENTITÉ ---
+            // Même si l'XP est pareille, si le Cloud a un vrai pseudo et que je suis "Anonyme", je prends celui du Cloud.
+            if (cloudData.username && cloudData.username !== "Élève Anonyme" && this.data.username === "Élève Anonyme") {
+                console.log("🔧 Correction Pseudo via Cloud");
+                this.data.username = cloudData.username;
+                this.saveData();
+                window.UI.updateHeader();
+            }
+            // -------------------------------
+
+            // Rafraîchir l'interface des paramètres (pour afficher "Certifié")
             if(document.getElementById('settingsModal').classList.contains('open')) {
                 window.UI.renderSettings();
             }
