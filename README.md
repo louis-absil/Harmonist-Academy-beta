@@ -1,7 +1,7 @@
 
 # 🎼 Harmonist Academy V7.0 : Connected Identity
 
-> **L'application ultime d'entraînement auditif pour l'harmonie, le jazz et l'acoustique.**
+> **L'application ultime d'entraînement auditif pour la reconnaissance d'accords de 7èmes.**
 
 ![Version](https://img.shields.io/badge/version-7.0-studio.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
