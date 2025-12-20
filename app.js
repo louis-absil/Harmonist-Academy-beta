@@ -7,6 +7,7 @@ import { Cloud } from './firebase.js';
 import { ChallengeManager } from './challenges.js';
 
 export const App = {
+    isResetting: false,
     data: { 
         username: "Élève Anonyme", 
         xp:0, lvl:1, next:100, mastery:0, currentSet: 'academy',
@@ -512,10 +513,83 @@ export const App = {
         this.saveData(); window.UI.renderBoard(); window.UI.renderSettings(); window.UI.updateHeader(); 
     },
 
-    hardReset() { if(confirm("Sûr ?")) { localStorage.removeItem('harmonist_v4_final'); location.reload(); } },
+    async hardReset() { 
+        if(!confirm("☢️ RESET D'USINE ☢️\n\nCela va :\n1. Supprimer votre pseudo du Cloud\n2. Effacer les données locales\n3. Vous déconnecter\n\nL'application redémarrera à zéro.")) return;
+
+        // 1. ON ACTIVE LE BOUCLIER (Anti-sauvegarde)
+        this.isResetting = true; 
+
+        // On tue les timers
+        if (this.cloudSaveTimer) { clearTimeout(this.cloudSaveTimer); this.cloudSaveTimer = null; }
+        if (this.timerRef) clearInterval(this.timerRef);
+
+        console.log("💀 Démarrage du nettoyage...");
+        window.UI.showToast("♻️ Libération du pseudo et nettoyage...");
+
+        // --- AJOUT : 2. LIBÉRATION DU PSEUDO (Pendant qu'on est encore connecté) ---
+        // On ne le fait que si on a un vrai pseudo et qu'on est connecté
+        if (typeof Cloud !== 'undefined' && Cloud.auth.currentUser) {
+            const currentName = this.data.username;
+            if (currentName && currentName !== "Élève Anonyme") {
+                try {
+                    console.log(`🗑️ Libération du pseudo : ${currentName}`);
+                    await Cloud.releaseUsername(currentName);
+                } catch (e) {
+                    console.warn("Erreur libération pseudo (peut-être déjà libre) :", e);
+                }
+            }
+        }
+        // ---------------------------------------------------------------------------
+
+        // 3. DÉCONNEXION FIREBASE
+        if (typeof Cloud !== 'undefined' && Cloud.auth) {
+            try { await Cloud.logout(); } catch (e) { console.warn(e); }
+        }
+
+        // 4. VIDAGE COMPLET DONNÉES
+        localStorage.clear(); 
+
+        // 5. SUPPRESSION INDEXEDDB (Persistence Firebase)
+        if (window.indexedDB && window.indexedDB.databases) {
+            try {
+                const dbs = await window.indexedDB.databases();
+                for (const db of dbs) {
+                    window.indexedDB.deleteDatabase(db.name);
+                }
+            } catch (e) {}
+        }
+
+        // 6. SUPPRESSION CACHE & SERVICE WORKER
+        if ('caches' in window) {
+            try {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(key => caches.delete(key)));
+            } catch (e) {}
+        }
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+        }
+
+        // 7. LA RUSE DU CHANGEMENT D'URL (Pour éviter le cache zombie)
+        setTimeout(() => {
+            window.location.replace(window.location.pathname + '?reset_t=' + Date.now());
+        }, 500);
+    },
+
 
     // Sauvegarde Locale (Ultra rapide - Appelé à chaque point)
     saveData() {
+        // --- BLOCAGE DE SÉCURITÉ ---
+        // Si on est en train de reset, INTERDICTION d'écrire quoi que ce soit !
+        if (this.isResetting) {
+            console.log("🛑 Sauvegarde bloquée (Reset en cours)");
+            return;
+        }
+        // ---------------------------
+        if(!this.data) return;
         try {
             localStorage.setItem('harmonist_v6_data', JSON.stringify(this.data));
             
@@ -534,6 +608,14 @@ export const App = {
     // DANS app.js
 
     triggerCloudSave(immediate = false) {
+        // --- AJOUT SÉCURITÉ CRITIQUE ---
+        // Si on est en train de reset, on annule TOUT (même les timers en cours)
+        if (this.isResetting) {
+            if (this.cloudSaveTimer) clearTimeout(this.cloudSaveTimer);
+            return;
+        }
+        // -------------------------------
+
         const user = Cloud.auth.currentUser;
 
         // --- ANTI-POLLUTION (FILTRE CRITIQUE) ---
@@ -1040,6 +1122,10 @@ export const App = {
 
     // --- SYSTEME DE SAUVEGARDE INTELLIGENT ---
     async triggerSave(reason = "Auto") {
+        // --- AJOUT SÉCURITÉ ---
+        if (this.isResetting) return;
+        // ----------------------
+
         // On ne sauvegarde que si un utilisateur est connecté
         if (!Cloud.auth.currentUser) return;
 

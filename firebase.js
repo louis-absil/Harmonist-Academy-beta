@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInAnonymously, signOut, onAuthStateChanged, GoogleAuthProvider, linkWithPopup, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, deleteDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, deleteDoc, getDoc, collection, addDoc, query, orderBy, limit, getDocs, where, serverTimestamp, runTransaction, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAMA9hH3hjlkjp-a4lpb3Dg9IusUB-AiMQ",
@@ -25,6 +25,19 @@ export const Cloud = {
             if (!app) app = initializeApp(firebaseConfig);
             if (!auth) auth = getAuth(app);
             if (!db) db = getFirestore(app);
+            // --- DEBUT AJOUT PERSISTANCE HORS-LIGNE ---
+            try {
+                // Tente d'activer le cache disque pour les données
+                await enableIndexedDbPersistence(db);
+                console.log("💾 Persistance Offline activée");
+            } catch (err) {
+                if (err.code == 'failed-precondition') {
+                    console.warn("Persistance échouée (Plusieurs onglets ouverts)");
+                } else if (err.code == 'unimplemented') {
+                    console.warn("Persistance non supportée par le navigateur");
+                }
+            }
+            // --- FIN AJOUT ---
             if (!provider) provider = new GoogleAuthProvider();
 
             this.initialized = true;
