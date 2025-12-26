@@ -1,7 +1,7 @@
 
-# 🎼 Harmonist Academy V7.0 : Connected Identity
+# 🎼 Harmonist Academy V5.1 (Studio Update)
 
-> **L'application ultime d'entraînement auditif pour la reconnaissance d'accords de 7èmes.**
+> **L'application ultime d'entraînement auditif pour l'harmonie, le jazz et l'acoustique.**
 
 ![Version](https://img.shields.io/badge/version-7.0-studio.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -11,7 +11,7 @@ Harmonist Academy est une **Single Page Application (SPA)** gamifiée conçue po
 
 ---
 
-## 🎹 Harmonist Academy V7.0 : Connected Identity
+# 🎹 Harmonist Academy V7.0 : Connected Identity
 
 **Mise à jour majeure - Décembre 2025**
 

@@ -6,12 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Harmonist Academy - V7.0 (Connected Identity)</title>
     <link rel="stylesheet" href="./styles.css">
-    <!-- Suppression des styles React/Vite inutiles -->
-<link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <!-- Favicon standard -->
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
 <script type="importmap">
 {
   "imports": {
@@ -20,9 +25,10 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body>
+
+<div id="challengeProgressContainer" class="challenge-progress-container"></div>
 
 <div class="vignette-overlay" id="vignette"></div>
 
@@ -79,9 +85,9 @@
             </div>
             <div class="header-actions">
                 <button class="icon-btn" id="btnCodex" onclick="window.UI.openCodex()">📖</button>
-                <button class="icon-btn" id="btnArena" onclick="window.UI.showChallengeHub()" style="color:var(--gold); border:1px solid rgba(251, 191, 36, 0.3);">⚔️</button>
-                <button class="icon-btn" id="btnStats" onclick="window.UI.openModal('statsModal')">📊</button>
-                <button class="icon-btn" id="btnSettings" onclick="window.UI.openModal('settingsModal')">⚙️</button>
+                <button class="icon-btn" id="btnArena" onclick="Audio.sfx('button_click'); window.UI.showChallengeHub()" style="color:var(--gold); border:1px solid rgba(251, 191, 36, 0.3);">⚔️</button>
+                <button class="icon-btn" id="btnStats" onclick="Audio.sfx('button_click'); window.UI.openModal('statsModal')">📊</button>
+                <button class="icon-btn" id="btnSettings" onclick="Audio.sfx('button_click'); window.UI.openModal('settingsModal')">⚙️</button>
             </div>
         </div>
     </header>
@@ -136,12 +142,12 @@
 
     <div class="game-area" id="mainArea">
         <div class="panel" id="panelChord">
-            <div class="panel-label"><span>Qualité</span><span>(1-6)</span></div>
+            <div class="panel-label"><span>Qualité</span><span id="chordShortcutsText" class="shortcuts-text-mobile">(1-6)</span><div id="chordShortcutsVisual"></div></div>
             <div class="pad-grid grid-c" id="chordGrid"></div>
         </div>
         
         <div class="panel" id="invPanel">
-            <div class="panel-label"><span id="invPanelLabel">Renversement</span><span>(A Z E R)</span></div>
+            <div class="panel-label"><span id="invPanelLabel">Renversement</span><div id="invShortcutsVisual"></div></div>
             <div class="pad-grid grid-i" id="invGrid"></div>
         </div>
         
@@ -176,7 +182,8 @@
 <!-- SETTINGS -->
 <div class="modal-overlay" id="settingsModal">
     <div class="modal">
-        <div style="display:flex; justify-content:flex-end;">
+        <div style="display:flex; justify-content:flex-end; gap:10px; align-items:center;">
+            <span class="modal-help-icon" onclick="window.UI.startTutorialModule('settings')" title="Aide">?</span>
             <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
         </div>
         <div class="brand-title" onclick="window.App.clickTitle()">
@@ -207,9 +214,6 @@
         <div id="settingsChords" class="settings-grid"></div>
         <h4 style="text-align:left; color:var(--primary); margin:15px 0 5px 0;">Variations</h4>
         <div id="settingsInvs" class="settings-grid"></div>
-        <button class="cmd-btn btn-listen" onclick="window.UI.openTutorial()" style="width:100%; margin-top:20px; padding:12px; border:1px solid var(--gold); color:var(--gold);">
-            🎓 Guide de l'Académie
-        </button>
         <button class="cmd-btn" id="btnResetSave" onclick="window.App.hardReset()" style="width:100%; margin-top:20px; background:rgba(239, 68, 68, 0.2); color:var(--error); padding:10px;">⚠️ Réinitialiser</button>
     </div>
 </div>
@@ -217,7 +221,8 @@
 <!-- PROFILE -->
 <div class="modal-overlay" id="modalProfile">
     <div class="modal">
-        <div style="position:absolute; top:15px; right:15px; z-index:50;">
+        <div style="position:absolute; top:15px; right:15px; z-index:50; display:flex; gap:10px; align-items:center;">
+            <span class="modal-help-icon" onclick="window.UI.startTutorialModule('progression')" title="Aide" style="position:static;">?</span>
             <span style="cursor:pointer; font-size:1.5rem; background:rgba(0,0,0,0.5); width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid rgba(255,255,255,0.1);" onclick="window.UI.closeModals()">✕</span>
         </div>
 
@@ -281,7 +286,10 @@
     <div class="modal" style="text-align:left;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 style="margin:0;">Statistiques</h2>
-            <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span class="modal-help-icon" onclick="window.UI.startTutorialModule('stats')" title="Aide">?</span>
+                <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+            </div>
         </div>
         <div class="coach-box" id="coachDisplay"></div>
         <h4 style="margin:0 0 10px 0; font-size:0.8rem; color:var(--text-dim); text-transform:uppercase;">Historique de Précision</h4>
@@ -301,7 +309,10 @@
     <div class="modal" style="width:95%; max-width:500px; height:80vh; display:flex; flex-direction:column; padding:0; background: #0f172a; border-radius: 20px;">
         <div style="padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--panel-border);">
             <h2 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:10px; color:var(--text);">📖 Codex</h2>
-            <span style="cursor:pointer; font-size:1.5rem; color:var(--text-dim);" onclick="window.UI.closeModals()">✕</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span class="modal-help-icon" onclick="window.UI.startTutorialModule('codex')" title="Aide">?</span>
+                <span style="cursor:pointer; font-size:1.5rem; color:var(--text-dim);" onclick="window.UI.closeModals()">✕</span>
+            </div>
         </div>
         <div id="codexGridView" style="flex:1; overflow-y:auto; padding:10px;"><div class="codex-grid" id="codexGrid"></div></div>
         <div id="codexDetailView" class="codex-detail">
@@ -341,7 +352,10 @@
     <div class="modal" style="height:85vh; display:flex; flex-direction:column;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h2 style="margin:0; color:var(--primary); display:flex; align-items:center; gap:10px;">⚔️ L'Arène</h2>
-            <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span class="modal-help-icon" onclick="window.UI.startTutorialModule('arena')" title="Aide">?</span>
+                <span style="cursor:pointer; font-size:1.5rem;" onclick="window.UI.closeModals()">✕</span>
+            </div>
         </div>
 
         <div class="lb-sub-nav">
@@ -390,7 +404,20 @@
                        style="background:rgba(0,0,0,0.3); border:1px solid var(--panel-border); color:white; padding:15px; border-radius:12px; font-weight:800; font-size:1.2rem; text-align:center; width:100%; text-transform:uppercase; letter-spacing:2px; margin-top:10px;">
                 
                 <div style="display:flex; gap:10px; margin-top:15px;">
-                    <button class="cmd-btn btn-action" style="flex:1;" onclick="window.UI.joinChallenge()">JOUER</button>
+                    <button class="cmd-btn btn-action" style="flex:1;" onclick="
+                        console.log('JOUER button clicked');
+                        try {
+                            if(window.UI && window.UI.joinChallenge) {
+                                window.UI.joinChallenge();
+                            } else {
+                                console.error('window.UI or joinChallenge not found', {UI: window.UI, joinChallenge: window.UI?.joinChallenge});
+                                alert('Erreur: UI.joinChallenge non disponible');
+                            }
+                        } catch(e) {
+                            console.error('Error in joinChallenge onclick:', e);
+                            alert('Erreur: ' + e.message);
+                        }
+                    ">JOUER</button>
                     <button class="cmd-btn btn-listen" style="flex:1;" onclick="window.UI.viewChallengeLeaderboard()">VOIR SCORES</button>
                 </div>
             </div>
@@ -447,6 +474,18 @@
     <!-- Injected by JS -->
 </div>
 
+<!-- MODALE DE CONFIRMATION PERSONNALISÉE -->
+<div class="modal-overlay" id="confirmModal" style="display:none;">
+    <div class="modal" style="max-width:400px; text-align:center;">
+        <h3 id="confirmModalTitle" style="margin:0 0 15px 0; color:var(--primary);">Confirmation</h3>
+        <p id="confirmModalMessage" style="color:var(--text-dim); margin-bottom:25px; line-height:1.6;"></p>
+        <div style="display:flex; gap:10px;">
+            <button id="confirmModalCancel" class="cmd-btn btn-listen" style="flex:1;" onclick="window.UI.confirmModalResolve(false)">Annuler</button>
+            <button id="confirmModalOk" class="cmd-btn btn-action" style="flex:1;" onclick="window.UI.confirmModalResolve(true)">Confirmer</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalTutorial">
     <div class="modal" style="max-width: 450px; text-align: center; padding: 30px 20px;">
         <div style="font-size:3.5rem; margin-bottom:15px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));" id="tutoIcon">🏛️</div>
@@ -491,5 +530,7 @@
             });
         }
     </script>
+
+
 </body>
 </html>

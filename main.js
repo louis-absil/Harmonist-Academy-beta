@@ -9,6 +9,7 @@ import { ChallengeManager } from './challenges.js';
 window.App = App;
 window.UI = UI;
 window.Piano = Piano;
+window.Audio = Audio;
 window.AudioEngine = Audio;
 window.ChallengeManager = ChallengeManager;
 
@@ -16,7 +17,7 @@ window.ChallengeManager = ChallengeManager;
 // Rangée du bas (W X C V B N ,) et milieu (S D G H J)
 const STUDIO_MAP = {
     'KeyZ': 0, // Do (W sur Azerty)
-    'KeyS': 1, // Do#
+    'KeyS': 1, // Do#   
     'KeyX': 2, // Ré
     'KeyD': 3, // Ré#
     'KeyC': 4, // Mi
@@ -100,6 +101,16 @@ document.addEventListener('keydown', e => {
 // Initialization
 window.onload = () => {
     App.init();
+    
+    // Hook : Vérifier si c'est la première visite et déclencher le tutoriel d'accueil
+    setTimeout(() => {
+        if (!localStorage.getItem('tuto_first_visit')) {
+            const moduleId = window.UI.checkTutorialTriggers({ type: 'firstVisit' });
+            if (moduleId) {
+                window.UI.startTutorialModule(moduleId);
+            }
+        }
+    }, 1000); // Délai pour laisser l'app s'initialiser
 };
 
 // GESTION DE LA FERMETURE / MINIMISATION (Mobile & Desktop)

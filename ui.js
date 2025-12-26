@@ -12,40 +12,417 @@ const LORE_PLACES = ['Le Club', 'Le Labo', 'Le Cosmos', "L'Institut", 'La Source
 export const UI = {
     // STATE
     lbState: { mode: 'chrono', period: 'weekly' },
-    createConfig: { length: 10 }, 
+    createConfig: { length: 10 },
+    currentTutorialModule: null, // Module actuellement affiché
+    wtStep: 0, // Étape actuelle dans le module
 
-// --- INTERACTIVE WALKTHROUGH ENGINE (V5.4) ---
-    // LEGACY
-    // wtStep: 0,
-    // wtData: [
-    //    { 
-    //        target: null, // null = Centré (Intro)
-    //        title: "Bienvenue à l'Académie", 
-    //        text: "Ceci est votre tableau de bord. Harmonist Academy va transformer votre oreille en instrument de précision. Laissez-moi vous faire visiter." 
-    //    },
-    //    { 
-    //        target: "rankIcon", // ID de l'élément à surligner
-    //        title: "Votre Identité", 
-    //        text: "Ici s'affichent votre <strong>Rang</strong> et votre <strong>Maîtrise</strong>. Gagnez de l'XP en jouant pour monter en grade et débloquer de nouveaux contenus." 
-    //    },
-    //    { 
-    //        target: "toolsBar", 
-    //        title: "Les Modes d'Entraînement", 
-    //        text: "Commencez en <strong>Zen</strong> pour apprendre. Débloquez ensuite <strong>Chrono</strong> (Niv.8), <strong>Sprint</strong> (Niv.12) et <strong>Inverse</strong> (Niv.3) pour tester vos réflexes." 
-    //    },
-    //    { 
-    //        target: "mainArea", 
-    //        title: "La Zone de Jeu", 
-    //        text: "Le cœur de l'action. Écoutez l'accord, identifiez sa <strong>Couleur</strong> (à gauche) et son <strong>Renversement</strong> (à droite). Analysez, ne devinez pas !" 
-    //    },
-    //    { 
-    //        target: "btnSettings", 
-    //        title: "Paramètres & Progression", 
-    //        text: "Accédez ici pour changer de 'Set' (Jazz, Labo), voir vos statistiques détaillées ou relancer ce guide." 
-    //    }
-    //],
+    // --- SYSTÈME DE TUTORIEL MODULAIRE ---
+    tutorialModules: {
+        // Module 1 : Premiers pas (Tutoriel d'accueil minimal)
+        'first_visit': {
+            id: 'first_visit',
+            name: 'Premiers pas',
+            steps: [
+                {
+                    target: null,
+                    title: "Bienvenue !",
+                    text: "Harmonist Academy est votre compagnon pour développer l'oreille relative. Commençons par les bases.",
+                },
+                {
+                    target: "playBtn",
+                    title: "Moteur Sonore",
+                    text: "Cliquez ici pour activer le son.<br><br><strong>⚠️ iPhone/iPad :</strong> Désactivez impérativement le mode silencieux (bouton latéral) pour entendre le piano.",
+                },
+                {
+                    target: "panelChord",
+                    title: "La Qualité de l'Accord",
+                    text: "Sélectionnez ici la <strong>qualité</strong> de l'accord (Maj7, min7, Dom7, etc.).",
+                },
+                {
+                    target: "invPanel",
+                    title: "Le Renversement",
+                    text: "Sélectionnez ici le <strong>renversement</strong> de l'accord (État Fondamental, 1er, 2ème, etc.).",
+                },
+                {
+                    target: "replayBtn",
+                    title: "Réécouter",
+                    text: "Cliquez ici pour réentendre l'accord.<br><em>Raccourci clavier : Espace</em>",
+                },
+                {
+                    target: "hintBtn",
+                    title: "L'Indice",
+                    text: "Bloqué ? Le bouton loupe joue les notes une par une (arpège).<br><strong>Attention :</strong> Utiliser l'indice réduit le score du tour.<br><em>Raccourci clavier : H</em>",
+                },
+                {
+                    target: "valBtn",
+                    title: "Valider",
+                    text: "Une fois votre choix fait (Couleur + Renversement), confirmez ici.<br><em>Raccourci clavier : Entrée</em>",
+                },
+                {
+                    target: null,
+                    title: "À vous de jouer !",
+                    text: "Vous pouvez relancer ce guide à tout moment depuis les <strong>Paramètres > Guide</strong>.",
+                }
+            ],
+            trigger: 'onFirstVisit',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
 
-    // --- SCÉNARIO TUTORIEL ULTIME V8 ---
+        // Module 2 : Votre progression
+        'progression': {
+            id: 'progression',
+            name: 'Votre progression',
+            steps: [
+                {
+                    target: "rankIcon",
+                    title: "Votre Niveau",
+                    text: "Ici s'affichent votre <strong>Niveau</strong> et votre <strong>Maîtrise</strong>. Gagnez de l'XP en répondant correctement pour débloquer les contenus avancés.",
+                },
+                {
+                    target: "xpBar",
+                    title: "Barre d'XP",
+                    text: "Chaque bonne réponse vous fait gagner de l'XP. Atteignez le niveau suivant pour débloquer de nouveaux modes et contenus.",
+                }
+            ],
+            trigger: 'onModalOpen',
+            modalId: 'modalProfile',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 3 : Modes de jeu (dynamique selon déblocage)
+        'mode_inverse': {
+            id: 'mode_inverse',
+            name: 'Mode Inverse',
+            steps: [
+                {
+                    target: "modeInverse",
+                    title: "Mode Inverse",
+                    text: "Le jeu vous donne le nom de l'accord, vous devez trouver le son parmi les options. Développe l'oreille intérieure et la mémoire auditive.",
+                }
+            ],
+            trigger: 'onModeUnlock',
+            mode: 'inverse',
+            requiredLevel: 3,
+            requiredMastery: 0,
+        },
+
+        'mode_chrono': {
+            id: 'mode_chrono',
+            name: 'Mode Chrono',
+            steps: [
+                {
+                    target: "modeChrono",
+                    title: "Mode Chrono",
+                    text: "Course contre la montre ! Vous avez 60 secondes pour faire le meilleur score. Chaque bonne réponse vous fait gagner du temps. Attention : les erreurs vous font perdre une vie !",
+                }
+            ],
+            trigger: 'onModeUnlock',
+            mode: 'chrono',
+            requiredLevel: 8,
+            requiredMastery: 0,
+        },
+
+        'mode_sprint': {
+            id: 'mode_sprint',
+            name: 'Mode Sprint',
+            steps: [
+                {
+                    target: "modeSprint",
+                    title: "Mode Sprint",
+                    text: "L'épreuve ultime ! Le temps diminue à chaque question. Plus vous répondez vite, plus vous gagnez de points. Renforce l'intuition musicale et les réflexes.",
+                }
+            ],
+            trigger: 'onModeUnlock',
+            mode: 'sprint',
+            requiredLevel: 12,
+            requiredMastery: 0,
+        },
+
+        // Module 4 : Paramètres
+        'settings': {
+            id: 'settings',
+            name: 'Paramètres',
+            steps: [
+                {
+                    target: "usernameInput",
+                    title: "Votre Identité",
+                    text: "Choisissez un pseudo unique. S'il est libre, il sera réservé pour vous. <br><em>(Les pseudos inactifs sont recyclés après 90 jours).</em>",
+                },
+                {
+                    target: "googleAuthBtn",
+                    title: "Sécuriser le Compte",
+                    text: "<strong>Recommandé :</strong> Connectez-vous avec Google pour sauvegarder votre progression dans le Cloud et éviter de tout perdre en cas de nettoyage du navigateur.",
+                    skipIf: () => {
+                        const user = Cloud.auth?.currentUser;
+                        return user && !user.isAnonymous;
+                    }
+                },
+                {
+                    target: "settingsChords",
+                    title: "Cursus & Accords",
+                    text: "Sélectionnez précisément les types d'accords que vous voulez travailler. Plus vous en activez, plus vous gagnez d'XP. En atteignant le <strong>Niveau 20</strong>, validez la <strong>Maîtrise</strong> pour débloquer de nouveaux sets d'accords.",
+                },
+                {
+                    target: "settingsInvs",
+                    title: "Renversements",
+                    text: "Activez ou désactivez les renversements (État Fondamental, 1er, 2ème...). Maîtriser les renversements est une des clés vers la maîtrise de l'oreille relative.",
+                }
+            ],
+            trigger: 'onModalOpen',
+            modalId: 'settingsModal',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 5 : Statistiques
+        'stats': {
+            id: 'stats',
+            name: 'Statistiques',
+            steps: [
+                {
+                    target: "coachDisplay",
+                    title: "Le Coach Virtuel",
+                    text: "Il analyse vos dernières parties pour vous donner des conseils personnalisés sur vos points faibles.",
+                },
+                {
+                    target: "historyChart",
+                    title: "Historique",
+                    text: "Consultez votre taux de réussite sur les 7 dernières sessions.",
+                },
+                {
+                    target: "statsContent",
+                    title: "Analyse Précise",
+                    text: "Visualisez votre pourcentage de réussite pour chaque accord et chaque renversement.",
+                },
+                {
+                    target: "badgesGrid",
+                    title: "Trophées",
+                    text: "Collectionnez les badges en accomplissant des exploits. Cliquez sur un badge pour voir comment l'obtenir.",
+                    onEnter: () => {
+                        const m = document.querySelector('#statsModal .modal');
+                        if(m) m.scrollTop = 400;
+                    }
+                }
+            ],
+            trigger: 'onModalOpen',
+            modalId: 'statsModal',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 6 : Codex
+        'codex': {
+            id: 'codex',
+            name: 'Le Codex',
+            steps: [
+                {
+                    target: "codexGridContainer",
+                    title: "Fiches Théoriques",
+                    text: "Cliquez sur une carte pour obtenir des éléments théoriques et écouter l'accord.",
+                },
+                {
+                    target: null,
+                    title: "Navigation",
+                    text: "Utilisez les onglets pour naviguer entre les différents sets d'accords (Académie, Jazz, Laboratoire).",
+                }
+            ],
+            trigger: 'onModalOpen',
+            modalId: 'modalCodex',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 7 : Arène
+        'arena': {
+            id: 'arena',
+            name: "L'Arène",
+            steps: [
+                {
+                    target: "tuto-arena-nav",
+                    title: "Navigation",
+                    text: "Utilisez ces onglets pour naviguer entre les Classements, le Défi du Jour et les modes Créatifs.",
+                    onEnter: () => {
+                        const nav = document.querySelector('.lb-sub-nav');
+                        if(nav) nav.id = "tuto-arena-nav";
+                    }
+                },
+                {
+                    target: "c-tab-global",
+                    title: "Défi du Jour",
+                    text: "Chaque jour, une série unique. Tout le monde a le même tirage. Qui aura la meilleure note ?",
+                    onEnter: () => { window.UI.switchChallengeTab('global'); }
+                },
+                {
+                    target: "c-tab-join",
+                    title: "Rejoindre",
+                    text: "Rejoignez un défi avec un code, ou consultez votre score avec le bouton 'Voir Scores'.",
+                    onEnter: () => { window.UI.switchChallengeTab('join'); }
+                }
+            ],
+            trigger: 'onModalOpen',
+            modalId: 'challengeHubModal',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 8 : Créer un défi
+        'create_challenge': {
+            id: 'create_challenge',
+            name: 'Créer un défi',
+            steps: [
+                {
+                    target: "btnOpenStudio",
+                    title: "Le Studio",
+                    text: "Composez votre propre dictée musicale accord par accord pour vous mesurer à vos amis.",
+                },
+                {
+                    target: "createControls",
+                    title: "Générateur Aléatoire",
+                    text: "Ou laissez l'IA créer un défi. Le contenu dépendra des <strong>Accords activés dans vos Paramètres</strong>.",
+                }
+            ],
+            trigger: 'onTabSwitch',
+            tabId: 'c-tab-create',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 9 : Fin de partie
+        'game_over': {
+            id: 'game_over',
+            name: 'Fin de partie',
+            steps: [
+                {
+                    target: "endScore",
+                    title: "Votre Score",
+                    text: "Votre score final s'affiche ici. Comparez-le avec votre record personnel.",
+                },
+                {
+                    target: "miniLeaderboardArea",
+                    title: "Classement",
+                    text: "Voyez où vous vous situez dans le classement hebdomadaire. Améliorez votre position en rejouant !",
+                    skipIf: () => {
+                        const lbArea = document.getElementById('miniLeaderboardArea');
+                        return !lbArea || lbArea.style.display === 'none';
+                    }
+                }
+            ],
+            trigger: 'onGameOver',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 10 : Première réponse correcte
+        'first_correct': {
+            id: 'first_correct',
+            name: 'Première réponse correcte',
+            steps: [
+                {
+                    target: null,
+                    title: "Bravo !",
+                    text: "Vous avez gagné de l'XP ! Continuez ainsi pour progresser et débloquer de nouveaux contenus.",
+                }
+            ],
+            trigger: 'onFirstCorrect',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 11 : Première erreur
+        'first_error': {
+            id: 'first_error',
+            name: 'Première erreur',
+            steps: [
+                {
+                    target: null,
+                    title: "Apprendre de ses erreurs",
+                    text: "Observez la correction : l'accord cible est en vert, votre réponse en rouge. C'est ainsi qu'on développe l'oreille !",
+                }
+            ],
+            trigger: 'onFirstError',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 12 : Premier badge
+        'first_badge': {
+            id: 'first_badge',
+            name: 'Premier badge',
+            steps: [
+                {
+                    target: null,
+                    title: "Badge débloqué !",
+                    text: "Félicitations ! Vous avez débloqué un badge. Consultez tous vos badges dans les <strong>Statistiques</strong>.",
+                }
+            ],
+            trigger: 'onFirstBadge',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 13 : Premier défi
+        'first_challenge': {
+            id: 'first_challenge',
+            name: 'Premier défi',
+            steps: [
+                {
+                    target: "challengeProgressContainer",
+                    title: "Barre de progression",
+                    text: "Cette barre montre votre progression dans le défi. Chaque segment représente une question.",
+                },
+                {
+                    target: null,
+                    title: "Fin du défi",
+                    text: "À la fin, vous verrez un rapport détaillé avec vos erreurs et votre classement.",
+                }
+            ],
+            trigger: 'onChallengeStart',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        },
+
+        // Module 14 : Maîtrise atteinte
+        'mastery_unlocked': {
+            id: 'mastery_unlocked',
+            name: 'Maîtrise atteinte',
+            steps: [
+                {
+                    target: null,
+                    title: "Nouveaux contenus !",
+                    text: "Félicitations ! Vous avez atteint la Maîtrise. De nouveaux sets d'accords sont maintenant disponibles : <strong>Le Club (Jazz)</strong> et <strong>Le Laboratoire</strong>.",
+                },
+                {
+                    target: "settingsChords",
+                    title: "Activer les nouveaux sets",
+                    text: "Allez dans les <strong>Paramètres</strong> pour activer les nouveaux accords et renversements.",
+                    onEnter: () => { window.UI.openModal('settingsModal'); }
+                }
+            ],
+            trigger: 'onMasteryUnlock',
+            requiredLevel: 20,
+            requiredMastery: 1,
+        },
+
+        // Module 15 : Premier classement
+        'first_leaderboard': {
+            id: 'first_leaderboard',
+            name: 'Premier classement',
+            steps: [
+                {
+                    target: "c-tab-arcade",
+                    title: "Classements",
+                    text: "Comparez vos scores avec le monde entier. Votre position est mise en évidence.",
+                }
+            ],
+            trigger: 'onFirstLeaderboard',
+            requiredLevel: 0,
+            requiredMastery: 0,
+        }
+    },
+
+    // --- ANCIEN SYSTÈME (GARDÉ POUR COMPATIBILITÉ) ---
     wtData: [
         // 0. ACCUEIL
         {
@@ -262,10 +639,159 @@ export const UI = {
         }
     ],
 
-    startWalkthrough() {
-        // Ferme les modales existantes pour nettoyer la vue
-        this.closeModals();
+    // Vérifie si un module de tutoriel doit être affiché
+    checkTutorialTriggers(context) {
+        const data = window.App?.data || {};
+        const lvl = data.lvl || 1;
+        const mastery = data.mastery || 0;
+        
+        // Vérifier chaque module
+        for (const [moduleId, module] of Object.entries(this.tutorialModules)) {
+            // Vérifier si le module a déjà été vu
+            if (localStorage.getItem(`tuto_module_${moduleId}_seen`) === 'true') {
+                continue;
+            }
+            
+            // Vérifier les conditions de niveau et maîtrise
+            if (lvl < module.requiredLevel || mastery < module.requiredMastery) {
+                continue;
+            }
+            
+            // Vérifier le déclencheur selon le contexte
+            let shouldTrigger = false;
+            
+            switch (module.trigger) {
+                case 'onFirstVisit':
+                    if (context.type === 'firstVisit' && !localStorage.getItem('tuto_first_visit')) {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onModalOpen':
+                    if (context.type === 'modalOpen' && context.modalId === module.modalId) {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onModeUnlock':
+                    if (context.type === 'modeUnlock' && context.mode === module.mode) {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onTabSwitch':
+                    if (context.type === 'tabSwitch' && context.tabId === module.tabId) {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onGameOver':
+                    if (context.type === 'gameOver') {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onFirstCorrect':
+                    if (context.type === 'firstCorrect') {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onFirstError':
+                    if (context.type === 'firstError') {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onFirstBadge':
+                    if (context.type === 'firstBadge') {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onChallengeStart':
+                    if (context.type === 'challengeStart') {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onMasteryUnlock':
+                    if (context.type === 'masteryUnlock') {
+                        shouldTrigger = true;
+                    }
+                    break;
+                    
+                case 'onFirstLeaderboard':
+                    if (context.type === 'firstLeaderboard') {
+                        shouldTrigger = true;
+                    }
+                    break;
+            }
+            
+            if (shouldTrigger) {
+                return moduleId;
+            }
+        }
+        
+        return null;
+    },
+
+    // Lance un module de tutoriel spécifique
+    startTutorialModule(moduleId) {
+        const module = this.tutorialModules[moduleId];
+        if (!module) {
+            console.warn(`Module de tutoriel introuvable: ${moduleId}`);
+            return;
+        }
+        
+        // Vérifier les conditions une dernière fois
+        const data = window.App?.data || {};
+        if (data.lvl < module.requiredLevel || data.mastery < module.requiredMastery) {
+            return;
+        }
+        
+        this.currentTutorialModule = moduleId;
         this.wtStep = 0;
+        this.startWalkthrough(moduleId);
+    },
+
+    startWalkthrough(moduleId = null) {
+        // Si un moduleId est fourni, utiliser ce module, sinon utiliser l'ancien système
+        let steps = [];
+        
+        if (moduleId && this.tutorialModules[moduleId]) {
+            steps = this.tutorialModules[moduleId].steps;
+            this.currentTutorialModule = moduleId;
+        } else {
+            // Ancien système : utiliser wtData
+            steps = this.wtData;
+            this.currentTutorialModule = null;
+        }
+        
+        // Filtrer les étapes selon les conditions
+        const data = window.App?.data || {};
+        const filteredSteps = steps.filter(step => {
+            // Vérifier skipIf si présent
+            if (step.skipIf && typeof step.skipIf === 'function') {
+                try {
+                    if (step.skipIf()) return false;
+                } catch (e) {
+                    console.warn("Erreur dans skipIf:", e);
+                }
+            }
+            return true;
+        });
+        
+        // Stocker les étapes filtrées temporairement
+        this.currentSteps = filteredSteps;
+        this.wtStep = 0;
+        
+        // IMPORTANT: Ne PAS fermer les modales si c'est un tutoriel contextuel (moduleId fourni)
+        // Car le tutoriel doit s'afficher SUR la modale ouverte
+        if (!moduleId) {
+            // Ferme les modales existantes pour nettoyer la vue (ancien système)
+            this.closeModals();
+        }
         document.getElementById('tour-spotlight').classList.add('active');
         document.getElementById('tour-tooltip').classList.add('active');
         this.renderWalkthroughStep();
@@ -275,25 +801,50 @@ export const UI = {
     },
 
     endWalkthrough() {
-        document.getElementById('tour-spotlight').classList.remove('active');
-        document.getElementById('tour-tooltip').classList.remove('active');
+        const spotlight = document.getElementById('tour-spotlight');
+        const tooltip = document.getElementById('tour-tooltip');
+        if(spotlight) spotlight.classList.remove('active');
+        if(tooltip) tooltip.classList.remove('active');
         document.body.style.overflow = ''; // Restaure le scroll
-        localStorage.setItem('tuto_seen_v5.4', 'true');
+        
+        // Marquer le module comme vu
+        if (this.currentTutorialModule) {
+            localStorage.setItem(`tuto_module_${this.currentTutorialModule}_seen`, 'true');
+        } else {
+            // Ancien système
+            localStorage.setItem('tuto_seen_v5.4', 'true');
+        }
+        
+        // Marquer la première visite
+        if (this.currentTutorialModule === 'first_visit') {
+            localStorage.setItem('tuto_first_visit', 'true');
+        }
+        
+        this.currentTutorialModule = null;
+        this.currentSteps = null;
         
         // Petit délai pour reset le highlight
         setTimeout(() => {
             const spot = document.getElementById('tour-spotlight');
-            spot.style.top = '-1000px'; 
-            spot.style.left = '-1000px';
-            spot.style.width = '0';
-            spot.style.height = '0';
+            if(spot) {
+                spot.style.top = '-1000px'; 
+                spot.style.left = '-1000px';
+                spot.style.width = '0';
+                spot.style.height = '0';
+                spot.style.pointerEvents = 'none'; // FIX: Désactiver les interactions
+            }
+            const tool = document.getElementById('tour-tooltip');
+            if(tool) {
+                tool.style.pointerEvents = 'none'; // FIX: Désactiver les interactions
+            }
         }, 500);
     },
 
     nextWalkthroughStep() {
-        Audio.sfx('card_open'); // Son plus doux et musical // <--- AJOUT SONORE ICI
+        Audio.sfx('card_open'); // Son plus doux et musical
         this.wtStep++;
-        if (this.wtStep >= this.wtData.length) {
+        const steps = this.currentSteps || this.wtData;
+        if (this.wtStep >= steps.length) {
             this.endWalkthrough();
             this.showToast("🎓 Bon entraînement !");
         } else {
@@ -302,14 +853,16 @@ export const UI = {
     },
 
     renderWalkthroughStep() {
+        const steps = this.currentSteps || this.wtData;
+        
         // Sécurité fin de parcours
-        if (this.wtStep >= this.wtData.length) {
+        if (this.wtStep >= steps.length) {
             this.endWalkthrough();
             this.showToast("🎓 Bon entraînement !");
             return;
         }
 
-        const step = this.wtData[this.wtStep];
+        const step = steps[this.wtStep];
         if(!step) return;
 
         // --- 1. GESTION DES ACTIONS (FIX: Ouverture des Modales) ---
@@ -326,7 +879,7 @@ export const UI = {
             step.onEnter();
         }
 
-        // --- 2. DÉLAI D'ANIMATION (Augmenté à 400ms) ---
+            // --- 2. DÉLAI D'ANIMATION (Augmenté à 400ms) ---
         // On laisse le temps à la modale de s'ouvrir (transition CSS) avant de calculer les positions
         setTimeout(() => {
             const spot = document.getElementById('tour-spotlight');
@@ -347,9 +900,10 @@ export const UI = {
             }
 
             // Remplissage du contenu
+            const steps = this.currentSteps || this.wtData;
             document.getElementById('tour-title').innerHTML = step.title;
             document.getElementById('tour-desc').innerHTML = step.text;
-            document.getElementById('tour-step-count').innerText = `${this.wtStep + 1}/${this.wtData.length}`;
+            document.getElementById('tour-step-count').innerText = `${this.wtStep + 1}/${steps.length}`;
             
             // --- LOGIQUE DE POSITIONNEMENT ---
             if (!targetEl) {
@@ -367,16 +921,31 @@ export const UI = {
                 // --- 4. SCROLL AUTOMATIQUE (FIX: Élément visible) ---
                 // Force le navigateur à scroller l'élément au centre de la vue (crucial pour les modales)
                 // On remplace 'smooth' par 'auto' pour éviter le décalage pendant l'animation
-                targetEl.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+                // IMPORTANT: Ne pas scroller si l'élément est caché (display: none)
+                if (window.getComputedStyle(targetEl).display !== 'none') {
+                    targetEl.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'center' });
+                }
 
                 const rect = targetEl.getBoundingClientRect();
                 const margin = 15;
                 
                 // Le projecteur (Spotlight)
-                spot.style.width = (rect.width + 8) + 'px';
-                spot.style.height = (rect.height + 8) + 'px';
-                spot.style.top = (rect.top - 4) + 'px';
-                spot.style.left = (rect.left - 4) + 'px';
+                // FIX: Si l'élément est invisible (width/height = 0 ou display: none), utiliser une position par défaut
+                const targetDisplay = window.getComputedStyle(targetEl).display;
+                if (rect.width === 0 || rect.height === 0 || targetDisplay === 'none') {
+                    // Élément invisible, centrer le spotlight
+                    spot.style.width = '200px';
+                    spot.style.height = '200px';
+                    spot.style.top = '50%';
+                    spot.style.left = '50%';
+                    spot.style.transform = 'translate(-50%, -50%)';
+                } else {
+                    spot.style.width = (rect.width + 8) + 'px';
+                    spot.style.height = (rect.height + 8) + 'px';
+                    spot.style.top = (rect.top - 4) + 'px';
+                    spot.style.left = (rect.left - 4) + 'px';
+                    spot.style.transform = '';
+                }
                 
                 // Récupère l'arrondi de l'élément ciblé pour que ce soit joli
                 const style = window.getComputedStyle(targetEl);
@@ -403,11 +972,21 @@ export const UI = {
                 tool.style.top = top + 'px';
                 tool.style.left = left + 'px';
                 tool.style.transform = ''; 
+                // FIX: S'assurer que le tooltip est cliquable (z-index élevé et pointer-events)
+                tool.style.pointerEvents = 'auto';
+                tool.style.zIndex = '2147483647';
+                // FIX: S'assurer que les boutons du tooltip sont cliquables
+                const tourBtns = tool.querySelectorAll('.tour-btn');
+                tourBtns.forEach(btn => {
+                    btn.style.pointerEvents = 'auto';
+                    btn.style.zIndex = '2147483648';
+                });
 
                 // La flèche
                 const arrow = document.getElementById('tour-arrow');
                 if(arrow) {
-                    let arrowLeft = (rect.left + rect.width/2) - left - 8;
+                    const targetDisplay = window.getComputedStyle(targetEl).display;
+                    let arrowLeft = (rect.width === 0 || rect.height === 0 || targetDisplay === 'none') ? toolW / 2 - 8 : (rect.left + rect.width/2) - left - 8;
                     arrowLeft = Math.max(10, Math.min(toolW - 26, arrowLeft));
                     arrow.style.left = arrowLeft + 'px';
                     arrow.style.top = (rect.bottom + margin === top) ? '-8px' : 'auto';
@@ -419,8 +998,14 @@ export const UI = {
     },
     
     // Garder cette fonction pour le bouton "Guide" du menu
-    openTutorial() {
-        this.startWalkthrough();
+    // Par défaut, lance le tutoriel d'accueil, mais peut être utilisé pour l'ancien tutoriel complet
+    openTutorial(moduleId = null) {
+        if (moduleId && this.tutorialModules[moduleId]) {
+            this.startTutorialModule(moduleId);
+        } else {
+            // Par défaut, lancer uniquement le tutoriel d'accueil
+            this.startTutorialModule('first_visit');
+        }
     },
 
     // --- AJOUT ICI ---
@@ -443,8 +1028,9 @@ export const UI = {
         if (active) {
             // Mode Défi : Bouton Quitter (Porte)
             btn.innerHTML = "🚪";
-            btn.onclick = () => {
-                if(confirm("Quitter le défi en cours ? Tout progrès sera perdu.")) {
+            btn.onclick = async () => {
+                const confirmed = await window.UI.showConfirmModal("Quitter le défi en cours ? Tout progrès sera perdu.", "Quitter le défi");
+                if(confirmed) {
                     window.ChallengeManager.exit();
                 }
             };
@@ -473,6 +1059,16 @@ export const UI = {
             if(tabName === 'global') btns[1].classList.add('active');
             if(tabName === 'join') btns[2].classList.add('active');
             if(tabName === 'create') btns[3].classList.add('active');
+        }
+        
+        // Hook : Vérifier si un tutoriel contextuel doit s'afficher pour l'onglet "Créer"
+        if (tabName === 'create') {
+            setTimeout(() => {
+                const moduleId = this.checkTutorialTriggers({ type: 'tabSwitch', tabId: 'c-tab-create' });
+                if (moduleId) {
+                    this.startTutorialModule(moduleId);
+                }
+            }, 300);
         }
     },
 
@@ -529,12 +1125,30 @@ export const UI = {
                     let color = 'white';
                     
                     // Calcul de la réussite (Moyenne)
-                    const displayScore = s.score !== undefined ? s.score : s.note; 
+                    // FIX: Calculer le nombre de bonnes réponses à partir de note et total
                     const totalPoints = s.total || 20;
-                    const isPass = (displayScore / totalPoints) >= 0.5;
+                    let correctAnswers;
+                    
+                    // Calcul correct : utiliser note si disponible (nouveaux scores), sinon estimer à partir de score
+                    if (s.note !== undefined && s.note !== null) {
+                        // Nouveaux scores : note sur 20, on calcule correctAnswers
+                        correctAnswers = Math.round((s.note / 20) * totalPoints);
+                    } else if (s.score !== undefined && s.score !== null) {
+                        // Anciens scores : score est le total de points, on doit estimer
+                        if (s.score <= totalPoints * 20) {
+                            correctAnswers = Math.max(0, Math.min(totalPoints, Math.round(s.score / 20)));
+                        } else {
+                            // Score trop élevé, on utilise une estimation conservatrice
+                            correctAnswers = Math.round(totalPoints * 0.5); // Estimation à 50%
+                        }
+                    } else {
+                        correctAnswers = 0;
+                    }
+                    
+                    const isPass = (correctAnswers / totalPoints) >= 0.5;
 
                     let rankDisplay = rank;
-                    let scoreDisplay = `${displayScore}/${totalPoints}`;
+                    let scoreDisplay = `${correctAnswers}/${totalPoints}`;
 
                     if(idx===0) { rankDisplay='🥇'; color='var(--gold)'; }
                     else if(idx===1) { rankDisplay='🥈'; color='#e2e8f0'; }
@@ -605,7 +1219,8 @@ export const UI = {
             length: 20,
             settings: settings
         };
-        if(confirm(`Lancer le Défi du Jour ?\n\n20 Questions • Mode Académie`)) {
+        const confirmed = await this.showConfirmModal(`Lancer le Défi du Jour ?<br><br>20 Questions • Mode Académie`, "Défi du Jour");
+        if(confirmed) {
             await ChallengeManager.start(challengeData);
         }
     },
@@ -623,7 +1238,8 @@ export const UI = {
             length: 20,
             settings: settings
         };
-        if(confirm(`Lancer le Défi du Jour ?\n\n20 Questions • Mode Académie`)) {
+        const confirmed = await this.showConfirmModal(`Lancer le Défi du Jour ?<br><br>20 Questions • Mode Académie`, "Défi du Jour");
+        if(confirmed) {
             await ChallengeManager.start(challengeData);
         }
     },
@@ -631,12 +1247,21 @@ export const UI = {
     async joinChallenge() {
         // Cible l'input avec le bon ID (joinInput)
         const input = document.getElementById('joinInput');
-        if(!input) { console.error("Input 'joinInput' introuvable"); return; }
+        if(!input) { 
+            console.error("Input 'joinInput' introuvable"); 
+            this.showToast("Erreur : Champ de code introuvable");
+            return; 
+        }
         
         const code = input.value.trim().toUpperCase();
-        if(code.length < 3) return;
+        
+        if(code.length < 3) {
+            this.showToast("⚠️ Le code doit contenir au moins 3 caractères");
+            return;
+        }
         
         let data = await Cloud.getChallenge(code);
+        
         if(!data) {
             data = {
                 id: code,
@@ -650,7 +1275,9 @@ export const UI = {
             };
         }
         
-        if(confirm(`Rejoindre le défi "${code}" ?`)) {
+        const confirmed = await this.showConfirmModal(`Rejoindre le défi "${code}" ?`, "Rejoindre un défi");
+        
+        if(confirmed) {
             await ChallengeManager.start(data);
         }
     },
@@ -678,26 +1305,46 @@ export const UI = {
                 let rank = idx+1;
                 let color = 'white';
                 
-                const displayScore = s.score !== undefined ? s.score : Math.round((s.note/20) * (s.total||20));
+                // FIX: Calculer le nombre de bonnes réponses à partir de note et total
+                // score est le total de points, pas le nombre de bonnes réponses
                 const totalPoints = s.total || 20;
-                const isPass = (displayScore / totalPoints) >= 0.5;
+                let correctAnswers;
+                
+                // Calcul correct : utiliser note si disponible (nouveaux scores), sinon estimer à partir de score
+                if (s.note !== undefined && s.note !== null) {
+                    // Nouveaux scores : note sur 20, on calcule correctAnswers
+                    correctAnswers = Math.round((s.note / 20) * totalPoints);
+                } else if (s.score !== undefined && s.score !== null) {
+                    // Anciens scores : score est le total de points, on doit estimer
+                    // Si score = 25 et total = 10, cela ne peut pas être 25 bonnes réponses
+                    // On estime : si score est raisonnable, on peut l'utiliser, sinon on calcule
+                    // En général, score = correctAnswers * 20 - mistakes * 5
+                    // Pour simplifier, on estime : correctAnswers ≈ score / 20 (si score < total * 20)
+                    if (s.score <= totalPoints * 20) {
+                        correctAnswers = Math.max(0, Math.min(totalPoints, Math.round(s.score / 20)));
+                    } else {
+                        // Score trop élevé, on utilise une estimation conservatrice
+                        correctAnswers = Math.round(totalPoints * 0.5); // Estimation à 50%
+                    }
+                } else {
+                    correctAnswers = 0;
+                }
+                
+                const isPass = (correctAnswers / totalPoints) >= 0.5;
 
                 let rankDisplay = rank;
-                let scoreDisplay = `${displayScore}/${totalPoints}`;
+                let scoreDisplay = `${correctAnswers}/${totalPoints}`;
 
                 if(idx===0) { rankDisplay='🥇'; color='var(--gold)'; }
                 else if(idx===1) { rankDisplay='🥈'; color='#e2e8f0'; }
                 else if(idx===2) { rankDisplay='🥉'; color='#b45309'; }
                 
                 if (!isPass) {
-                    rankDisplay = '-';
-                    scoreDisplay = `<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>`;
+                    rankDisplay = '-'; // On masque le rang exact pour les scores < 50%
                     color = 'var(--text-dim)';
-                    if (isMe) {
-                        const status = window.App.getProgressionStatus(displayScore, totalPoints);
-                        if (status === 'best') { scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--cyan);">⭐ Record Perso</span>`; color = 'var(--cyan)'; } 
-                        else if (status === 'trend') { scoreDisplay = `<span style="font-size:0.7rem; font-weight:900; opacity:1; color:var(--success);">📈 En hausse</span>`; color = 'var(--success)'; }
-                    }
+                    // FIX: Masquer le score exact pour tous (y compris l'utilisateur) si < 50%
+                    scoreDisplay = `<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>`;
+                    // L'utilisateur verra toujours son pseudo avec "En progrès", mais pas son score exact
                 }
 
                 let masteryHtml = "";
@@ -763,10 +1410,25 @@ export const UI = {
     },
 
     renderChallengeReport(report) {
+        // Normalisation : accepte soit {chord,userResp} soit l'ancien {correct,given}
+        const mistakes = Array.isArray(report.mistakes) ? report.mistakes.map(m => {
+            if (m && m.chord && m.userResp) return m;
+
+            // Fallback ancien format
+            const chordObj = (m && m.correct)
+                ? { type: (DB.chords.find(c => c.id === m.correct) || { name: m.correct, sub: "" }), notes: [] }
+                : { type: { name: "?", sub: "" }, notes: [] };
+
+            return {
+                chord: chordObj,
+                userResp: (m && m.given) ? m.given : {}
+            };
+        }) : [];
+
         let coachMsg = "Bravo pour cet effort.";
-        if (report.mistakes.length > 0) {
-            const m = report.mistakes[0];
-            const cName = m.chord.type.name;
+        if (mistakes.length > 0) {
+            const m0 = mistakes[0];
+            const cName = m0?.chord?.type?.name || "?";
             coachMsg = `Tu as confondu <strong>${cName}</strong>. Compare tes réponses ci-dessous.`;
         } else {
             coachMsg = "Un parcours sans faute ! Ton oreille est affûtée.";
@@ -776,7 +1438,35 @@ export const UI = {
         if(!modal) return;
         
         // VIEW 1: MISTAKES LIST
-        const mistakesHTML = report.mistakes.map(m => {
+        // FIX: Utiliser le step stocké dans chaque erreur, ou trouver dans attempts
+        const mistakeToQuestionMap = new Map();
+        if (report.attempts && report.mistakes) {
+            // Trouver tous les indices dans attempts où win === false (dans l'ordre chronologique)
+            const errorIndices = [];
+            report.attempts.forEach((attempt, idx) => {
+                if (!attempt.win) {
+                    errorIndices.push(idx);
+                }
+            });
+            
+            // Mapper chaque erreur à son numéro de question réel
+            report.mistakes.forEach((mistake, mistakeIdx) => {
+                // Priorité 1: Utiliser step si disponible
+                if (mistake.step !== undefined) {
+                    mistakeToQuestionMap.set(mistakeIdx, mistake.step + 1); // +1 car step commence à 0
+                } 
+                // Priorité 2: Utiliser l'index dans attempts
+                else if (mistakeIdx < errorIndices.length) {
+                    mistakeToQuestionMap.set(mistakeIdx, errorIndices[mistakeIdx] + 1);
+                } 
+                // Fallback
+                else {
+                    mistakeToQuestionMap.set(mistakeIdx, mistakeIdx + 1);
+                }
+            });
+        }
+        
+        const mistakesHTML = mistakes.map((m, mistakeIdx) => {
             const targetNotesStr = JSON.stringify(m.chord.notes);
             const targetName = m.chord.type.name;
             const targetSub = m.chord.type.sub;
@@ -804,11 +1494,14 @@ export const UI = {
                 }
             }
             const userNotesStr = JSON.stringify(userNotes);
+            
+            // FIX: Utiliser le numéro de question réel au lieu de l'index dans mistakes
+            const questionNumber = mistakeToQuestionMap.get(mistakeIdx) || (mistakeIdx + 1);
 
             return `
                 <div class="mistake-row" style="flex-direction:column; align-items:stretch; cursor:default; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; padding-bottom:5px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <span style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase;">Question ${report.mistakes.indexOf(m) + 1}</span>
+                        <span style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase;">Question ${questionNumber}</span>
                     </div>
                     <div style="display:flex; gap:10px;">
                         <div style="flex:1; background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.3); border-radius:8px; padding:8px; cursor:pointer;" onclick="window.AudioEngine.chord(${targetNotesStr})">
@@ -903,7 +1596,10 @@ export const UI = {
             }).join('');
         }
 
-        const pct = Math.round((report.score / report.total) * 100);
+        // FIX: Calculer le nombre de bonnes réponses à partir de attempts
+        const correctAnswers = report.attempts ? report.attempts.filter(a => a.win).length : 0;
+        const totalQuestions = report.total || (report.attempts ? report.attempts.length : 0);
+        const pct = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
         modal.innerHTML = `
             <div class="modal" style="text-align:center;">
@@ -911,8 +1607,8 @@ export const UI = {
                 <h2 style="margin:0; color:white; font-size:1.5rem;">${report.seed}</h2>
                 
                 <div class="report-score-circle" style="border-color:${pct >= 50 ? 'var(--success)' : 'var(--error)'}; color:${pct >= 50 ? 'var(--success)' : 'var(--error)'};">
-                    <span style="font-size:3.5rem; font-weight:900;">${report.score}</span>
-                    <span style="font-size:1rem; opacity:0.8;">/ ${report.total}</span>
+                    <span style="font-size:3.5rem; font-weight:900;">${correctAnswers}</span>
+                    <span style="font-size:1rem; opacity:0.8;">/ ${totalQuestions}</span>
                     <div style="font-size:0.9rem; margin-top:5px; color:${pct>=50?'var(--success)':'var(--error)'}">${pct}%</div>
                 </div>
 
@@ -923,6 +1619,7 @@ export const UI = {
                 <div class="report-tabs" style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
                     <button id="btn-rep-err" class="mode-opt active" onclick="window.UI.switchReportTab('err')">Erreurs</button>
                     <button id="btn-rep-stat" class="mode-opt" onclick="window.UI.switchReportTab('stat')">Statistiques</button>
+                    <button id="btn-rep-leaderboard" class="mode-opt" onclick="window.UI.switchReportTab('leaderboard', '${report.id || report.seed}')">Classement</button>
                 </div>
 
                 <div style="background:rgba(0,0,0,0.2); border-radius:12px; padding:10px; max-height:250px; overflow-y:auto; text-align:left;">
@@ -934,20 +1631,131 @@ export const UI = {
                         ${statsHTML}
                         ${statsInvHTML}
                     </div>
+                    <div id="view-rep-leaderboard" style="display:none;">
+                        <div style="text-align:center; padding:20px; color:var(--text-dim); font-size:0.8rem;">Chargement du classement...</div>
+                    </div>
                 </div>
 
-                <button class="cmd-btn btn-action" style="width:100%; margin-top:20px; padding:15px;" onclick="window.ChallengeManager.exit()">Quitter</button>
+                <button id="btn-rep-quit" class="cmd-btn btn-action" style="width:100%; margin-top:15px;" onclick="
+                    try { window.ChallengeManager?.exit?.(); } catch(e) { window.UI?.closeModals?.(); }
+                ">
+                 Quitter
+                </button>
             </div>
         `;
-        modal.classList.add('open');
+        // FIX: Utiliser openModal pour s'assurer que la modale est visible
+        this.openModal('challengeReportModal');
         Audio.sfx('win');
     },
 
-    switchReportTab(tab) {
+    switchReportTab(tab, challengeId = null) {
         document.getElementById('view-rep-err').style.display = tab === 'err' ? 'block' : 'none';
         document.getElementById('view-rep-stat').style.display = tab === 'stat' ? 'block' : 'none';
+        document.getElementById('view-rep-leaderboard').style.display = tab === 'leaderboard' ? 'block' : 'none';
         document.getElementById('btn-rep-err').classList.toggle('active', tab === 'err');
         document.getElementById('btn-rep-stat').classList.toggle('active', tab === 'stat');
+        document.getElementById('btn-rep-leaderboard').classList.toggle('active', tab === 'leaderboard');
+        
+        // Charger le leaderboard uniquement quand l'onglet est activé (lazy loading)
+        if (tab === 'leaderboard' && challengeId) {
+            this.loadChallengeLeaderboard(challengeId, document.getElementById('view-rep-leaderboard'));
+        }
+    },
+
+    // Fonction pour charger le leaderboard d'un défi dans la modale de fin
+    async loadChallengeLeaderboard(challengeId, containerElement) {
+        if (!containerElement || !challengeId) return;
+        
+        // Afficher l'état de chargement
+        containerElement.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim); font-size:0.8rem;">Chargement du classement...</div>';
+        
+        try {
+            const scores = await Cloud.getChallengeLeaderboard(challengeId);
+            const myUid = Cloud.getCurrentUID();
+            
+            containerElement.innerHTML = ''; // Clear loading text
+            
+            if (scores.length === 0) {
+                containerElement.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Aucun score pour ce défi.</div>';
+                return;
+            }
+            
+            // Calculer la fenêtre de scores à afficher (utilisateur +/- 2)
+            let myIndex = scores.findIndex(s => s.uid === myUid);
+            let start = 0;
+            let end = Math.min(10, scores.length); // Afficher jusqu'à 10 scores
+            
+            if (myIndex !== -1) {
+                start = Math.max(0, myIndex - 2);
+                end = Math.min(scores.length, start + 5);
+                // Ajuster si on est en bas de liste pour afficher 5 éléments si possible
+                if (end - start < 5 && start > 0) {
+                    start = Math.max(0, end - 5);
+                }
+            }
+            
+            const slice = scores.slice(start, end);
+            
+            slice.forEach((s, idx) => {
+                const absRank = start + idx + 1;
+                const isMe = (myIndex !== -1 && (start + idx) === myIndex);
+                
+                // Calculer le nombre de bonnes réponses
+                const totalPoints = s.total || 20;
+                let correctAnswers;
+                
+                if (s.note !== undefined && s.note !== null) {
+                    correctAnswers = Math.round((s.note / 20) * totalPoints);
+                } else if (s.score !== undefined && s.score !== null) {
+                    if (s.score <= totalPoints * 20) {
+                        correctAnswers = Math.max(0, Math.min(totalPoints, Math.round(s.score / 20)));
+                    } else {
+                        correctAnswers = Math.round(totalPoints * 0.5);
+                    }
+                } else {
+                    correctAnswers = 0;
+                }
+                
+                const isPass = (correctAnswers / totalPoints) >= 0.5;
+                
+                let rankDisplay = absRank;
+                let color = 'white';
+                let scoreDisplay = `${correctAnswers}/${totalPoints}`;
+                
+                if (absRank === 1) { rankDisplay = '🥇'; color = 'var(--gold)'; }
+                else if (absRank === 2) { rankDisplay = '🥈'; color = '#e2e8f0'; }
+                else if (absRank === 3) { rankDisplay = '🥉'; color = '#b45309'; }
+                
+                if (!isPass) {
+                    rankDisplay = '-';
+                    color = 'var(--text-dim)';
+                    scoreDisplay = '<span style="font-size:0.75rem; font-weight:400; opacity:0.7; color:var(--text-dim);">💪 En progrès</span>';
+                }
+                
+                const row = document.createElement('div');
+                row.style.cssText = `
+                    display:flex; align-items:center; padding:6px 10px; border-radius:8px; 
+                    background:${isMe ? 'rgba(99, 102, 241, 0.15)' : 'transparent'}; 
+                    border:1px solid ${isMe ? 'var(--primary)' : 'transparent'};
+                    margin-bottom: 2px;
+                    font-size: 0.85rem;
+                `;
+                
+                row.innerHTML = `
+                    <div style="width:25px; text-align:center; font-size:1rem; margin-right:8px;">${rankDisplay}</div>
+                    <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; color:${isMe ? 'white' : color};">
+                        ${s.pseudo}
+                    </div>
+                    <div style="font-weight:900; color:${color};">${scoreDisplay}</div>
+                `;
+                
+                containerElement.appendChild(row);
+            });
+            
+        } catch (e) {
+            console.error("Erreur lors du chargement du leaderboard:", e);
+            containerElement.innerHTML = '<div style="color:var(--error); text-align:center; padding:20px;">Erreur de connexion</div>';
+        }
     },
 
     // --- LEADERBOARD ARCADE ---
@@ -990,7 +1798,24 @@ export const UI = {
                 list.innerHTML = `<div style="text-align:center; color:var(--text-dim); margin-top:20px;">Aucun score ${periodText}.<br>Soyez le premier !</div>`;
                 return;
             }
+            const myUid = Cloud.getCurrentUID();
+            let foundUser = false;
+            
             scores.forEach((s, idx) => {
+                // Vérifier si l'utilisateur est dans le classement
+                if (!s.isGhost && s.uid === myUid && !foundUser) {
+                    foundUser = true;
+                    // Hook : Vérifier si c'est la première fois que l'utilisateur apparaît dans un classement
+                    if (!localStorage.getItem('tuto_module_first_leaderboard_seen')) {
+                        setTimeout(() => {
+                            const moduleId = this.checkTutorialTriggers({ type: 'firstLeaderboard' });
+                            if (moduleId) {
+                                this.startTutorialModule(moduleId);
+                            }
+                        }, 1000);
+                    }
+                }
+                
                 let rankVisual = `<span style="width:25px; font-weight:700; color:var(--text-dim);">${idx+1}</span>`;
                 if(idx === 0) rankVisual = '🥇';
                 if(idx === 1) rankVisual = '🥈';
@@ -1418,6 +2243,21 @@ export const UI = {
                 }
             }
         }
+
+        // Rendre les schémas de clavier pour les raccourcis
+        // Vérifier si on est en mode desktop
+        const isDesktop = window.innerWidth > 768;
+        
+        if (isDesktop) {
+            // Schéma pour les accords (1-6)
+            this.renderKeyboardShortcuts('chords', ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6']);
+            
+            // Schéma pour les renversements (Q W E R)
+            // Seulement si ce n'est pas le mode laboratory
+            if (!isLab) {
+                this.renderKeyboardShortcuts('inversions', ['KeyQ', 'KeyW', 'KeyE', 'KeyR']);
+            }
+        }
     },
 
     renderSel() {
@@ -1491,6 +2331,105 @@ export const UI = {
 
     vibrate(ptr) { if(navigator.vibrate) navigator.vibrate(ptr); },
     
+    // --- DANS UI.JS ---
+
+    // 1. Initialisation de la barre (Correction du segment en trop)
+    initChallengeProgress(total) {
+        const container = document.getElementById('challengeProgressContainer');
+        if (!container) return;
+        
+        // A. Nettoyage absolu (Supprime les anciens segments fantômes)
+        container.innerHTML = ''; 
+        container.style.display = 'flex';
+
+        // B. Boucle Corrigée : Strictement inférieur à total (i < total)
+        // Si total = 10, ça va de 0 à 9 (donc 10 cases).
+        for (let i = 0; i < total; i++) {
+            const seg = document.createElement('div');
+            seg.className = 'challenge-segment'; // Classe de base (Gris)
+            seg.id = `prog-seg-${i}`;
+            
+            // C. Seule la première case est "Active/Blanche" au début
+            if (i === 0) {
+                seg.classList.add('current');
+            }
+            
+            container.appendChild(seg);
+        }
+    },
+
+    // 2. Mise à jour de la barre (Correction des couleurs)
+    updateChallengeProgress(stepIndex, status) { 
+        // stepIndex = Index de la question qu'on vient de finir
+        
+        // A. GESTION DU PASSÉ (La question finie)
+        const currentSeg = document.getElementById(`prog-seg-${stepIndex}`);
+        if (currentSeg) {
+            // FORCE RESET : On écrase toutes les classes pour ne garder que la base
+            // Cela supprime 'current', 'wrong', 'active', etc.
+            currentSeg.className = 'challenge-segment'; 
+            
+            // On applique proprement la couleur du résultat
+            // status doit être 'win' (Vert) ou 'lose' (Rouge)
+            currentSeg.classList.add(status === 'win' ? 'correct' : 'wrong');
+        }
+
+        // B. GESTION DU FUTUR (La question suivante)
+        const nextIndex = stepIndex + 1;
+        const nextSeg = document.getElementById(`prog-seg-${nextIndex}`);
+        
+        // On vérifie que la case existe (pour ne pas planter à la dernière question)
+        if (nextSeg) {
+            nextSeg.className = 'challenge-segment'; // On s'assure qu'elle est propre
+            nextSeg.classList.add('current'); // Elle devient blanche (En cours)
+        }
+    },
+
+    resetChallengeUI() {
+        const container = document.getElementById('challengeProgressContainer');
+        if(container) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+        }
+        
+        const oldScore = document.getElementById('scoreGroup');
+        if(oldScore) oldScore.classList.remove('hidden-force');
+        
+        const chrono = document.getElementById('chronoDisplay');
+        if(chrono) {
+            chrono.classList.remove('hidden-force');
+            // --- CORRECTION : ON VIDE LE TEXTE "QUESTION 1" ---
+            chrono.innerHTML = '00:00'; 
+            // --------------------------------------------------
+        }
+        
+        const overlay = document.getElementById('interstitialOverlay');
+        if(overlay) overlay.style.display = 'none';
+    }, // N'oublie pas la virgule ici si ce n'est pas la dernière fonction
+
+    // Affiche l'écran de transition "Question X / Y"
+    async showChallengeTransition(nextStepIndex, total) {
+        const overlay = document.getElementById('interstitialOverlay');
+        const title = document.getElementById('interstitialTitle');
+        
+        if (!overlay || !title) return;
+
+        // Mise à jour du texte
+        title.innerHTML = `Question <span style="color:var(--gold)">${nextStepIndex + 1}</span> / ${total}`;
+        
+        // Apparition
+        overlay.classList.add('active');
+
+        // PAUSE (0.8s suffisent pour lire sans frustrer)
+        await new Promise(r => setTimeout(r, 800)); 
+
+        // Disparition
+        overlay.classList.remove('active');
+        
+        // Petite sécu pour laisser le CSS finir le fade-out
+        await new Promise(r => setTimeout(r, 200));
+    },
+
     updateHeader() {
         const d = window.App.data; 
         const r = DB.ranks[Math.min(d.lvl-1, DB.ranks.length-1)];
@@ -1508,8 +2447,10 @@ export const UI = {
     },
 
     updateChrono() { 
-        document.getElementById('timerVal').innerText = window.App.session.time; 
-        document.getElementById('livesVal').innerText = '❤️'.repeat(window.App.session.lives); 
+        const timerVal = document.getElementById('timerVal');
+        const livesVal = document.getElementById('livesVal');
+        if (timerVal) timerVal.innerText = window.App.session.time; 
+        if (livesVal) livesVal.innerText = '❤️'.repeat(window.App.session.lives); 
     },
 
     updateBackground(streak) { const body = document.body; if(streak >= 20) body.style.backgroundColor = '#370b1b'; else if(streak >= 10) body.style.backgroundColor = '#1e1b4b'; else body.style.backgroundColor = '#0f172a'; },
@@ -1583,13 +2524,65 @@ export const UI = {
 
     openModal(id, locked = false) { 
         if(id==='settingsModal') window.UI.renderSettings(); if(id==='statsModal') window.UI.renderStats(); if(id==='modalProfile') window.UI.renderProfile();
-        const el = document.getElementById(id); if(el) { el.classList.add('open'); el.onclick = (e) => { if (locked) return; if (e.target === el) window.UI.closeModals(); }; } 
+        
+        // Mapping modalId → son approprié
+        const modalSounds = {
+            'settingsModal': 'modal_settings',
+            'statsModal': 'modal_stats',
+            'modalProfile': 'modal_profile',
+            'challengeHubModal': 'modal_arena',
+            'challengeReportModal': null, // Déjà géré avec 'win' dans renderChallengeReport
+            'modalGameOver': null // Probablement géré ailleurs
+        };
+        
+        // Jouer le son approprié (sauf si null ou si c'est le codex qui a son propre son)
+        if (id !== 'modalCodex' && modalSounds[id] !== null && modalSounds[id] !== undefined) {
+            Audio.sfx(modalSounds[id]);
+        } else if (modalSounds[id] === undefined) {
+            // Son générique pour les modales non mappées
+            Audio.sfx('modal_open');
+        }
+        
+        const el = document.getElementById(id);
+        if(el) { 
+            el.classList.add('open');
+            // FIX: Forcer display: flex pour éviter que style inline display:none écrase le CSS
+            el.style.display = 'flex';
+            el.onclick = (e) => { if (locked) return; if (e.target === el) window.UI.closeModals(); }; 
+            
+            // Hook : Vérifier si un tutoriel contextuel doit s'afficher
+            if (!locked) {
+                setTimeout(() => {
+                    const moduleId = this.checkTutorialTriggers({ type: 'modalOpen', modalId: id });
+                    if (moduleId) {
+                        this.startTutorialModule(moduleId);
+                    }
+                }, 300); // Délai pour laisser la modale s'ouvrir
+            }
+        }
     },
     
     openCodex() {
         Audio.sfx('codex_open'); 
         const modal = document.getElementById('modalCodex'); 
         modal.classList.add('open');
+        modal.style.display = 'flex';
+        // FIX: Ajouter l'event handler pour fermer en cliquant en dehors (comme openModal)
+        // IMPORTANT: Ne pas fermer si on clique sur les éléments du tutoriel
+        modal.onclick = (e) => { 
+            // Ne pas fermer si on clique sur les éléments du tutoriel
+            if (e.target === modal && !e.target.closest('#tour-tooltip') && !e.target.closest('#tour-spotlight')) {
+                window.UI.closeModals(); 
+            }
+        };
+        
+        // Hook : Vérifier si un tutoriel contextuel doit s'afficher
+        setTimeout(() => {
+            const moduleId = this.checkTutorialTriggers({ type: 'modalOpen', modalId: 'modalCodex' });
+            if (moduleId) {
+                this.startTutorialModule(moduleId);
+            }
+        }, 300);
         
         // MODIFICATION ICI : Ajout du bouton "codex-mobile-close" dans content-area
         modal.innerHTML = `
@@ -1612,6 +2605,19 @@ export const UI = {
             
         modal.onclick = (e) => { if (e.target === modal) window.UI.closeModals(); }; 
         this.switchCodexTab('academy');
+
+        const quitBtn = document.getElementById('btn-rep-quit');
+            if (quitBtn) {
+                quitBtn.addEventListener('click', () => {
+            try {
+                window.ChallengeManager?.exit?.();
+            } catch (e) {
+                console.error("Quit challenge failed:", e);
+                // Fallback : au moins fermer la modale
+                window.UI?.closeModals?.();
+            }
+    });
+}
     },
 
     switchCodexTab(tabName) { Audio.sfx('codex_select'); document.querySelectorAll('.codex-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.codex-tab[data-tab="${tabName}"]`).classList.add('active'); document.getElementById('codexDetailContainer').style.display = 'none'; document.getElementById('codexGridContainer').style.display = 'grid'; this.renderCodexGrid(tabName); },
@@ -1811,11 +2817,65 @@ export const UI = {
         // On regarde si les paramètres sont ouverts AVANT de tout fermer
         const wasSettingsOpen = settingsEl && settingsEl.classList.contains('open');
 
-        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.classList.remove('open');
+            m.style.display = 'none'; // FIX: Forcer display:none pour les modales dynamiques
+        });
         
         // Si on vient de fermer les paramètres, on déclenche la logique de mise à jour dans App
         if (wasSettingsOpen && window.App && window.App.onSettingsClosed) {
             window.App.onSettingsClosed();
+        }
+    },
+
+    // Modale de confirmation personnalisée (remplace confirm() pour compatibilité Live Preview)
+    confirmModalPromise: null,
+    confirmModalResolve: null,
+    
+    async showConfirmModal(message, title = "Confirmation") {
+        return new Promise((resolve) => {
+            this.confirmModalPromise = resolve;
+            const modal = document.getElementById('confirmModal');
+            const titleEl = document.getElementById('confirmModalTitle');
+            const messageEl = document.getElementById('confirmModalMessage');
+            
+            if (titleEl) titleEl.innerText = title;
+            if (messageEl) messageEl.innerHTML = message.replace(/\n/g, '<br>');
+            
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.add('open');
+                // Fermeture au clic sur l'overlay
+                modal.onclick = (e) => {
+                    if (e.target === modal) {
+                        this.confirmModalResolve(false);
+                    }
+                };
+            } else {
+                console.error("confirmModal not found in DOM");
+                // Fallback: résoudre immédiatement avec false si la modale n'existe pas
+                resolve(false);
+            }
+        });
+    },
+    
+    confirmModalResolve(result) {
+        const modal = document.getElementById('confirmModal');
+        if (modal) {
+            modal.classList.remove('open');
+            modal.style.display = 'none';
+        }
+        
+        // Son approprié selon l'action
+        if (result) {
+            Audio.sfx('button_confirm');
+        } else {
+            Audio.sfx('button_cancel');
+        }
+        
+        if (this.confirmModalPromise) {
+            this.confirmModalPromise(result);
+            this.confirmModalPromise = null;
         }
     },
     
@@ -1888,6 +2948,24 @@ export const UI = {
             });
         }
         if(d.currentSet === 'jazz' || d.currentSet === 'laboratory') document.getElementById('rowToggleOpen').style.display='none'; else document.getElementById('rowToggleOpen').style.display='flex';
+        
+        // Ajouter un son pour le toggle "Position Ouverte"
+        const toggleOpen = document.getElementById('toggleOpen');
+        if (toggleOpen) {
+            toggleOpen.checked = d.settings.open || false;
+            // Supprimer les anciens listeners pour éviter les doublons
+            const newToggle = toggleOpen.cloneNode(true);
+            toggleOpen.parentNode.replaceChild(newToggle, toggleOpen);
+            
+            newToggle.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                // Sauvegarder la valeur dans les données
+                window.App.data.settings.open = isChecked;
+                // Jouer le son approprié
+                Audio.sfx(isChecked ? 'toggle_on' : 'toggle_off');
+            });
+        }
+        
         const gen = (arr, type, dest) => { document.getElementById(dest).innerHTML = arr.map(x => { const active = (type==='c'?d.settings.activeC:d.settings.activeI).includes(x.id); let locked = window.App.isLocked(x.id); let cls = `setting-chip ${active?'active':''} ${locked?'locked':''}`; const visual = this.getLabel(x, type); return `<div class="${cls}" onclick="window.App.toggleSetting('${type}', ${typeof x.id==='string'?"'"+x.id+"'":x.id})">${visual}</div>`; }).join(''); }; 
         gen(DB.chords, 'c', 'settingsChords'); 
         if(d.currentSet === 'laboratory') { const labOpts = [ {id: 0, name: "Pos. Alpha (0)", corr: "d8↳/Chrom/Sus2"}, {id: 1, name: "Pos. Beta (1)", corr: "d8↗/Vien/Sus4"}, {id: 2, name: "Pos. Gamma (2)", corr: "a8↳/1t/4al"}, {id: 3, name: "Pos. Delta (3)", corr: "a8↗/Octat/5tal"} ]; gen(labOpts, 'i', 'settingsInvs'); } else { gen(DB.currentInvs, 'i', 'settingsInvs'); }
@@ -2060,5 +3138,135 @@ export const UI = {
         loreBadges.forEach(b => renderBadge(b));
         
         const oldDetail = document.getElementById('badgeDetail'); if(oldDetail) oldDetail.style.display = 'none';
-    }
+    },
+
+    // --- NOUVELLE MÉTHODE POUR LA FIN DU DÉFI ---
+    openChallengeEndModal(score, mistakes, totalQuestions, challengeId) {
+        const modal = document.getElementById('endGameModal');
+        const content = document.getElementById('endGameContent');
+        if (!modal || !content) return;
+
+        // 1. Calcul du pourcentage
+        const accuracy = Math.round(((totalQuestions - mistakes.length) / totalQuestions) * 100);
+        
+        // 2. Génération HTML des erreurs (Comparatif)
+        let mistakesHTML = '<div class="mistakes-list">';
+        
+        // Sécurité sur le tableau lui-même
+        if (data.mistakes && Array.isArray(data.mistakes) && data.mistakes.length > 0) {
+            data.mistakes.forEach(m => {
+                // 1. GUARD CLAUSE BASIQUE : L'entrée doit exister
+                if (!m || !m.correct) return;
+
+                // 2. GUARD CLAUSE CRITIQUE (Le Fix du Crash)
+                // On cherche l'accord dans la DB
+                let correctObj = window.DB.chords.find(c => c.id === m.correct);
+
+                // SI undefined (accord introuvable ou ID corrompu), on crée un objet de secours
+                // Cela empêche l'erreur "Cannot read properties of undefined (reading 'type')"
+                if (!correctObj) {
+                    console.warn(`Accord introuvable pour l'ID: ${m.correct}`);
+                    correctObj = { name: m.correct || '?', type: '?', suffix: '' };
+                }
+
+                // Maintenant on peut lire .name ou .type sans faire planter l'app
+                const givenLabel = m.given || "Aucune réponse";
+
+                mistakesHTML += `
+                <div class="mistake-row" onclick="window.App.preview('c', '${m.correct}')">
+                    <div class="mistake-info">
+                        <span class="mistake-label">Attendu :</span>
+                        <strong class="text-success">${correctObj.name}</strong> 
+                    </div>
+                    <div class="mistake-info">
+                        <span class="mistake-label">Donné :</span>
+                        <strong class="text-error">${givenLabel}</strong>
+                    </div>
+                </div>`;
+            });
+        } else {
+            mistakesHTML += '<div style="text-align:center; padding:10px; color:var(--text-dim); font-style:italic;">Aucune erreur. Parfait !</div>';
+        }
+        
+        mistakesHTML += '</div>';
+
+        // 3. Construction du contenu final
+        content.innerHTML = `
+            <div class="modal-header">
+                <h2>Défi Terminé</h2>
+                <div class="score-badge">${score} pts</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Précision</span>
+                    <span class="stat-value">${accuracy}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Questions</span>
+                    <span class="stat-value">${totalQuestions}</span>
+                </div>
+            </div>
+
+            ${mistakesHTML}
+
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="window.ChallengeManager.restore()">
+                    Quitter le mode Défi
+                </button>
+            </div>
+        `;
+
+        // 4. Affichage
+        modal.classList.add('active');
+    },
+
+    renderKeyboardShortcuts(type, keyCodes) {
+        // Ne pas afficher en mode mobile
+        if (window.innerWidth <= 768) {
+            return;
+        }
+
+        let containerId;
+        let keysToShow = [];
+
+        if (type === 'chords') {
+            containerId = 'chordShortcutsVisual';
+            // Pour les accords : afficher les touches 1-6
+            keysToShow = [
+                { code: 'Digit1', label: '1', highlight: keyCodes.includes('Digit1') || keyCodes.includes('Numpad1') },
+                { code: 'Digit2', label: '2', highlight: keyCodes.includes('Digit2') || keyCodes.includes('Numpad2') },
+                { code: 'Digit3', label: '3', highlight: keyCodes.includes('Digit3') || keyCodes.includes('Numpad3') },
+                { code: 'Digit4', label: '4', highlight: keyCodes.includes('Digit4') || keyCodes.includes('Numpad4') },
+                { code: 'Digit5', label: '5', highlight: keyCodes.includes('Digit5') || keyCodes.includes('Numpad5') },
+                { code: 'Digit6', label: '6', highlight: keyCodes.includes('Digit6') || keyCodes.includes('Numpad6') }
+            ];
+        } else if (type === 'inversions') {
+            containerId = 'invShortcutsVisual';
+            // Pour les renversements : afficher Q W E R (positions physiques, pas les caractères)
+            // Le code utilise KeyQ, KeyW, KeyE, KeyR qui sont universels
+            keysToShow = [
+                { code: 'KeyQ', label: 'Q', highlight: keyCodes.includes('KeyQ') },
+                { code: 'KeyW', label: 'W', highlight: keyCodes.includes('KeyW') },
+                { code: 'KeyE', label: 'E', highlight: keyCodes.includes('KeyE') },
+                { code: 'KeyR', label: 'R', highlight: keyCodes.includes('KeyR') }
+            ];
+        } else {
+            return;
+        }
+
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Générer le HTML du schéma
+        let html = '<div class="keyboard-shortcut-visual">';
+        keysToShow.forEach(key => {
+            const highlightClass = key.highlight ? ' highlight' : '';
+            html += `<div class="keyboard-key${highlightClass}" data-key="${key.code}">${key.label}</div>`;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
+    },
+
 };
