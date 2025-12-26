@@ -1516,11 +1516,16 @@ export const App = {
         const s = this.session; const d = this.data; const rand = (arr) => arr[Math.floor(this.rng() * arr.length)];
         const sTot = s.globalTot; const sOk = s.globalOk; const sAcc = sTot > 0 ? (sOk / sTot) : 0;
         let gOk = 0, gTot = 0; for(let k in d.stats.c) { gOk += d.stats.c[k].ok; gTot += d.stats.c[k].tot; } const gAcc = gTot > 0 ? (gOk / gTot) : 0;
-        if(sTot < 5 && gTot < 20) { return { t: "Débutant", m: rand(COACH_DB.start) }; }
-        if(gAcc > 0.70 && sTot > 10 && sAcc < 0.50) { return { t: "Santé ☕", m: rand(COACH_DB.critical) }; }
+        
+        // --- PRIORITÉ 1: DÉBUTANT (toujours en premier) ---
+        if(sTot < 5 && gTot < 20) { 
+            return { t: "Débutant", m: rand(COACH_DB.start) }; 
+        }
+        
+        // --- PRIORITÉ 2: CONSEILS CIBLÉS (avant les autres génériques) ---
         // --- NOUVELLE LOGIQUE COACH (ACCORDS + RENVERSEMENTS) ---
         let candidates = [];
-        const THRESHOLD = 0.45; // Seuil de faiblesse (< 45% de réussite)
+        const THRESHOLD = 0.60; // Seuil de faiblesse (< 60% de réussite) - Augmenté pour détecter plus de faiblesses
         const MIN_PLAYED = 5;   // Minimum d'essais pour être jugé
 
         // 1. Analyse des Accords
@@ -1528,8 +1533,13 @@ export const App = {
             for(let cid in d.stats.c) {
                 const st = d.stats.c[cid];
                 // On vérifie le score ET si on a une phrase dans la DB pour cet accord
-                if(st && st.tot >= MIN_PLAYED && (st.ok / st.tot) < THRESHOLD) {
-                    if(COACH_DB.weakness[cid]) { candidates.push(cid); }
+                if(st && st.tot >= MIN_PLAYED) {
+                    const acc = st.tot > 0 ? (st.ok / st.tot) : 0;
+                    if(acc < THRESHOLD) {
+                        if(COACH_DB.weakness[cid]) { 
+                            candidates.push(cid); 
+                        }
+                    }
                 }
             }
         }
@@ -1545,8 +1555,13 @@ export const App = {
                     const st = invStats[iid];
                     const dbKey = prefix + iid; // ex: "inv_0" ou "voc_2"
                     
-                    if(st && st.tot >= MIN_PLAYED && (st.ok / st.tot) < THRESHOLD) {
-                        if(COACH_DB.weakness[dbKey]) { candidates.push(dbKey); }
+                    if(st && st.tot >= MIN_PLAYED) {
+                        const acc = st.tot > 0 ? (st.ok / st.tot) : 0;
+                        if(acc < THRESHOLD) {
+                            if(COACH_DB.weakness[dbKey]) { 
+                                candidates.push(dbKey); 
+                            }
+                        }
                     }
                 }
             }
@@ -1588,11 +1603,29 @@ export const App = {
             return { t: tip.t, m: tip.m, target: prettyName };
         }
         // -------------------------------------------------------
-        if(s.fastStreak > 3 && sAcc < 0.60) { return { t: "Vitesse ⚠️", m: rand(COACH_DB.speed_warn) }; }
-        if(gAcc < 0.60 && s.streak >= 8) { return { t: "Déclic 💡", m: rand(COACH_DB.breakthrough) }; }
-        if(sTot > 40 && sAcc < 0.50) { return { t: "Persévérance 💪", m: rand(COACH_DB.effort) }; }
-        if(sTot > 5 && (s.replayCount / sTot) > 2.5 && sAcc > 0.80) { return { t: "Confiance 🦁", m: rand(COACH_DB.patience) }; }
-        if(s.streak >= 12) { return { t: "En Feu 🔥", m: rand(COACH_DB.streak) }; }
+        
+        // --- PRIORITÉ 3: CONDITIONS GÉNÉRIQUES (seulement si pas de conseils ciblés) ---
+        
+        // Fatigue (déplacé après les conseils ciblés)
+        if(gAcc > 0.70 && sTot > 10 && sAcc < 0.50) { 
+            return { t: "Santé ☕", m: rand(COACH_DB.critical) }; 
+        }
+        
+        if(s.fastStreak > 3 && sAcc < 0.60) { 
+            return { t: "Vitesse ⚠️", m: rand(COACH_DB.speed_warn) }; 
+        }
+        if(gAcc < 0.60 && s.streak >= 8) { 
+            return { t: "Déclic 💡", m: rand(COACH_DB.breakthrough) }; 
+        }
+        if(sTot > 40 && sAcc < 0.50) { 
+            return { t: "Persévérance 💪", m: rand(COACH_DB.effort) }; 
+        }
+        if(sTot > 5 && (s.replayCount / sTot) > 2.5 && sAcc > 0.80) { 
+            return { t: "Confiance 🦁", m: rand(COACH_DB.patience) }; 
+        }
+        if(s.streak >= 12) { 
+            return { t: "En Feu 🔥", m: rand(COACH_DB.streak) }; 
+        }
         return { t: "Rappel 🧠", m: rand(COACH_DB.theory) };
     },
 
